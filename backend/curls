@@ -1,0 +1,30 @@
+# Version check
+curl -v http://localhost:8080/api/v1
+
+# Prompts - Create
+curl -v -X POST http://localhost:8080/api/v1/prompts \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Hello world", "model": "gpt-4"}'
+
+# Prompts - List
+curl -v http://localhost:8080/api/v1/prompts
+
+# Prompts - Get
+curl -v http://localhost:8080/api/v1/prompts/123
+
+# Prompts - Update
+curl -v -X PUT http://localhost:8080/api/v1/prompts/123 \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Updated prompt", "model": "gpt-4-turbo"}'
+
+# Prompts - Delete
+curl -v -X DELETE http://localhost:8080/api/v1/prompts/1
+
+# Logs - List
+curl -v http://localhost:8080/api/v1/logs
+
+# Logs - Get Single
+curl -v http://localhost:8080/api/v1/logs/456
+
+# Example error case
+curl -v http://localhost:8080/api/v1/prompts/999

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO llm_api_traces (\n                prompt_id,\n                provider,\n                model,\n                request_data\n            ) VALUES (?, ?, ?, ?)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "f759402d9554cd8498cb2fc5fd329356bd0c14fe87c8b4bd5240b79300e31f3b"
+}

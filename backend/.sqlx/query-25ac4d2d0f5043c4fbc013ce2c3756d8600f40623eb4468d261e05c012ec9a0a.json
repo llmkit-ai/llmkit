@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            UPDATE llm_prompts\n            SET prompt = ?, model = ?, updated_at = CURRENT_TIMESTAMP\n            WHERE id = ?\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "25ac4d2d0f5043c4fbc013ce2c3756d8600f40623eb4468d261e05c012ec9a0a"
+}
