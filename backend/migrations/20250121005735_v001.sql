@@ -1,6 +1,7 @@
 -- Add migration script here
 CREATE TABLE llm_prompts (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    key TEXT NOT NULL,
     prompt TEXT NOT NULL,
     model TEXT NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

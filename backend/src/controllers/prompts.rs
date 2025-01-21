@@ -19,7 +19,7 @@ pub async fn create_prompt(
     State(state): State<AppState>,
     Json(payload): Json<CreatePromptRequest>,
 ) -> Result<Json<PromptResponse>, AppError> {
-    let id = state.db.prompt.create_prompt(&payload.prompt, &payload.model).await?;
+    let id = state.db.prompt.create_prompt(&payload.key, &payload.prompt, &payload.model).await?;
     let prompt = state.db.prompt.get_prompt(id).await?
         .ok_or(AppError::NotFound("Prompt not found after creation".into()))?;
     Ok(Json(prompt.into()))
@@ -46,7 +46,7 @@ pub async fn update_prompt(
     State(state): State<AppState>,
     Json(payload): Json<UpdatePromptRequest>,
 ) -> Result<Json<PromptResponse>, AppError> {
-    let updated = state.db.prompt.update_prompt(id, &payload.prompt, &payload.model).await?;
+    let updated = state.db.prompt.update_prompt(id, &payload.key, &payload.prompt, &payload.model).await?;
     if !updated {
         return Err(AppError::NotFound("Prompt not found".into()));
     }

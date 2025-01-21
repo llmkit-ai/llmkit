@@ -10,6 +10,7 @@ pub struct PromptRepository {
 #[derive(Debug, Clone, FromRow)]
 pub struct LlmPrompt {
     pub id: i64,
+    pub key: String,
     pub prompt: String,
     pub model: String,
     pub created_at: chrono::NaiveDateTime,
@@ -22,13 +23,14 @@ impl PromptRepository {
     }
 
     // Create a new prompt
-    pub async fn create_prompt(&self, prompt: &str, model: &str) -> Result<i64> {
+    pub async fn create_prompt(&self, key: &str, prompt: &str, model: &str) -> Result<i64> {
         let mut conn = self.pool.acquire().await?;
         let id = sqlx::query!(
             r#"
-            INSERT INTO llm_prompts (prompt, model)
-            VALUES (?, ?)
+            INSERT INTO llm_prompts (key, prompt, model)
+            VALUES (?, ?, ?)
             "#,
+            key,
             prompt,
             model
         )
@@ -43,7 +45,7 @@ impl PromptRepository {
         let prompt = sqlx::query_as!(
             LlmPrompt,
             r#"
-            SELECT id, prompt, model, created_at, updated_at
+            SELECT id, key, prompt, model, created_at, updated_at
             FROM llm_prompts
             WHERE id = ?
             "#,
@@ -59,7 +61,7 @@ impl PromptRepository {
         let prompts = sqlx::query_as!(
             LlmPrompt,
             r#"
-            SELECT id, prompt, model, created_at, updated_at
+            SELECT id, key, prompt, model, created_at, updated_at
             FROM llm_prompts
             ORDER BY created_at
             "#
@@ -70,13 +72,14 @@ impl PromptRepository {
     }
 
     // Update an existing prompt
-    pub async fn update_prompt(&self, id: i64, prompt: &str, model: &str) -> Result<bool> {
+    pub async fn update_prompt(&self, id: i64, key: &str, prompt: &str, model: &str) -> Result<bool> {
         let rows_affected = sqlx::query!(
             r#"
             UPDATE llm_prompts
-            SET prompt = ?, model = ?, updated_at = CURRENT_TIMESTAMP
+            SET key = ?, prompt = ?, model = ?, updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
             "#,
+            key,
             prompt,
             model,
             id

@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            SELECT id, prompt, model, created_at, updated_at\n            FROM llm_prompts\n            ORDER BY created_at\n            ",
+  "query": "\n            SELECT id, key, prompt, model, created_at, updated_at\n            FROM llm_prompts\n            ORDER BY created_at\n            ",
   "describe": {
     "columns": [
       {
@@ -9,23 +9,28 @@
         "type_info": "Integer"
       },
       {
-        "name": "prompt",
+        "name": "key",
         "ordinal": 1,
         "type_info": "Text"
       },
       {
-        "name": "model",
+        "name": "prompt",
         "ordinal": 2,
         "type_info": "Text"
       },
       {
-        "name": "created_at",
+        "name": "model",
         "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 4,
         "type_info": "Datetime"
       },
       {
         "name": "updated_at",
-        "ordinal": 4,
+        "ordinal": 5,
         "type_info": "Datetime"
       }
     ],
@@ -37,8 +42,9 @@
       false,
       false,
       false,
+      false,
       false
     ]
   },
-  "hash": "2a7b170ea55952744ce79cb4340216f10e42a59d81d1706bc95c8b08d5b29690"
+  "hash": "b54ac9d3c0118c9954998f866235ea5e3ff716f41cc0004d854a158093b5fc2c"
 }
