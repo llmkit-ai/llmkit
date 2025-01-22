@@ -9,7 +9,7 @@ use axum::{
 };
 
 use anyhow::Result;
-use controllers::{logs::{get_api_trace, list_api_traces}, prompts::{create_prompt, delete_prompt, get_prompt, list_prompts, update_prompt}};
+use controllers::{logs::{get_api_trace, list_api_traces}, models::list_models, prompts::{create_prompt, delete_prompt, get_prompt, list_prompts, update_prompt}};
 use db::init::DbInit;
 use moka::future::Cache;
 
@@ -37,11 +37,11 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-// Updated router setup with correct path syntax
 fn api_v1_routes() -> Router<AppState> {
     Router::new()
         .route("/", get(api_version_handler))
         .nest("/prompts", prompt_routes())
+        .nest("/models", model_routes())
         .nest("/logs", logs_routes())
 }
 
@@ -49,6 +49,11 @@ fn prompt_routes() -> Router<AppState> {
     Router::new()
         .route("/", post(create_prompt).get(list_prompts))
         .route("/{id}", get(get_prompt).put(update_prompt).delete(delete_prompt))
+}
+
+fn model_routes() -> Router<AppState> {
+    Router::new()
+        .route("/", get(list_models))
 }
 
 fn logs_routes() -> Router<AppState> {

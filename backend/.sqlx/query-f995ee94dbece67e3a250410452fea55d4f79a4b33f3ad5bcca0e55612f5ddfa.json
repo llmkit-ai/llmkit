@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            SELECT id, key, prompt, model, created_at, updated_at\n            FROM llm_prompts\n            ORDER BY created_at\n            ",
+  "query": "\n            SELECT \n                p.id, p.key, p.prompt, p.model_id,\n                m.provider, m.model_name,\n                p.created_at, p.updated_at\n            FROM llm_prompts p\n            JOIN models m ON p.model_id = m.id\n            WHERE p.id = ?\n            ",
   "describe": {
     "columns": [
       {
@@ -19,25 +19,37 @@
         "type_info": "Text"
       },
       {
-        "name": "model",
+        "name": "model_id",
         "ordinal": 3,
+        "type_info": "Integer"
+      },
+      {
+        "name": "provider",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "model_name",
+        "ordinal": 5,
         "type_info": "Text"
       },
       {
         "name": "created_at",
-        "ordinal": 4,
+        "ordinal": 6,
         "type_info": "Datetime"
       },
       {
         "name": "updated_at",
-        "ordinal": 5,
+        "ordinal": 7,
         "type_info": "Datetime"
       }
     ],
     "parameters": {
-      "Right": 0
+      "Right": 1
     },
     "nullable": [
+      false,
+      false,
       false,
       false,
       false,
@@ -46,5 +58,5 @@
       false
     ]
   },
-  "hash": "b54ac9d3c0118c9954998f866235ea5e3ff716f41cc0004d854a158093b5fc2c"
+  "hash": "f995ee94dbece67e3a250410452fea55d4f79a4b33f3ad5bcca0e55612f5ddfa"
 }

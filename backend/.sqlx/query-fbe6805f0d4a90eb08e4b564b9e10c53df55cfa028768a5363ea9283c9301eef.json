@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            SELECT \n                id,\n                prompt_id,\n                provider,\n                model,\n                request_data,\n                response_data,\n                status_code,\n                latency_ms,\n                input_tokens,\n                output_tokens,\n                error_code,\n                error_message,\n                created_at\n            FROM llm_api_traces\n            WHERE id = ?\n            ",
+  "query": "\n            SELECT \n                id,\n                prompt_id,\n                model_id,\n                request_data,\n                response_data,\n                status_code,\n                latency_ms,\n                input_tokens,\n                output_tokens,\n                error_code,\n                error_message,\n                created_at\n            FROM llm_api_traces\n            ORDER BY created_at DESC\n            ",
   "describe": {
     "columns": [
       {
@@ -14,68 +14,62 @@
         "type_info": "Integer"
       },
       {
-        "name": "provider",
+        "name": "model_id",
         "ordinal": 2,
-        "type_info": "Text"
+        "type_info": "Integer"
       },
       {
-        "name": "model",
+        "name": "request_data",
         "ordinal": 3,
         "type_info": "Text"
       },
       {
-        "name": "request_data",
+        "name": "response_data",
         "ordinal": 4,
         "type_info": "Text"
       },
       {
-        "name": "response_data",
-        "ordinal": 5,
-        "type_info": "Text"
-      },
-      {
         "name": "status_code",
-        "ordinal": 6,
+        "ordinal": 5,
         "type_info": "Integer"
       },
       {
         "name": "latency_ms",
-        "ordinal": 7,
+        "ordinal": 6,
         "type_info": "Integer"
       },
       {
         "name": "input_tokens",
-        "ordinal": 8,
+        "ordinal": 7,
         "type_info": "Integer"
       },
       {
         "name": "output_tokens",
-        "ordinal": 9,
+        "ordinal": 8,
         "type_info": "Integer"
       },
       {
         "name": "error_code",
-        "ordinal": 10,
+        "ordinal": 9,
         "type_info": "Text"
       },
       {
         "name": "error_message",
-        "ordinal": 11,
+        "ordinal": 10,
         "type_info": "Text"
       },
       {
         "name": "created_at",
-        "ordinal": 12,
+        "ordinal": 11,
         "type_info": "Datetime"
       }
     ],
     "parameters": {
-      "Right": 1
+      "Right": 0
     },
     "nullable": [
       false,
       true,
-      false,
       false,
       false,
       true,
@@ -88,5 +82,5 @@
       true
     ]
   },
-  "hash": "6c0cfccaceda84f9e293cdaca7ca5eeb159bf6b8d42fe3687f2630a513cdaed4"
+  "hash": "fbe6805f0d4a90eb08e4b564b9e10c53df55cfa028768a5363ea9283c9301eef"
 }

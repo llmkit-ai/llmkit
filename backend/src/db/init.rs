@@ -3,7 +3,8 @@ use std::sync::Arc;
 
 use super::{
     logs::LogRepository, 
-    prompts::PromptRepository
+    prompts::PromptRepository,
+    models::ModelRepository
 };
 
 #[derive(Clone, Debug)]
@@ -11,6 +12,7 @@ use super::{
 pub struct DbInit {
     pub prompt: PromptRepository,
     pub log: LogRepository,
+    pub model: ModelRepository,
 }
 
 impl DbInit {
@@ -19,10 +21,12 @@ impl DbInit {
 
         let prompt = PromptRepository::new(pool.clone()).await?;
         let log = LogRepository::new(pool.clone()).await?;
+        let model = ModelRepository::new(pool.clone()).await?;
 
         Ok(DbInit {
             prompt,
             log,
+            model
         })
     }
 }

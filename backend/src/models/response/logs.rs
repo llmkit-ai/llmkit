@@ -5,8 +5,7 @@ use crate::db::logs::LlmApiTrace;
 pub struct ApiTraceResponse {
     pub id: i64,
     pub prompt_id: Option<i64>,
-    pub provider: String,
-    pub model: String,
+    pub model_id: i64,
     pub request_data: String,
     pub response_data: Option<String>,
     pub status_code: Option<i64>,
@@ -22,8 +21,7 @@ impl From<LlmApiTrace> for ApiTraceResponse {
         ApiTraceResponse {
             id: trace.id,
             prompt_id: trace.prompt_id,
-            provider: trace.provider,
-            model: trace.model,
+            model_id: trace.model_id,
             request_data: trace.request_data,
             response_data: trace.response_data,
             status_code: trace.status_code,

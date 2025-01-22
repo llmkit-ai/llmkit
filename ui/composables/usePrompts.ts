@@ -20,7 +20,7 @@ export const usePrompts = () => {
   const createPrompt = async (promptData: { 
     key: string
     prompt: string
-    model: string 
+    model_id: number 
   }) => {
     try {
       const newPrompt = await $fetch<Prompt>('/api/v1/prompts', {
@@ -28,7 +28,7 @@ export const usePrompts = () => {
         body: {
           key: promptData.key,
           prompt: promptData.prompt,
-          model: promptData.model
+          model_id: promptData.model_id
         }
       })
       prompts.value.push(newPrompt)
@@ -42,7 +42,7 @@ export const usePrompts = () => {
   const updatePrompt = async (id: number, updates: { 
     key?: string
     prompt?: string
-    model?: string 
+    model_id?: number 
   }) => {
     try {
       const updatedPrompt = await $fetch<Prompt>(`/api/v1/prompts/${id}`, {
@@ -50,7 +50,7 @@ export const usePrompts = () => {
         body: {
           key: updates.key,
           prompt: updates.prompt,
-          model: updates.model
+          model_id: updates.model_id
         }
       })
       const index = prompts.value.findIndex(p => p.id === id)

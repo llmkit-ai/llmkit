@@ -11,8 +11,7 @@ pub struct LogRepository {
 pub struct LlmApiTrace {
     pub id: i64,
     pub prompt_id: Option<i64>,
-    pub provider: String,
-    pub model: String,
+    pub model_id: i64,
     pub request_data: String,
     pub response_data: Option<String>,
     pub status_code: Option<i64>,
@@ -33,8 +32,7 @@ impl LogRepository {
     pub async fn create_trace(
         &self,
         prompt_id: Option<i64>,
-        provider: &str,
-        model: &str,
+        model_id: i64,
         request_data: &str,
     ) -> Result<i64> {
         let mut conn = self.pool.acquire().await?;
@@ -42,14 +40,12 @@ impl LogRepository {
             r#"
             INSERT INTO llm_api_traces (
                 prompt_id,
-                provider,
-                model,
+                model_id,
                 request_data
-            ) VALUES (?, ?, ?, ?)
+            ) VALUES (?, ?, ?)
             "#,
             prompt_id,
-            provider,
-            model,
+            model_id,
             request_data
         )
         .execute(&mut *conn)
@@ -125,8 +121,7 @@ impl LogRepository {
             SELECT 
                 id,
                 prompt_id,
-                provider,
-                model,
+                model_id,
                 request_data,
                 response_data,
                 status_code,
@@ -154,8 +149,7 @@ impl LogRepository {
             SELECT 
                 id,
                 prompt_id,
-                provider,
-                model,
+                model_id,
                 request_data,
                 response_data,
                 status_code,
@@ -182,8 +176,7 @@ impl LogRepository {
             SELECT 
                 id,
                 prompt_id,
-                provider,
-                model,
+                model_id,
                 request_data,
                 response_data,
                 status_code,

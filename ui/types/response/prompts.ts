@@ -3,4 +3,6 @@ export interface Prompt {
   prompt: string
   key: string
   model: string
+  model_id: number
+  provider: string
 }
