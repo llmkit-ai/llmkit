@@ -16,6 +16,7 @@ use moka::future::Cache;
 pub mod db;
 pub mod controllers;
 pub mod models;
+pub mod services;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -43,6 +44,12 @@ fn api_v1_routes() -> Router<AppState> {
         .nest("/prompts", prompt_routes())
         .nest("/models", model_routes())
         .nest("/logs", logs_routes())
+        .nest("/execute", execute_routes())
+}
+
+fn execute_routes() -> Router<AppState> {
+    Router::new()
+        .route("/{id}", post(create_prompt))
 }
 
 fn prompt_routes() -> Router<AppState> {

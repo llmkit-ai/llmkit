@@ -1,5 +1,6 @@
 use serde::Serialize;
-use crate::db::logs::LlmApiTrace;
+
+use crate::db::models::log::LogRow;
 
 #[derive(Debug, Serialize)]
 pub struct ApiTraceResponse {
@@ -16,8 +17,8 @@ pub struct ApiTraceResponse {
     pub error_message: Option<String>,
 }
 
-impl From<LlmApiTrace> for ApiTraceResponse {
-    fn from(trace: LlmApiTrace) -> Self {
+impl From<LogRow> for ApiTraceResponse {
+    fn from(trace: LogRow) -> Self {
         ApiTraceResponse {
             id: trace.id,
             prompt_id: trace.prompt_id,

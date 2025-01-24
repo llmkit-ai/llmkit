@@ -2,6 +2,7 @@ use axum::{
     extract::{Path, State},
     Json,
 };
+use serde_json::Value;
 use crate::{
     models::{
         request::prompts::{
@@ -20,8 +21,8 @@ pub async fn create_prompt(
     Json(payload): Json<CreatePromptRequest>,
 ) -> Result<Json<PromptResponse>, AppError> {
     let id = state.db.prompt.create_prompt(&payload.key, &payload.prompt, payload.model_id).await?;
-    let prompt = state.db.prompt.get_prompt(id).await?
-        .ok_or(AppError::NotFound("Prompt not found after creation".into()))?;
+    let prompt = state.db.prompt.get_prompt(id).await
+        .map_err(|_| AppError::NotFound("Prompt not found after creation".into()))?;
     Ok(Json(prompt.into()))
 }
 
@@ -29,8 +30,8 @@ pub async fn get_prompt(
     Path(id): Path<i64>,
     State(state): State<AppState>,
 ) -> Result<Json<PromptResponse>, AppError> {
-    let prompt = state.db.prompt.get_prompt(id).await?
-        .ok_or(AppError::NotFound("Prompt not found".into()))?;
+    let prompt = state.db.prompt.get_prompt(id).await
+        .map_err(|_| AppError::NotFound("Prompt not found".into()))?;
     Ok(Json(prompt.into()))
 }
 
@@ -50,8 +51,9 @@ pub async fn update_prompt(
     if !updated {
         return Err(AppError::NotFound("Prompt not found".into()));
     }
-    let prompt = state.db.prompt.get_prompt(id).await?
-        .ok_or(AppError::NotFound("Prompt not found after update".into()))?;
+    let prompt = state.db.prompt.get_prompt(id).await
+        .map_err(|_| AppError::NotFound("Prompt not found after update".into()))?;
+
     Ok(Json(prompt.into()))
 }
 
@@ -63,5 +65,18 @@ pub async fn delete_prompt(
     if !deleted {
         return Err(AppError::NotFound("Prompt not found".into()));
     }
+    Ok(())
+}
+
+pub async fn execute_prompt(
+    Path(id): Path<i64>,
+    State(state): State<AppState>,
+    Json(payload): Json<Value>,
+) -> Result<(), AppError> {
+    let prompt = state.db.prompt.get_prompt(id).await?;
+    
+    // use tera to substitute context
+    // run 
+
     Ok(())
 }

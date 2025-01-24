@@ -1,22 +1,20 @@
 use serde::Serialize;
 
-use crate::db::models::Model;
+use crate::db::models::models::ModelRow;
 
 
 #[derive(Debug, Serialize)]
 pub struct ModelResponse {
     pub id: i64,
-    pub provider: String,
     pub model: String
 }
 
 
-impl From<Model> for ModelResponse {
-    fn from(model: Model) -> Self {
+impl From<ModelRow> for ModelResponse {
+    fn from(model: ModelRow) -> Self {
         ModelResponse {
             id: model.id,
-            model: model.model_name,
-            provider: model.provider,
+            model: model.model_name.into(),
         }
     }
 }

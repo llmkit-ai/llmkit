@@ -1,9 +1,8 @@
 -- Create models table
 CREATE TABLE models (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    provider TEXT NOT NULL,          -- Company name (e.g., 'openai', 'anthropic')
     model_name TEXT NOT NULL,        -- Model identifier (e.g., 'gpt-4', 'claude-2')
-    UNIQUE(provider, model_name)     -- Prevent duplicate model entries
+    UNIQUE(model_name)     -- Prevent duplicate model entries
 );
 
 

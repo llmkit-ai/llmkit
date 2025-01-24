@@ -1,3 +1,3 @@
 [x] add models table
-[] add models repo
-[] add models endpoint
+[x] add models repo
+[x] add models endpoint

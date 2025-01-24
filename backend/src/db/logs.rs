@@ -1,26 +1,11 @@
 use std::sync::Arc;
 use anyhow::Result;
-use sqlx::FromRow;
+
+use crate::db::models::log::LogRow;
 
 #[derive(Clone, Debug)]
 pub struct LogRepository {
     pool: Arc<sqlx::SqlitePool>,
-}
-
-#[derive(Debug, Clone, FromRow)]
-pub struct LlmApiTrace {
-    pub id: i64,
-    pub prompt_id: Option<i64>,
-    pub model_id: i64,
-    pub request_data: String,
-    pub response_data: Option<String>,
-    pub status_code: Option<i64>,
-    pub latency_ms: Option<i64>,
-    pub input_tokens: Option<i64>,
-    pub output_tokens: Option<i64>,
-    pub error_code: Option<String>,
-    pub error_message: Option<String>,
-    pub created_at: Option<chrono::NaiveDateTime>,
 }
 
 impl LogRepository {
@@ -114,9 +99,9 @@ impl LogRepository {
     }
 
     // Get a single trace by ID
-    pub async fn get_trace_by_id(&self, id: i64) -> Result<Option<LlmApiTrace>> {
+    pub async fn get_trace_by_id(&self, id: i64) -> Result<Option<LogRow>> {
         let trace = sqlx::query_as!(
-            LlmApiTrace,
+            LogRow,
             r#"
             SELECT 
                 id,
@@ -142,9 +127,9 @@ impl LogRepository {
     }
 
     // List all traces ordered by creation time
-    pub async fn list_traces(&self) -> Result<Vec<LlmApiTrace>> {
+    pub async fn list_traces(&self) -> Result<Vec<LogRow>> {
         let traces = sqlx::query_as!(
-            LlmApiTrace,
+            LogRow,
             r#"
             SELECT 
                 id,
@@ -169,9 +154,9 @@ impl LogRepository {
     }
 
     // List traces by prompt ID
-    pub async fn list_traces_by_prompt(&self, prompt_id: i64) -> Result<Vec<LlmApiTrace>> {
+    pub async fn list_traces_by_prompt(&self, prompt_id: i64) -> Result<Vec<LogRow>> {
         let traces = sqlx::query_as!(
-            LlmApiTrace,
+            LogRow,
             r#"
             SELECT 
                 id,

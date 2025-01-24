@@ -1,17 +1,11 @@
 use std::sync::Arc;
 use anyhow::Result;
-use sqlx::FromRow;
+
+use crate::db::models::models::ModelRow;
 
 #[derive(Clone, Debug)]
 pub struct ModelRepository {
     pool: Arc<sqlx::SqlitePool>,
-}
-
-#[derive(Debug, Clone, FromRow)]
-pub struct Model {
-    pub id: i64,
-    pub provider: String,
-    pub model_name: String,
 }
 
 impl ModelRepository {
@@ -20,13 +14,12 @@ impl ModelRepository {
     }
 
     // Get a single model by ID
-    pub async fn get_model_by_id(&self, id: i64) -> Result<Option<Model>> {
+    pub async fn get_model_by_id(&self, id: i64) -> Result<Option<ModelRow>> {
         let model = sqlx::query_as!(
-            Model,
+            ModelRow,
             r#"
             SELECT 
                 id,
-                provider,
                 model_name
             FROM models
             WHERE id = ?
@@ -39,13 +32,12 @@ impl ModelRepository {
     }
 
     // List all prompts with model info, ordered by creation time
-    pub async fn list_models(&self) -> Result<Vec<Model>> {
+    pub async fn list_models(&self) -> Result<Vec<ModelRow>> {
         let models = sqlx::query_as!(
-            Model,
+            ModelRow,
             r#"
                 SELECT 
                     id,
-                    provider,
                     model_name
                 FROM models
             "#

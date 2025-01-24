@@ -1,32 +1,13 @@
 use std::sync::Arc;
 use anyhow::Result;
-use sqlx::FromRow;
+
+use crate::db::models::prompt::PromptRowWithModel;
+
+use super::models::prompt::PromptWithModel;
 
 #[derive(Clone, Debug)]
 pub struct PromptRepository {
     pool: Arc<sqlx::SqlitePool>,
-}
-
-#[derive(Debug, Clone, FromRow)]
-pub struct LlmPrompt {
-    pub id: i64,
-    pub key: String,
-    pub prompt: String,
-    pub model_id: i64,
-    pub created_at: chrono::NaiveDateTime,
-    pub updated_at: chrono::NaiveDateTime,
-}
-
-#[derive(Debug, Clone, FromRow)]
-pub struct LlmPromptWithModel {
-    pub id: i64,
-    pub key: String,
-    pub prompt: String,
-    pub model_id: i64,
-    pub provider: String,
-    pub model_name: String,
-    pub created_at: chrono::NaiveDateTime,
-    pub updated_at: chrono::NaiveDateTime,
 }
 
 impl PromptRepository {
@@ -53,13 +34,13 @@ impl PromptRepository {
     }
 
     // Get a single prompt by ID with model info
-    pub async fn get_prompt(&self, id: i64) -> Result<Option<LlmPromptWithModel>> {
+    pub async fn get_prompt(&self, id: i64) -> Result<PromptWithModel> {
         let prompt = sqlx::query_as!(
-            LlmPromptWithModel,
+            PromptRowWithModel,
             r#"
             SELECT 
                 p.id, p.key, p.prompt, p.model_id,
-                m.provider, m.model_name,
+                m.model_name,
                 p.created_at, p.updated_at
             FROM llm_prompts p
             JOIN models m ON p.model_id = m.id
@@ -67,19 +48,20 @@ impl PromptRepository {
             "#,
             id
         )
-        .fetch_optional(&*self.pool)
+        .fetch_one(&*self.pool)
         .await?;
-        Ok(prompt)
+
+        Ok(prompt.into())
     }
 
     // List all prompts with model info, ordered by creation time
-    pub async fn list_prompts(&self) -> Result<Vec<LlmPromptWithModel>> {
+    pub async fn list_prompts(&self) -> Result<Vec<PromptWithModel>> {
         let prompts = sqlx::query_as!(
-            LlmPromptWithModel,
+            PromptRowWithModel,
             r#"
             SELECT 
                 p.id, p.key, p.prompt, p.model_id,
-                m.provider, m.model_name,
+                m.model_name,
                 p.created_at, p.updated_at
             FROM llm_prompts p
             JOIN models m ON p.model_id = m.id
@@ -88,7 +70,8 @@ impl PromptRepository {
         )
         .fetch_all(&*self.pool)
         .await?;
-        Ok(prompts)
+
+        Ok(prompts.into_iter().map(|p| p.into()).collect())
     }
 
     // Update an existing prompt

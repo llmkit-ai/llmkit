@@ -1,6 +1,7 @@
 use serde::Serialize;
 
-use crate::db::prompts::LlmPromptWithModel;
+use crate::db::models::prompt::PromptWithModel;
+
 
 
 #[derive(Debug, Serialize)]
@@ -14,13 +15,13 @@ pub struct PromptResponse {
 }
 
 
-impl From<LlmPromptWithModel> for PromptResponse {
-    fn from(prompt: LlmPromptWithModel) -> Self {
+impl From<PromptWithModel> for PromptResponse {
+    fn from(prompt: PromptWithModel) -> Self {
         PromptResponse {
             id: prompt.id,
             key: prompt.key,
             prompt: prompt.prompt,
-            model: prompt.model_name,
+            model: prompt.model_name.into(),
             model_id: prompt.model_id,
             provider: prompt.provider,
         }
