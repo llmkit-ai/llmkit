@@ -1,15 +1,14 @@
-use std::sync::Arc;
 use anyhow::Result;
 use crate::db::types::prompt::PromptRowWithModel;
 use super::types::prompt::PromptWithModel;
 
 #[derive(Clone, Debug)]
 pub struct PromptRepository {
-    pool: Arc<sqlx::SqlitePool>,
+    pool: sqlx::SqlitePool,
 }
 
 impl PromptRepository {
-    pub async fn new(pool: Arc<sqlx::SqlitePool>) -> Result<Self> {
+    pub async fn new(pool: sqlx::SqlitePool) -> Result<Self> {
         Ok(PromptRepository { pool })
     }
 
@@ -69,7 +68,7 @@ impl PromptRepository {
             "#,
             id
         )
-        .fetch_one(&*self.pool)
+        .fetch_one(&self.pool)
         .await?;
         Ok(prompt.into())
     }
@@ -94,7 +93,7 @@ impl PromptRepository {
             ORDER BY p.created_at
             "#
         )
-        .fetch_all(&*self.pool)
+        .fetch_all(&self.pool)
         .await?;
         Ok(prompts.into_iter().map(|p| p.into()).collect())
     }
@@ -130,7 +129,7 @@ impl PromptRepository {
             json_mode,
             id
         )
-        .execute(&*self.pool)
+        .execute(&self.pool)
         .await?
         .rows_affected();
 
@@ -145,7 +144,7 @@ impl PromptRepository {
             "#,
             id
         )
-        .execute(&*self.pool)
+        .execute(&self.pool)
         .await?
         .rows_affected();
         Ok(rows_affected > 0)

@@ -1,15 +1,14 @@
-use std::sync::Arc;
 use anyhow::Result;
 
 use crate::db::types::log::LogRow;
 
 #[derive(Clone, Debug)]
 pub struct LogRepository {
-    pool: Arc<sqlx::SqlitePool>,
+    pool: sqlx::SqlitePool,
 }
 
 impl LogRepository {
-    pub async fn new(pool: Arc<sqlx::SqlitePool>) -> Result<Self> {
+    pub async fn new(pool: sqlx::SqlitePool) -> Result<Self> {
         Ok(LogRepository { pool })
     }
 
@@ -67,7 +66,7 @@ impl LogRepository {
             output_tokens,
             id
         )
-        .execute(&*self.pool)
+        .execute(&self.pool)
         .await?
         .rows_affected();
         Ok(rows_affected > 0)
@@ -92,7 +91,7 @@ impl LogRepository {
             error_message,
             id
         )
-        .execute(&*self.pool)
+        .execute(&self.pool)
         .await?
         .rows_affected();
         Ok(rows_affected > 0)
@@ -121,7 +120,7 @@ impl LogRepository {
             "#,
             id
         )
-        .fetch_optional(&*self.pool)
+        .fetch_optional(&self.pool)
         .await?;
         Ok(trace)
     }
@@ -148,7 +147,7 @@ impl LogRepository {
             ORDER BY created_at DESC
             "#
         )
-        .fetch_all(&*self.pool)
+        .fetch_all(&self.pool)
         .await?;
         Ok(traces)
     }
@@ -177,7 +176,7 @@ impl LogRepository {
             "#,
             prompt_id
         )
-        .fetch_all(&*self.pool)
+        .fetch_all(&self.pool)
         .await?;
         Ok(traces)
     }
@@ -191,7 +190,7 @@ impl LogRepository {
             "#,
             id
         )
-        .execute(&*self.pool)
+        .execute(&self.pool)
         .await?
         .rows_affected();
         Ok(rows_affected > 0)

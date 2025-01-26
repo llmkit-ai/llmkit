@@ -1,15 +1,14 @@
-use std::sync::Arc;
 use anyhow::Result;
 
 use crate::db::types::models::ModelRow;
 
 #[derive(Clone, Debug)]
 pub struct ModelRepository {
-    pool: Arc<sqlx::SqlitePool>,
+    pool: sqlx::SqlitePool,
 }
 
 impl ModelRepository {
-    pub async fn new(pool: Arc<sqlx::SqlitePool>) -> Result<Self> {
+    pub async fn new(pool: sqlx::SqlitePool) -> Result<Self> {
         Ok(ModelRepository { pool })
     }
 
@@ -26,7 +25,7 @@ impl ModelRepository {
             "#,
             id
         )
-        .fetch_optional(&*self.pool)
+        .fetch_optional(&self.pool)
         .await?;
         Ok(model)
     }
@@ -42,7 +41,7 @@ impl ModelRepository {
                 FROM models
             "#
         )
-        .fetch_all(&*self.pool)
+        .fetch_all(&self.pool)
         .await?;
 
         Ok(models)

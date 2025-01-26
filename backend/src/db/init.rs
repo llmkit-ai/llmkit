@@ -1,7 +1,7 @@
 use anyhow::Result;
 use sqlx::migrate::Migrator;
 
-use std::sync::Arc;
+use std::str::FromStr;
 
 use super::{
     logs::LogRepository, 
@@ -23,14 +23,18 @@ pub struct DbInit {
 
 impl DbInit {
     pub async fn new(db_url: &str) -> Result<Self> {
-        let pool = sqlx::SqlitePool::connect(&db_url).await?;
+        let pool = sqlx::SqlitePool::connect_with(
+            sqlx::sqlite::SqliteConnectOptions::from_str(db_url)?
+                .create_if_missing(true)
+                .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal)
+                .synchronous(sqlx::sqlite::SqliteSynchronous::Normal)
+        ).await?;
+
         MIGRATOR.run(&pool).await?;
 
-        let arc_pool = Arc::new(pool);
-
-        let prompt = PromptRepository::new(arc_pool.clone()).await?;
-        let log = LogRepository::new(arc_pool.clone()).await?;
-        let model = ModelRepository::new(arc_pool.clone()).await?;
+        let prompt = PromptRepository::new(pool.clone()).await?;
+        let log = LogRepository::new(pool.clone()).await?;
+        let model = ModelRepository::new(pool.clone()).await?;
 
         Ok(DbInit {
             prompt,
