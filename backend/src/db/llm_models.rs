@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use anyhow::Result;
 
-use crate::db::models::models::ModelRow;
+use crate::db::types::models::ModelRow;
 
 #[derive(Clone, Debug)]
 pub struct ModelRepository {
@@ -44,6 +44,7 @@ impl ModelRepository {
         )
         .fetch_all(&*self.pool)
         .await?;
+
         Ok(models)
     }
 }

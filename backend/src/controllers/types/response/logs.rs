@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use crate::db::models::log::LogRow;
+use crate::db::types::log::LogRow;
 
 #[derive(Debug, Serialize)]
 pub struct ApiTraceResponse {

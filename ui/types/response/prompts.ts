@@ -5,4 +5,7 @@ export interface Prompt {
   model: string
   model_id: number
   provider: string
+  max_tokens: number
+  temperature: number
+  json_mode: boolean
 }

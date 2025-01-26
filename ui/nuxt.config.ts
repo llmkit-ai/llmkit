@@ -5,7 +5,7 @@ export default defineNuxtConfig({
   modules: ['@nuxtjs/tailwindcss'],
   nitro: {
     routeRules: {
-      "/api/v1/**": { proxy: 'http://127.0.0.1:8080/api/v1/**' },
+      "/api/v1/**": { proxy: 'http://127.0.0.1:8000/api/v1/**' },
     }
   },
 })

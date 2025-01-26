@@ -1,0 +1,74 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT\n                p.id, \n                p.key, \n                p.prompt, \n                p.model_id,\n                p.max_tokens,\n                p.temperature,\n                p.json_mode,\n                m.model_name,\n                p.created_at, \n                p.updated_at\n            FROM llm_prompts p\n            JOIN models m ON p.model_id = m.id\n            ORDER BY p.created_at\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "key",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "prompt",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "model_id",
+        "ordinal": 3,
+        "type_info": "Integer"
+      },
+      {
+        "name": "max_tokens",
+        "ordinal": 4,
+        "type_info": "Integer"
+      },
+      {
+        "name": "temperature",
+        "ordinal": 5,
+        "type_info": "Float"
+      },
+      {
+        "name": "json_mode",
+        "ordinal": 6,
+        "type_info": "Bool"
+      },
+      {
+        "name": "model_name",
+        "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 8,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "updated_at",
+        "ordinal": 9,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "24e7d1f125d615fd1942d128821e30dfc1c22185ae06a91cb548de27f8cc594b"
+}

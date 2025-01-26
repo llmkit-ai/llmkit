@@ -8,19 +8,18 @@
             <h2 class="text-base/7 font-semibold text-gray-900">
               {{ mode === 'edit' ? 'Edit Prompt' : 'New Prompt' }}
             </h2>
-
             <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
               <!-- Prompt Key Input -->
               <div class="sm:col-span-4">
                 <label for="prompt-key" class="block text-sm/6 font-medium text-gray-900">Prompt key</label>
                 <div class="mt-2">
                   <div class="flex items-center border-2 border-black bg-white">
-                    <input 
-                      v-model="promptKey" 
-                      type="text" 
-                      name="prompt-key" 
-                      id="prompt-key" 
-                      class="block min-w-0 grow p-2 text-base text-gray-900 focus:outline-none sm:text-sm/6" 
+                    <input
+                      v-model="promptKey"
+                      type="text"
+                      name="prompt-key"
+                      id="prompt-key"
+                      class="block min-w-0 grow p-2 text-base text-gray-900 focus:outline-none sm:text-sm/6"
                       placeholder="PROMPT-KEY-HERE"
                     >
                   </div>
@@ -57,7 +56,6 @@
                       />
                     </svg>
                   </button>
-
                   <ul
                     v-if="isOpen"
                     class="absolute z-10 mt-1 max-h-60 w-full overflow-auto border-2 border-black bg-white py-1 text-base"
@@ -93,6 +91,48 @@
                     </li>
                   </ul>
                 </div>
+              </div>
+
+              <!-- LLM Parameters -->
+              <div class="sm:col-span-2">
+                <label for="max-tokens" class="block text-sm/6 font-medium text-gray-900">Max Tokens</label>
+                <div class="mt-2">
+                  <input
+                    v-model.number="maxTokens"
+                    type="number"
+                    min="1"
+                    id="max-tokens"
+                    class="block w-full border-2 border-black p-2 text-base text-gray-900 focus:outline-none sm:text-sm/6"
+                  >
+                </div>
+              </div>
+
+              <div class="sm:col-span-2">
+                <label for="temperature" class="block text-sm/6 font-medium text-gray-900">
+                  Temperature ({{ temperatureValue.toFixed(2) }})
+                </label>
+                <div class="mt-2">
+                  <input
+                    v-model.number="temperatureValue"
+                    type="range"
+                    min="0"
+                    max="2"
+                    step="0.1"
+                    id="temperature"
+                    class="block w-full border-2 border-black p-2 text-base text-gray-900 focus:outline-none sm:text-sm/6"
+                  >
+                </div>
+              </div>
+
+              <div class="sm:col-span-2">
+                <label class="inline-flex items-center gap-2">
+                  <input
+                    v-model="jsonMode"
+                    type="checkbox"
+                    class="border-2 border-black"
+                  >
+                  <span class="text-sm/6 font-medium text-gray-900">JSON Mode</span>
+                </label>
               </div>
 
               <!-- Prompt Content -->
@@ -147,13 +187,24 @@
               <dt class="text-sm/6 font-medium text-gray-900">Model</dt>
               <dd class="mt-1 text-sm/6 text-gray-700 sm:mt-2">{{ selectedModel?.model }} ({{ selectedModel?.provider }})</dd>
             </div>
+            <div class="border-t border-gray-100 px-4 py-6 sm:col-span-1 sm:px-0">
+              <dt class="text-sm/6 font-medium text-gray-900">Max Tokens</dt>
+              <dd class="mt-1 text-sm/6 text-gray-700 sm:mt-2">{{ maxTokens }}</dd>
+            </div>
+            <div class="border-t border-gray-100 px-4 py-6 sm:col-span-1 sm:px-0">
+              <dt class="text-sm/6 font-medium text-gray-900">Temperature</dt>
+              <dd class="mt-1 text-sm/6 text-gray-700 sm:mt-2">{{ temperatureValue.toFixed(2) }}</dd>
+            </div>
+            <div class="border-t border-gray-100 px-4 py-6 sm:col-span-1 sm:px-0">
+              <dt class="text-sm/6 font-medium text-gray-900">JSON Mode</dt>
+              <dd class="mt-1 text-sm/6 text-gray-700 sm:mt-2">{{ jsonMode ? 'Enabled' : 'Disabled' }}</dd>
+            </div>
             <div class="border-t border-gray-100 px-4 py-6 sm:col-span-2 sm:px-0">
               <dt class="text-sm/6 font-medium text-gray-900">Prompt Content</dt>
               <dd class="mt-1 text-sm/6 text-gray-700 sm:mt-2 whitespace-pre-wrap">{{ prompt }}</dd>
             </div>
           </dl>
         </div>
-
         <div class="mt-6 flex justify-end px-4 sm:px-0">
           <button
             type="button"
@@ -184,39 +235,52 @@ const props = defineProps<{
 
 const emit = defineEmits(['cancel', 'edit', 'saved']);
 
+// Form state
 const promptKey = ref(props.prompt?.key || '');
 const prompt = ref(props.prompt?.prompt || '');
 const selectedModelId = ref<number | null>(props.prompt?.model_id || null);
+const maxTokens = ref(props.prompt?.max_tokens || 256);
+const temperatureValue = ref(props.prompt?.temperature || 0.7);
+const jsonMode = ref(props.prompt?.json_mode || false);
 const isLoading = ref(false);
 const isOpen = ref(false);
 
+// Dependencies
 const { createPrompt, updatePrompt } = usePrompts();
 const { models, loading: modelsLoading, fetchModels } = useModels();
 
-const selectedModel = computed(() => 
+// Computed
+const selectedModel = computed(() =>
   models.value?.find(m => m.id === selectedModelId.value) || null
 );
 
-const formIsValid = computed(() => 
-  promptKey.value.trim() !== '' && 
-  prompt.value.trim() !== '' && 
-  selectedModelId.value !== null
+const formIsValid = computed(() =>
+  promptKey.value.trim() !== '' &&
+  prompt.value.trim() !== '' &&
+  selectedModelId.value !== null &&
+  maxTokens.value > 0 &&
+  temperatureValue.value >= 0 &&
+  temperatureValue.value <= 2
 );
 
+// Watchers
 watch(() => props.prompt, (newPrompt) => {
   if (newPrompt) {
     promptKey.value = newPrompt.key;
     prompt.value = newPrompt.prompt;
     selectedModelId.value = newPrompt.model_id;
+    maxTokens.value = newPrompt.max_tokens;
+    temperatureValue.value = newPrompt.temperature;
+    jsonMode.value = newPrompt.json_mode;
   } else {
-    promptKey.value = '';
-    prompt.value = '';
-    selectedModelId.value = null;
+    resetForm();
   }
 }, { immediate: true });
 
+// Lifecycle
 onMounted(fetchModels);
 
+// Methods
 function toggleDropdown() {
   isOpen.value = !isOpen.value;
 }
@@ -226,22 +290,32 @@ function selectModel(model: Model) {
   isOpen.value = false;
 }
 
+function resetForm() {
+  promptKey.value = '';
+  prompt.value = '';
+  selectedModelId.value = null;
+  maxTokens.value = 256;
+  temperatureValue.value = 0.7;
+  jsonMode.value = false;
+}
+
 async function handleSubmit() {
   if (!formIsValid.value || isLoading.value) return;
-
+  
   isLoading.value = true;
   try {
-    const result = props.mode === 'edit' 
-      ? await updatePrompt(props.prompt!.id, {
-          key: promptKey.value,
-          prompt: prompt.value,
-          model_id: selectedModelId.value!
-        })
-      : await createPrompt({
-          key: promptKey.value,
-          prompt: prompt.value,
-          model_id: selectedModelId.value!
-        });
+    const payload = {
+      key: promptKey.value,
+      prompt: prompt.value,
+      model_id: selectedModelId.value!,
+      max_tokens: maxTokens.value,
+      temperature: temperatureValue.value,
+      json_mode: jsonMode.value
+    };
+
+    const result = props.mode === 'edit'
+      ? await updatePrompt(props.prompt!.id, payload)
+      : await createPrompt(payload);
 
     emit('saved', result);
   } finally {

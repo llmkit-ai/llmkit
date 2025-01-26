@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use anyhow::Result;
 
-use crate::db::models::log::LogRow;
+use crate::db::types::log::LogRow;
 
 #[derive(Clone, Debug)]
 pub struct LogRepository {

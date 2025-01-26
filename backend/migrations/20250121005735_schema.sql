@@ -5,15 +5,17 @@ CREATE TABLE models (
     UNIQUE(model_name)     -- Prevent duplicate model entries
 );
 
-
--- Updated prompts table
 CREATE TABLE llm_prompts (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    key TEXT NOT NULL,
-    prompt TEXT NOT NULL,
-    model_id INTEGER NOT NULL,       -- Foreign key to models
+    key TEXT NOT NULL UNIQUE,
+    prompt TEXT NOT NULL,       
+    model_id INTEGER NOT NULL,
+    max_tokens INTEGER NOT NULL DEFAULT 256,
+    temperature REAL NOT NULL DEFAULT 0.7,
+    json_mode BOOLEAN NOT NULL DEFAULT FALSE,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
     FOREIGN KEY (model_id) REFERENCES models(id)
 );
 

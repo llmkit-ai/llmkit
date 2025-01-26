@@ -1,7 +1,6 @@
 use serde::Serialize;
 
-use crate::db::models::prompt::PromptWithModel;
-
+use crate::db::types::prompt::PromptWithModel;
 
 
 #[derive(Debug, Serialize)]
@@ -11,7 +10,10 @@ pub struct PromptResponse {
     pub prompt: String,
     pub model: String,
     pub model_id: i64,
-    pub provider: String
+    pub provider: String,
+    pub max_tokens: i64,
+    pub temperature: f64,
+    pub json_mode: bool
 }
 
 
@@ -24,6 +26,9 @@ impl From<PromptWithModel> for PromptResponse {
             model: prompt.model_name.into(),
             model_id: prompt.model_id,
             provider: prompt.provider,
+            max_tokens: prompt.max_tokens,
+            temperature: prompt.temperature,
+            json_mode: prompt.json_mode,
         }
     }
 }

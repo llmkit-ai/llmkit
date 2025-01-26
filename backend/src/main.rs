@@ -9,13 +9,27 @@ use axum::{
 };
 
 use anyhow::Result;
-use controllers::{logs::{get_api_trace, list_api_traces}, models::list_models, prompts::{create_prompt, delete_prompt, get_prompt, list_prompts, update_prompt}};
+use controllers::{
+    logs::{
+        get_api_trace, 
+        list_api_traces
+    }, 
+    models::list_models, 
+    prompts::{
+        create_prompt, 
+        delete_prompt, 
+        get_prompt, 
+        list_prompts, 
+        update_prompt
+    }
+};
+
 use db::init::DbInit;
 use moka::future::Cache;
 
+pub mod common;
 pub mod db;
 pub mod controllers;
-pub mod models;
 pub mod services;
 
 #[tokio::main]
@@ -30,7 +44,7 @@ async fn main() -> Result<()> {
         .nest("/api/v1", api_v1_routes())
         .with_state(app_state);
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:8080").await?;
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:8000").await?;
 
     println!("listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, router).await.unwrap();

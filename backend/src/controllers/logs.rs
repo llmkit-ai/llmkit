@@ -2,7 +2,10 @@ use axum::{
     extract::{Path, State},
     Json,
 };
-use crate::{models::response::logs::ApiTraceResponse, AppError, AppState};
+
+use crate::{AppError, AppState};
+
+use super::types::response::logs::ApiTraceResponse;
 
 
 pub async fn get_api_trace(

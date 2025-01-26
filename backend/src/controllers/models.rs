@@ -2,11 +2,10 @@ use axum::{
     extract::State,
     Json,
 };
-use crate::{
-    models::response::models::ModelResponse, 
-    AppError, 
-    AppState
-};
+
+use crate::{AppError, AppState};
+
+use super::types::response::models::ModelResponse;
 
 
 pub async fn list_models(

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO llm_prompts (\n                key, \n                prompt, \n                model_id,\n                max_tokens,\n                temperature,\n                json_mode\n            )\n            VALUES (?, ?, ?, ?, ?, ?)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "6e18c1f4b1f7f0c7b739956949858c4e48e6011571f5a8ef03ef0ba8ebc914cd"
+}

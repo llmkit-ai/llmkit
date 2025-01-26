@@ -21,6 +21,9 @@ export const usePrompts = () => {
     key: string
     prompt: string
     model_id: number 
+    max_tokens: number
+    temperature: number
+    json_mode: boolean
   }) => {
     try {
       const newPrompt = await $fetch<Prompt>('/api/v1/prompts', {
@@ -28,7 +31,10 @@ export const usePrompts = () => {
         body: {
           key: promptData.key,
           prompt: promptData.prompt,
-          model_id: promptData.model_id
+          model_id: promptData.model_id,
+          max_tokens: promptData.max_tokens,
+          temperature: promptData.temperature,
+          json_mode: promptData.json_mode
         }
       })
       prompts.value.push(newPrompt)
@@ -43,6 +49,9 @@ export const usePrompts = () => {
     key?: string
     prompt?: string
     model_id?: number 
+    max_tokens: number
+    temperature: number
+    json_mode: boolean
   }) => {
     try {
       const updatedPrompt = await $fetch<Prompt>(`/api/v1/prompts/${id}`, {
@@ -50,7 +59,10 @@ export const usePrompts = () => {
         body: {
           key: updates.key,
           prompt: updates.prompt,
-          model_id: updates.model_id
+          model_id: updates.model_id,
+          max_tokens: updates.max_tokens,
+          temperature: updates.temperature,
+          json_mode: updates.json_mode
         }
       })
       const index = prompts.value.findIndex(p => p.id === id)

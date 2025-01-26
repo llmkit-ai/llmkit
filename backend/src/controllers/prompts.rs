@@ -3,24 +3,24 @@ use axum::{
     Json,
 };
 use serde_json::Value;
-use crate::{
-    models::{
-        request::prompts::{
-            CreatePromptRequest, 
-            UpdatePromptRequest
-        }, 
-        response::prompts::PromptResponse
-    }, 
-    AppError, 
-    AppState
-};
+
+use crate::{services::types::llm_props::LlmProps, AppError, AppState};
+
+use super::types::{request::prompts::{CreatePromptRequest, UpdatePromptRequest}, response::prompts::PromptResponse};
 
 
 pub async fn create_prompt(
     State(state): State<AppState>,
     Json(payload): Json<CreatePromptRequest>,
 ) -> Result<Json<PromptResponse>, AppError> {
-    let id = state.db.prompt.create_prompt(&payload.key, &payload.prompt, payload.model_id).await?;
+    let id = state.db.prompt.create_prompt(
+        &payload.key, 
+        &payload.prompt, 
+        payload.model_id,
+        payload.max_tokens,
+        payload.temperature,
+        payload.json_mode
+    ).await?;
     let prompt = state.db.prompt.get_prompt(id).await
         .map_err(|_| AppError::NotFound("Prompt not found after creation".into()))?;
     Ok(Json(prompt.into()))
@@ -47,7 +47,15 @@ pub async fn update_prompt(
     State(state): State<AppState>,
     Json(payload): Json<UpdatePromptRequest>,
 ) -> Result<Json<PromptResponse>, AppError> {
-    let updated = state.db.prompt.update_prompt(id, &payload.key, &payload.prompt, payload.model_id).await?;
+    let updated = state.db.prompt.update_prompt(
+        id, 
+        &payload.key, 
+        &payload.prompt, 
+        payload.model_id,
+        payload.max_tokens,
+        payload.temperature,
+        payload.json_mode
+    ).await?;
     if !updated {
         return Err(AppError::NotFound("Prompt not found".into()));
     }
@@ -74,7 +82,8 @@ pub async fn execute_prompt(
     Json(payload): Json<Value>,
 ) -> Result<(), AppError> {
     let prompt = state.db.prompt.get_prompt(id).await?;
-    
+    let llm_props = LlmProps::from_prompt(prompt, payload);
+
     // use tera to substitute context
     // run 
 

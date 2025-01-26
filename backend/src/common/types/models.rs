@@ -1,9 +1,3 @@
-#[derive(sqlx::FromRow, Debug, Clone)]
-pub struct ModelRow {
-   pub id: i64,
-   pub model_name: String, 
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ModelName {
    OpenAi(OpenAiModel),
@@ -23,7 +17,7 @@ impl ModelName {
     }
 }
 
-#[derive(sqlx::Type, Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum OpenAiModel {
    Gpt4o202411,
    Gpt4oMini202407,
@@ -31,7 +25,7 @@ pub enum OpenAiModel {
    O1Mini202409,
 }
 
-#[derive(sqlx::Type, Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AnthropicModel {
    Claude35SonnetLatest,
    Claude35Sonnet20241022,
@@ -39,7 +33,7 @@ pub enum AnthropicModel {
    Claude35Haiku20241022,
 }
 
-#[derive(sqlx::Type, Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum GeminiModel {
    Gemini20FlashThinkingExp0121,
    Gemini20FlashExp,
@@ -48,7 +42,7 @@ pub enum GeminiModel {
    Gemini15Pro,
 }
 
-#[derive(sqlx::Type, Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DeepseekModel {
    DeepseekChat,
    DeepseekReasoner,
