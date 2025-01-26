@@ -20,7 +20,7 @@ use controllers::{
     }
 };
 
-use db::init::DbInit;
+use db::{init::DbInit, types::prompt::PromptWithModel};
 use moka::future::Cache;
 
 pub mod common;
@@ -87,12 +87,12 @@ async fn api_version_handler() -> &'static str {
 #[derive(Clone)]
 pub struct AppState {
     pub db: DbInit,
-    pub prompt_cache: Cache<i64, String>,
+    pub prompt_cache: Cache<i64, PromptWithModel>,
 }
 
 impl AppState {
     pub async fn new(data: DbInit) -> Self {
-        let prompt_cache: Cache<i64, String> = Cache::new(500);
+        let prompt_cache: Cache<i64, PromptWithModel> = Cache::new(500);
 
         AppState { db: data, prompt_cache }
     }

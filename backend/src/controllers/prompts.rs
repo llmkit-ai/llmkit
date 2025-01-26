@@ -23,6 +23,10 @@ pub async fn create_prompt(
     ).await?;
     let prompt = state.db.prompt.get_prompt(id).await
         .map_err(|_| AppError::NotFound("Prompt not found after creation".into()))?;
+
+    // add the new prompt to the cache
+    state.prompt_cache.insert(id, prompt.clone()).await;
+
     Ok(Json(prompt.into()))
 }
 
@@ -30,8 +34,15 @@ pub async fn get_prompt(
     Path(id): Path<i64>,
     State(state): State<AppState>,
 ) -> Result<Json<PromptResponse>, AppError> {
-    let prompt = state.db.prompt.get_prompt(id).await
-        .map_err(|_| AppError::NotFound("Prompt not found".into()))?;
+    let prompt = match state.prompt_cache.get(&id).await {
+        Some(p) => p,
+        None => { 
+            let prompt = state.db.prompt.get_prompt(id).await?;
+            state.prompt_cache.insert(id, prompt.clone()).await;
+            prompt
+        }
+    };
+
     Ok(Json(prompt.into()))
 }
 
@@ -56,11 +67,15 @@ pub async fn update_prompt(
         payload.temperature,
         payload.json_mode
     ).await?;
+
     if !updated {
         return Err(AppError::NotFound("Prompt not found".into()));
     }
+
     let prompt = state.db.prompt.get_prompt(id).await
         .map_err(|_| AppError::NotFound("Prompt not found after update".into()))?;
+
+    state.prompt_cache.insert(id, prompt.clone()).await;
 
     Ok(Json(prompt.into()))
 }
@@ -70,9 +85,13 @@ pub async fn delete_prompt(
     State(state): State<AppState>,
 ) -> Result<(), AppError> {
     let deleted = state.db.prompt.delete_prompt(id).await?;
+
     if !deleted {
         return Err(AppError::NotFound("Prompt not found".into()));
     }
+
+    state.prompt_cache.remove(&id).await;
+
     Ok(())
 }
 
@@ -81,7 +100,15 @@ pub async fn execute_prompt(
     State(state): State<AppState>,
     Json(payload): Json<Value>,
 ) -> Result<String, AppError> {
-    let prompt = state.db.prompt.get_prompt(id).await?;
+    let prompt = match state.prompt_cache.get(&id).await {
+        Some(p) => p,
+        None => { 
+            let prompt = state.db.prompt.get_prompt(id).await?;
+            state.prompt_cache.insert(id, prompt.clone()).await;
+            prompt
+        }
+    };
+
     let llm_props = LlmProps::from_prompt(prompt, payload);
     let llm = Llm::new(llm_props).map_err(|_| AppError::InternalServerError("Something went wrong".to_string()))?;
 
