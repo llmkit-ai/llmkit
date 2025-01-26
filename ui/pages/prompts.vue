@@ -19,7 +19,7 @@
             v-if="selectedPrompt?.id === p.id" 
             class="absolute -left-3 inset-y-0 border-l-4 border-black"
           />
-          <button @click="selectedPrompt = p" class="w-full text-left">
+          <button @click="selectedPrompt = p, promptMode = 'view'" class="w-full text-left">
             <p class="text-sm/6 text-black">{{ p.key }}</p>
             <div class="flex items-center gap-x-2 text-xs/5 text-gray-500">
               <p>{{ p.model }}</p>
@@ -33,21 +33,6 @@
       </ul>
     </aside>
 
-    <!-- Empty State -->
-    <!-- <div v-if="prompts && prompts.length === 0" class="h-[60vh] flex items-center justify-center"> -->
-    <!--   <div> -->
-    <!--     <p class="text-center text-gray-600">No prompts available</p> -->
-    <!--     <div class="mt-10 flex justify-center"> -->
-    <!--       <button  -->
-    <!--         @click="handleNewClick"  -->
-    <!--         class="p-2 border-2 border-black hover:bg-gray-50" -->
-    <!--       > -->
-    <!--         Create new prompt -->
-    <!--       </button> -->
-    <!--     </div> -->
-    <!--   </div> -->
-    <!-- </div> -->
-
     <!-- Main Content -->
     <div class="pl-96">
       <ViewAddEditPrompt 
@@ -56,6 +41,7 @@
         @edit="promptMode = 'edit'"
         @cancel="handleCancelClick"
         @saved="handleSaved"
+        @test="handleTest"
       />
     </div>
   </div>
@@ -66,7 +52,13 @@ import type { Prompt } from '~/types/response/prompts';
 
 const selectedPrompt = ref<Prompt | null>(null);
 const selectedPromptCache = ref<Prompt | null>(null);
-const promptMode = ref<'view' | 'edit' | 'new'>('view');
+const promptMode = ref<'view' | 'edit' | 'new' | 'test'>('view');
+
+// Provide emit handlers
+provide('handleCancel', () => handleCancelClick());
+provide('handleEdit', () => promptMode.value = 'edit');
+provide('handleSaved', (prompt: Prompt) => handleSaved(prompt));
+provide('handleTest', () => handleTest());
 
 const { 
   prompts, 
@@ -102,5 +94,9 @@ async function handleSaved(newPrompt: Prompt) {
   await fetchPrompts();
   selectedPrompt.value = newPrompt;
   promptMode.value = 'view';
+}
+
+async function handleTest() {
+  promptMode.value = 'test';
 }
 </script>

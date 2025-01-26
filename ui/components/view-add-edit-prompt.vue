@@ -2,7 +2,7 @@
   <div class="font-mono">
     <!-- Form Section -->
     <div>
-      <form v-if="mode !== 'view'" @submit.prevent="handleSubmit">
+      <form v-if="mode === 'edit' || mode === 'new'" @submit.prevent="handleSubmit">
         <div class="space-y-12">
           <div>
             <h2 class="text-base/7 font-semibold text-gray-900">
@@ -156,7 +156,7 @@
         <div class="mt-6 flex items-center justify-end gap-x-6">
           <button
             type="button"
-            @click="$emit('cancel')"
+            @click="handleCancel"
             class="text-sm/6 text-gray-900"
           >
             Cancel
@@ -171,8 +171,12 @@
         </div>
       </form>
 
+      <div v-if="mode === 'test' && props.prompt">
+        <TestPrompt :prompt="props.prompt" />
+      </div>
+
       <!-- View Mode -->
-      <div v-else>
+      <div v-if="mode === 'view'">
         <div class="px-4 sm:px-0">
           <h3 class="text-base/7 font-semibold text-gray-900">Prompt Details</h3>
           <p class="mt-1 max-w-2xl text-sm/6 text-gray-500">Configuration and content for this prompt.</p>
@@ -205,13 +209,20 @@
             </div>
           </dl>
         </div>
-        <div class="mt-6 flex justify-end px-4 sm:px-0">
+        <div class="mt-6 flex justify-end px-4 sm:px-0 space-x-2">
           <button
             type="button"
-            @click="$emit('edit')"
+            @click="handleEdit"
             class="text-sm/6 p-2 border-2 border-black"
           >
             Edit
+          </button>
+          <button
+            type="button"
+            @click="handleTest"
+            class="text-sm/6 p-2 border-2 border-black bg-black text-white"
+          >
+            Test
           </button>
         </div>
       </div>
@@ -229,11 +240,17 @@ import type { Prompt } from '~/types/response/prompts';
 import type { Model } from '~/types/response/models';
 
 const props = defineProps<{
-  mode: 'view' | 'edit' | 'new'
+  mode: 'view' | 'edit' | 'new' | 'test'
   prompt?: Prompt | null
 }>();
 
-const emit = defineEmits(['cancel', 'edit', 'saved']);
+// Inject event handlers
+const handleCancel = inject('handleCancel', () => {});
+const handleEdit = inject('handleEdit', () => {});
+const handleSaved = inject<(prompt: Prompt) => void>('handleSaved', () => {
+  console.error('handleSaved not provided');
+});
+const handleTest = inject('handleTest', () => {});
 
 // Form state
 const promptKey = ref(props.prompt?.key || '');
@@ -317,7 +334,7 @@ async function handleSubmit() {
       ? await updatePrompt(props.prompt!.id, payload)
       : await createPrompt(payload);
 
-    emit('saved', result);
+    handleSaved(result)
   } finally {
     isLoading.value = false;
   }

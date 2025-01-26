@@ -8,62 +8,6 @@ use tera::{Tera, Context as TeraContext};
 use crate::common::types::models::ModelName;
 use super::types::llm_props::LlmProps;
 
-#[derive(Debug)]
-struct Message {
-    role: String,
-    content: String,
-}
-
-fn parse_rendered_prompt(rendered_prompt: &str) -> Result<Vec<Message>, Error> {
-    let mut messages = Vec::new();
-    let mut current_role = None;
-    let mut current_content = String::new();
-
-    for line in rendered_prompt.lines() {
-        let line = line.trim();
-        if let Some(role) = parse_role_line(line) {
-            if let Some(prev_role) = current_role.take() {
-                messages.push(Message {
-                    role: prev_role,
-                    content: current_content.trim().to_string(),
-                });
-                current_content.clear();
-            }
-            current_role = Some(role);
-        } else if !line.is_empty() {
-            current_content.push_str(line);
-            current_content.push('\n');
-        }
-    }
-
-    if let Some(role) = current_role {
-        messages.push(Message {
-            role,
-            content: current_content.trim().to_string(),
-        });
-    }
-
-    if messages.is_empty() {
-        Err(Error::NoRoleSections)
-    } else {
-        Ok(messages)
-    }
-}
-
-fn parse_role_line(line: &str) -> Option<String> {
-    const PREFIX: &str = "<!-- role:";
-    const SUFFIX: &str = "-->";
-    
-    if line.starts_with(PREFIX) && line.ends_with(SUFFIX) {
-        let role = line[PREFIX.len()..line.len()-SUFFIX.len()].trim().to_string();
-        match role.as_str() {
-            "system" | "user" | "assistant" => Some(role),
-            _ => None
-        }
-    } else {
-        None
-    }
-}
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -103,7 +47,6 @@ impl Llm {
     pub fn new(props: LlmProps) -> Result<Self, Error> {
         dotenv().ok();
         
-        // Initialize Tera with the prompt template
         let mut tera = Tera::default();
         tera.add_raw_template("prompt", &props.prompt)
             .map_err(|e| Error::Template(e))?;
@@ -128,6 +71,10 @@ impl Llm {
             serde_json::from_str(&text).map_err(Into::into)
         })
         .await
+    }
+
+    pub async fn stream(&self) -> Result<String, Error> {
+        todo!();
     }
 
     async fn send_request(&self, format: ResponseFormat) -> Result<String, Error> {
@@ -185,6 +132,9 @@ impl Llm {
         if format == ResponseFormat::Json {
             body["response_format"] = serde_json::json!({ "type": "json_object" });
         }
+
+        body["temperature"] = self.props.temperature.into();
+        body["max_completion_tokens"] = self.props.max_tokens.into();
         
         Ok(self.client
             .post("https://api.openai.com/v1/chat/completions")
@@ -227,18 +177,8 @@ impl Llm {
         });
 
         // Add optional parameters
-        if let Some(stop) = self.props.context.get("stop_sequences") {
-            body["stop_sequences"] = stop.clone();
-        }
-        if let Some(temp) = self.props.context.get("temperature") {
-            body["temperature"] = temp.clone();
-        }
-        if let Some(top_p) = self.props.context.get("top_p") {
-            body["top_p"] = top_p.clone();
-        }
-        if let Some(top_k) = self.props.context.get("top_k") {
-            body["top_k"] = top_k.clone();
-        }
+        body["temperature"] = self.props.temperature.into();
+        body["max_tokens"] = self.props.max_tokens.into();
 
         Ok(self.client
             .post("https://api.anthropic.com/v1/messages")
@@ -265,18 +205,8 @@ impl Llm {
 
         // Prepare generation config
         let mut generation_config = json!({
-            "temperature": self.props.context.get("temperature")
-                .and_then(|v| v.as_f64())
-                .unwrap_or(1.0),
-            "topK": self.props.context.get("top_k")
-                .and_then(|v| v.as_i64())
-                .unwrap_or(64),
-            "topP": self.props.context.get("top_p")
-                .and_then(|v| v.as_f64())
-                .unwrap_or(0.95),
-            "maxOutputTokens": self.props.context.get("max_tokens")
-                .and_then(|v| v.as_i64())
-                .unwrap_or(8192),
+            "temperature": self.props.temperature,
+            "maxOutputTokens": self.props.max_tokens
         });
 
         if format == ResponseFormat::Json {
@@ -338,6 +268,9 @@ impl Llm {
             "model": model,
             "messages": messages_json
         });
+
+        body["temperature"] = self.props.temperature.into();
+        body["max_tokens"] = self.props.max_tokens.into();
 
         if format == ResponseFormat::Json {
             body["response_format"] = serde_json::json!({ "type": "json_object" });
@@ -419,6 +352,63 @@ impl Llm {
     }
 }
 
+#[derive(Debug)]
+struct Message {
+    role: String,
+    content: String,
+}
+
+fn parse_rendered_prompt(rendered_prompt: &str) -> Result<Vec<Message>, Error> {
+    let mut messages = Vec::new();
+    let mut current_role = None;
+    let mut current_content = String::new();
+
+    for line in rendered_prompt.lines() {
+        let line = line.trim();
+        if let Some(role) = parse_role_line(line) {
+            if let Some(prev_role) = current_role.take() {
+                messages.push(Message {
+                    role: prev_role,
+                    content: current_content.trim().to_string(),
+                });
+                current_content.clear();
+            }
+            current_role = Some(role);
+        } else if !line.is_empty() {
+            current_content.push_str(line);
+            current_content.push('\n');
+        }
+    }
+
+    if let Some(role) = current_role {
+        messages.push(Message {
+            role,
+            content: current_content.trim().to_string(),
+        });
+    }
+
+    if messages.is_empty() {
+        Err(Error::NoRoleSections)
+    } else {
+        Ok(messages)
+    }
+}
+
+fn parse_role_line(line: &str) -> Option<String> {
+    const PREFIX: &str = "<!-- role:";
+    const SUFFIX: &str = "-->";
+    
+    if line.starts_with(PREFIX) && line.ends_with(SUFFIX) {
+        let role = line[PREFIX.len()..line.len()-SUFFIX.len()].trim().to_string();
+        match role.as_str() {
+            "system" | "user" | "assistant" => Some(role),
+            _ => None
+        }
+    } else {
+        None
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -484,7 +474,6 @@ mod tests {
         assert_eq!(result.unwrap(), "test response");
     }
 
-    // Update the test's create_test_props function
     async fn create_test_props(model: ModelName) -> LlmProps {
         LlmProps {
             model,
@@ -495,6 +484,9 @@ mod tests {
             context: json!({
                 "name": "World",
             }),
+            temperature: 0.5,
+            max_tokens: 100,
+            json_mode: false
         }
     }
 
@@ -617,6 +609,9 @@ mod tests {
             model: ModelName::OpenAi(OpenAiModel::Gpt4oMini202407),
             prompt: "test".to_string(),
             context: json!({}),
+            temperature: 0.5,
+            max_tokens: 100,
+            json_mode: false
         };
         let llm = Llm::new(props).unwrap();
         

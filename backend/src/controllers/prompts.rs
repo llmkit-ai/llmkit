@@ -4,7 +4,7 @@ use axum::{
 };
 use serde_json::Value;
 
-use crate::{services::types::llm_props::LlmProps, AppError, AppState};
+use crate::{services::{llm::Llm, types::llm_props::LlmProps}, AppError, AppState};
 
 use super::types::{request::prompts::{CreatePromptRequest, UpdatePromptRequest}, response::prompts::PromptResponse};
 
@@ -80,12 +80,14 @@ pub async fn execute_prompt(
     Path(id): Path<i64>,
     State(state): State<AppState>,
     Json(payload): Json<Value>,
-) -> Result<(), AppError> {
+) -> Result<String, AppError> {
     let prompt = state.db.prompt.get_prompt(id).await?;
     let llm_props = LlmProps::from_prompt(prompt, payload);
+    let llm = Llm::new(llm_props).map_err(|_| AppError::InternalServerError("Something went wrong".to_string()))?;
 
-    // use tera to substitute context
-    // run 
+    let res = llm.text()
+        .await
+        .map_err(|_| AppError::InternalServerError("Something went wrong".to_string()))?;
 
-    Ok(())
+    Ok(res)
 }

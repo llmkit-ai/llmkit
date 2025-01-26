@@ -84,6 +84,18 @@ export const usePrompts = () => {
     }
   }
 
+  const executePrompt = async (id: number, body: any) => {
+    try {
+      return await $fetch<string>(`/api/v1/prompts/execute/${id}`, { 
+        method: 'POST',
+        body 
+      })
+    } catch (err) {
+      error.value = 'Failed to execute prompt'
+      throw err
+    }
+  }
+
   return {
     prompts,
     loading,
@@ -91,6 +103,7 @@ export const usePrompts = () => {
     fetchPrompts,
     createPrompt,
     updatePrompt,
-    deletePrompt
+    deletePrompt,
+    executePrompt
   }
 }

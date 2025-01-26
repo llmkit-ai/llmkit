@@ -16,11 +16,7 @@ use controllers::{
     }, 
     models::list_models, 
     prompts::{
-        create_prompt, 
-        delete_prompt, 
-        get_prompt, 
-        list_prompts, 
-        update_prompt
+        create_prompt, delete_prompt, execute_prompt, get_prompt, list_prompts, update_prompt
     }
 };
 
@@ -56,14 +52,14 @@ fn api_v1_routes() -> Router<AppState> {
     Router::new()
         .route("/", get(api_version_handler))
         .nest("/prompts", prompt_routes())
+        .nest("/prompts/execute", execute_routes())
         .nest("/models", model_routes())
         .nest("/logs", logs_routes())
-        .nest("/execute", execute_routes())
 }
 
 fn execute_routes() -> Router<AppState> {
     Router::new()
-        .route("/{id}", post(create_prompt))
+        .route("/{id}", post(execute_prompt))
 }
 
 fn prompt_routes() -> Router<AppState> {
