@@ -1,5 +1,6 @@
 use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
+use tokio::sync::mpsc::Sender;
 use tokio_retry::{Retry, strategy::{ExponentialBackoff, jitter}};
 use std::time::Duration;
 use dotenv::dotenv;
@@ -73,12 +74,12 @@ impl Llm {
         .await
     }
 
-    pub async fn stream(&self) -> Result<String, Error> {
+    pub async fn stream(&self, sender: Sender<String>) -> Result<String, Error> {
+        // let (tx, mut rx) = mpsc::channel(10);
         todo!();
     }
 
     async fn send_request(&self, format: ResponseFormat) -> Result<String, Error> {
-        // Render the prompt template with context
         let mut tera_ctx = TeraContext::new();
         if let Value::Object(context) = &self.props.context {
             for (k, v) in context {

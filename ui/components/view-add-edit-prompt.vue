@@ -205,7 +205,7 @@
             </div>
             <div class="border-t border-gray-100 px-4 py-6 sm:col-span-2 sm:px-0">
               <dt class="text-sm/6 font-medium text-gray-900">Prompt Content</dt>
-              <dd class="mt-1 text-sm/6 text-gray-700 sm:mt-2 whitespace-pre-wrap">{{ prompt }}</dd>
+              <dd class="mt-1 text-sm/6 text-gray-700 sm:mt-2 whitespace-pre-wrap bg-gray-100 p-2">{{ prompt }}</dd>
             </div>
           </dl>
         </div>

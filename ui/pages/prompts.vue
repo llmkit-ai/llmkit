@@ -2,7 +2,7 @@
   <div v-if="!promptsLoading" class="font-mono">
     <!-- Sidebar -->
     <aside 
-      class="bg-gray-50 fixed inset-y-0 left-72 hidden w-96 overflow-y-auto border-r border-gray-200 px-4 py-6 sm:px-6 lg:px-8 xl:block"
+      class="bg-gray-50 fixed inset-y-0 left-72 w-96 overflow-y-auto border-r border-gray-200 px-4 py-6 sm:px-6 lg:px-8 xl:block"
     >
       <div class="flex justify-between items-center">
         <h2 class="font-mono font-bold">Prompts</h2>

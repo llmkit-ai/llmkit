@@ -109,12 +109,24 @@ pub async fn execute_prompt(
         }
     };
 
-    let llm_props = LlmProps::from_prompt(prompt, payload);
+    let llm_props = LlmProps::from_prompt(prompt.clone(), payload);
     let llm = Llm::new(llm_props).map_err(|_| AppError::InternalServerError("Something went wrong".to_string()))?;
 
-    let res = llm.text()
-        .await
-        .map_err(|_| AppError::InternalServerError("Something went wrong".to_string()))?;
+    match prompt.json_mode {
+        true => {
+            let res: Value = llm.json()
+                .await
+                .map_err(|_| AppError::InternalServerError("Something went wrong".to_string()))?;
 
-    Ok(res)
+            let res = serde_json::to_string(&res)
+                .map_err(|_| AppError::InternalServerError("Something went wrong".to_string()))?;
+
+            Ok(res)
+        },
+        false => {
+            Ok(llm.text()
+                .await
+                .map_err(|_| AppError::InternalServerError("Something went wrong".to_string()))?)
+        }
+    }
 }
