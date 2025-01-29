@@ -5,21 +5,21 @@
       <form v-if="mode === 'edit' || mode === 'new'" @submit.prevent="handleSubmit">
         <div class="space-y-12">
           <div>
-            <h2 class="text-base/7 font-semibold text-gray-900">
+            <h2 class="text-base/7 font-semibold text-gray-900 dark:text-white">
               {{ mode === 'edit' ? 'Edit Prompt' : 'New Prompt' }}
             </h2>
             <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
               <!-- Prompt Key Input -->
               <div class="sm:col-span-4">
-                <label for="prompt-key" class="block text-sm/6 font-medium text-gray-900">Prompt key</label>
+                <label for="prompt-key" class="block text-sm/6 font-medium text-gray-900 dark:text-white">Prompt key</label>
                 <div class="mt-2">
-                  <div class="flex items-center border-2 border-black bg-white">
+                  <div class="flex items-center border-2 border-black dark:border-white bg-white dark:bg-gray-800">
                     <input
                       v-model="promptKey"
                       type="text"
                       name="prompt-key"
                       id="prompt-key"
-                      class="block min-w-0 grow p-2 text-base text-gray-900 focus:outline-none sm:text-sm/6"
+                      class="block min-w-0 grow p-2 text-base text-gray-900 dark:text-white bg-white dark:bg-gray-800 focus:outline-none sm:text-sm/6"
                       placeholder="PROMPT-KEY-HERE"
                     >
                   </div>
@@ -28,11 +28,11 @@
 
               <!-- Model Selection -->
               <div class="sm:col-span-4">
-                <label for="model" class="block text-sm/6 font-medium text-gray-900">Select model</label>
+                <label for="model" class="block text-sm/6 font-medium text-gray-900 dark:text-white">Select model</label>
                 <div class="relative mt-2">
                   <button
                     type="button"
-                    class="grid w-full cursor-default grid-cols-1 border-2 border-black bg-white p-2 text-left text-gray-900"
+                    class="grid w-full cursor-default grid-cols-1 border-2 border-black dark:border-white bg-white dark:bg-gray-800 p-2 text-left text-gray-900 dark:text-white"
                     aria-haspopup="listbox"
                     aria-expanded="true"
                     aria-labelledby="listbox-label"
@@ -40,10 +40,10 @@
                   >
                     <span class="col-start-1 row-start-1 flex w-full gap-2 pr-6">
                       <span class="truncate">{{ selectedModel ? selectedModel.model : 'Select a model' }}</span>
-                      <span v-if="selectedModel" class="truncate text-gray-500">{{ selectedModel.provider }}</span>
+                      <span v-if="selectedModel" class="truncate text-gray-500 dark:text-gray-400">{{ selectedModel.provider }}</span>
                     </span>
                     <svg
-                      class="col-start-1 row-start-1 size-5 self-center justify-self-end text-gray-500 sm:size-4"
+                      class="col-start-1 row-start-1 size-5 self-center justify-self-end text-gray-500 dark:text-gray-400 sm:size-4"
                       viewBox="0 0 16 16"
                       fill="currentColor"
                       aria-hidden="true"
@@ -58,7 +58,7 @@
                   </button>
                   <ul
                     v-if="isOpen"
-                    class="absolute z-10 mt-1 max-h-60 w-full overflow-auto border-2 border-black bg-white py-1 text-base"
+                    class="absolute z-10 mt-1 max-h-60 w-full overflow-auto border-2 border-black dark:border-white bg-white dark:bg-gray-800 py-1 text-base"
                     tabindex="-1"
                     role="listbox"
                     aria-labelledby="listbox-label"
@@ -66,19 +66,19 @@
                     <li
                       v-for="model in models"
                       :key="model.id"
-                      class="relative cursor-default select-none py-2 pl-3 pr-9 text-gray-900"
-                      :class="{ 'bg-black text-white': model.id === selectedModel?.id }"
+                      class="relative cursor-default select-none py-2 pl-3 pr-9 text-gray-900 dark:text-white"
+                      :class="{ 'bg-black dark:bg-white text-white dark:text-black': model.id === selectedModel?.id }"
                       role="option"
                       @click="selectModel(model)"
                     >
                       <div class="flex">
                         <span class="truncate">{{ model.model }}</span>
-                        <span class="ml-2 truncate text-gray-500">{{ model.provider }}</span>
+                        <span class="ml-2 truncate text-gray-500 dark:text-gray-400">{{ model.provider }}</span>
                       </div>
                       <span
                         v-if="model.id === selectedModel?.id"
                         class="absolute inset-y-0 right-0 flex items-center pr-4"
-                        :class="{'text-white': model.id === selectedModel?.id, 'text-black': model.id !== selectedModel?.id}"
+                        :class="{'text-white dark:text-black': model.id === selectedModel?.id, 'text-black dark:text-white': model.id !== selectedModel?.id}"
                       >
                         <svg class="size-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                           <path
@@ -95,20 +95,20 @@
 
               <!-- LLM Parameters -->
               <div class="sm:col-span-2">
-                <label for="max-tokens" class="block text-sm/6 font-medium text-gray-900">Max Tokens</label>
+                <label for="max-tokens" class="block text-sm/6 font-medium text-gray-900 dark:text-white">Max Tokens</label>
                 <div class="mt-2">
                   <input
                     v-model.number="maxTokens"
                     type="number"
                     min="1"
                     id="max-tokens"
-                    class="block w-full border-2 border-black p-2 text-base text-gray-900 focus:outline-none sm:text-sm/6"
+                    class="block w-full border-2 border-black dark:border-white bg-white dark:bg-gray-800 p-2 text-base text-gray-900 dark:text-white focus:outline-none sm:text-sm/6"
                   >
                 </div>
               </div>
 
               <div class="sm:col-span-2">
-                <label for="temperature" class="block text-sm/6 font-medium text-gray-900">
+                <label for="temperature" class="block text-sm/6 font-medium text-gray-900 dark:text-white">
                   Temperature ({{ temperatureValue.toFixed(2) }})
                 </label>
                 <div class="mt-2">
@@ -119,7 +119,7 @@
                     max="2"
                     step="0.1"
                     id="temperature"
-                    class="block w-full border-2 border-black p-2 text-base text-gray-900 focus:outline-none sm:text-sm/6"
+                    class="block w-full border-2 border-black dark:border-white bg-white dark:bg-gray-800 p-2 text-base text-gray-900 dark:text-white focus:outline-none sm:text-sm/6"
                   >
                 </div>
               </div>
@@ -129,22 +129,22 @@
                   <input
                     v-model="jsonMode"
                     type="checkbox"
-                    class="border-2 border-black"
+                    class="border-2 border-black dark:border-white"
                   >
-                  <span class="text-sm/6 font-medium text-gray-900">JSON Mode</span>
+                  <span class="text-sm/6 font-medium text-gray-900 dark:text-white">JSON Mode</span>
                 </label>
               </div>
 
               <!-- Prompt Content -->
               <div class="col-span-full">
-                <label for="prompt" class="block text-sm/6 font-medium text-gray-900">Prompt</label>
+                <label for="prompt" class="block text-sm/6 font-medium text-gray-900 dark:text-white">Prompt</label>
                 <div class="mt-2">
                   <textarea
                     v-model="prompt"
                     name="prompt"
                     id="prompt"
                     rows="15"
-                    class="block w-full border-2 border-black p-2 text-base text-gray-900 focus:outline-none sm:text-sm/6"
+                    class="block w-full border-2 border-black dark:border-white bg-white dark:bg-gray-800 p-2 text-base text-gray-900 dark:text-white focus:outline-none sm:text-sm/6"
                   />
                 </div>
               </div>
@@ -157,14 +157,14 @@
           <button
             type="button"
             @click="handleCancel"
-            class="text-sm/6 text-gray-900"
+            class="text-sm/6 text-gray-900 dark:text-gray-300 hover:text-black dark:hover:text-white"
           >
             Cancel
           </button>
           <button
             :disabled="!formIsValid || isLoading"
             type="submit"
-            class="text-sm/6 p-2 border-2 border-black disabled:opacity-50"
+            class="text-sm/6 p-2 border-2 border-black dark:border-white disabled:opacity-50 bg-white dark:bg-gray-800 text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
           >
             {{ isLoading ? 'Saving...' : mode === 'edit' ? 'Update' : 'Save' }}
           </button>
@@ -178,34 +178,34 @@
       <!-- View Mode -->
       <div v-if="mode === 'view'">
         <div class="px-4 sm:px-0">
-          <h3 class="text-base/7 font-semibold text-gray-900">Prompt Details</h3>
-          <p class="mt-1 max-w-2xl text-sm/6 text-gray-500">Configuration and content for this prompt.</p>
+          <h3 class="text-base/7 font-semibold text-gray-900 dark:text-white">Prompt Details</h3>
+          <p class="mt-1 max-w-2xl text-sm/6 text-gray-500 dark:text-gray-400">Configuration and content for this prompt.</p>
         </div>
         <div class="mt-6">
           <dl class="grid grid-cols-1 sm:grid-cols-2">
-            <div class="border-t border-gray-100 px-4 py-6 sm:col-span-1 sm:px-0">
-              <dt class="text-sm/6 font-medium text-gray-900">Prompt Key</dt>
-              <dd class="mt-1 text-sm/6 text-gray-700 sm:mt-2">{{ promptKey }}</dd>
+            <div class="border-t border-gray-100 dark:border-gray-700 px-4 py-6 sm:col-span-1 sm:px-0">
+              <dt class="text-sm/6 font-medium text-gray-900 dark:text-white">Prompt Key</dt>
+              <dd class="mt-1 text-sm/6 text-gray-700 dark:text-gray-300 sm:mt-2">{{ promptKey }}</dd>
             </div>
-            <div class="border-t border-gray-100 px-4 py-6 sm:col-span-1 sm:px-0">
-              <dt class="text-sm/6 font-medium text-gray-900">Model</dt>
-              <dd class="mt-1 text-sm/6 text-gray-700 sm:mt-2">{{ selectedModel?.model }} ({{ selectedModel?.provider }})</dd>
+            <div class="border-t border-gray-100 dark:border-gray-700 px-4 py-6 sm:col-span-1 sm:px-0">
+              <dt class="text-sm/6 font-medium text-gray-900 dark:text-white">Model</dt>
+              <dd class="mt-1 text-sm/6 text-gray-700 dark:text-gray-300 sm:mt-2">{{ selectedModel?.model }} ({{ selectedModel?.provider }})</dd>
             </div>
-            <div class="border-t border-gray-100 px-4 py-6 sm:col-span-1 sm:px-0">
-              <dt class="text-sm/6 font-medium text-gray-900">Max Tokens</dt>
-              <dd class="mt-1 text-sm/6 text-gray-700 sm:mt-2">{{ maxTokens }}</dd>
+            <div class="border-t border-gray-100 dark:border-gray-700 px-4 py-6 sm:col-span-1 sm:px-0">
+              <dt class="text-sm/6 font-medium text-gray-900 dark:text-white">Max Tokens</dt>
+              <dd class="mt-1 text-sm/6 text-gray-700 dark:text-gray-300 sm:mt-2">{{ maxTokens }}</dd>
             </div>
-            <div class="border-t border-gray-100 px-4 py-6 sm:col-span-1 sm:px-0">
-              <dt class="text-sm/6 font-medium text-gray-900">Temperature</dt>
-              <dd class="mt-1 text-sm/6 text-gray-700 sm:mt-2">{{ temperatureValue.toFixed(2) }}</dd>
+            <div class="border-t border-gray-100 dark:border-gray-700 px-4 py-6 sm:col-span-1 sm:px-0">
+              <dt class="text-sm/6 font-medium text-gray-900 dark:text-white">Temperature</dt>
+              <dd class="mt-1 text-sm/6 text-gray-700 dark:text-gray-300 sm:mt-2">{{ temperatureValue.toFixed(2) }}</dd>
             </div>
-            <div class="border-t border-gray-100 px-4 py-6 sm:col-span-1 sm:px-0">
-              <dt class="text-sm/6 font-medium text-gray-900">JSON Mode</dt>
-              <dd class="mt-1 text-sm/6 text-gray-700 sm:mt-2">{{ jsonMode ? 'Enabled' : 'Disabled' }}</dd>
+            <div class="border-t border-gray-100 dark:border-gray-700 px-4 py-6 sm:col-span-1 sm:px-0">
+              <dt class="text-sm/6 font-medium text-gray-900 dark:text-white">JSON Mode</dt>
+              <dd class="mt-1 text-sm/6 text-gray-700 dark:text-gray-300 sm:mt-2">{{ jsonMode ? 'Enabled' : 'Disabled' }}</dd>
             </div>
-            <div class="border-t border-gray-100 px-4 py-6 sm:col-span-2 sm:px-0">
-              <dt class="text-sm/6 font-medium text-gray-900">Prompt Content</dt>
-              <dd class="mt-1 text-sm/6 text-gray-700 sm:mt-2 whitespace-pre-wrap bg-gray-100 p-2">{{ prompt }}</dd>
+            <div class="border-t border-gray-100 dark:border-gray-700 px-4 py-6 sm:col-span-2 sm:px-0">
+              <dt class="text-sm/6 font-medium text-gray-900 dark:text-white">Prompt Content</dt>
+              <dd class="mt-1 text-sm/6 text-gray-700 dark:text-gray-300 sm:mt-2 whitespace-pre-wrap bg-gray-100 dark:bg-gray-800 p-2">{{ prompt }}</dd>
             </div>
           </dl>
         </div>
@@ -213,14 +213,14 @@
           <button
             type="button"
             @click="handleEdit"
-            class="text-sm/6 p-2 border-2 border-black"
+            class="text-sm/6 p-2 border-2 border-black dark:border-white text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800"
           >
             Edit
           </button>
           <button
             type="button"
             @click="handleTest"
-            class="text-sm/6 p-2 border-2 border-black bg-black text-white"
+            class="text-sm/6 p-2 border-2 border-black dark:border-white bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200"
           >
             Test
           </button>

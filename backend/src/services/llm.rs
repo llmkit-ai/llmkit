@@ -2,9 +2,11 @@ use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
 use tokio::sync::mpsc::Sender;
 use tokio_retry::{Retry, strategy::{ExponentialBackoff, jitter}};
-use std::time::Duration;
+use futures_util::StreamExt;
 use dotenv::dotenv;
 use tera::{Tera, Context as TeraContext};
+
+use std::time::Duration;
 
 use crate::common::types::models::ModelName;
 use super::types::llm_props::LlmProps;
@@ -92,10 +94,10 @@ impl Llm {
 
         let model_name: String = self.props.model.clone().into();
         let request = match &self.props.model {
-            ModelName::OpenAi(_) => self.build_openai_request(&model_name, format, &messages),
-            ModelName::Anthropic(_) => self.build_anthropic_request(&model_name, format, &messages),
-            ModelName::Gemini(_) => self.build_google_request(&model_name, format, &messages),
-            ModelName::Deepseek(_) => self.build_deepseek_request(&model_name, format, &messages),
+            ModelName::OpenAi(_) => self.build_openai_request(&model_name, format, &messages, false),
+            ModelName::Anthropic(_) => self.build_anthropic_request(&model_name, format, &messages, false),
+            ModelName::Gemini(_) => self.build_google_request(&model_name, format, &messages, false),
+            ModelName::Deepseek(_) => self.build_deepseek_request(&model_name, format, &messages, false),
         }?;
 
         let response = request.send().await?;
@@ -114,11 +116,46 @@ impl Llm {
         }
     }
 
+    async fn send_request_stream(&self, format: ResponseFormat) -> Result<(), Error> {
+        let mut tera_ctx = TeraContext::new();
+        if let Value::Object(context) = &self.props.context {
+            for (k, v) in context {
+                tera_ctx.insert(k, v);
+            }
+        }
+        
+        let rendered_prompt = self.tera.render("prompt", &tera_ctx)?;
+        let messages = parse_rendered_prompt(&rendered_prompt)?;
+
+        let model_name: String = self.props.model.clone().into();
+        let request = match &self.props.model {
+            ModelName::OpenAi(_) => self.build_openai_request(&model_name, format, &messages, true),
+            ModelName::Anthropic(_) => self.build_anthropic_request(&model_name, format, &messages, true),
+            ModelName::Gemini(_) => self.build_google_request(&model_name, format, &messages, true),
+            ModelName::Deepseek(_) => self.build_deepseek_request(&model_name, format, &messages, true),
+        }?;
+
+        let res = request
+            .send()
+            .await?
+            .error_for_status()?;
+
+        let mut res = res.bytes_stream();
+        
+        while let Some(chunk) = res.next().await {
+            let chunk = chunk?;
+            println!("{:?}", std::str::from_utf8(&chunk));
+        }
+
+        Ok(())        
+    }
+
     fn build_openai_request(
         &self,
         model: &str,
         format: ResponseFormat,
         messages: &[Message],
+        streaming: bool
     ) -> Result<reqwest::RequestBuilder, Error> {
         let api_key = std::env::var("OPENAI_API_KEY").map_err(|_| Error::Auth)?;
         let messages_json: Vec<_> = messages.iter()
@@ -127,7 +164,8 @@ impl Llm {
 
         let mut body = serde_json::json!({
             "model": model,
-            "messages": messages_json
+            "messages": messages_json,
+            "stream": streaming
         });
 
         if format == ResponseFormat::Json {
@@ -148,6 +186,7 @@ impl Llm {
         model: &str,
         _format: ResponseFormat,
         messages: &[Message],
+        streaming: bool
     ) -> Result<reqwest::RequestBuilder, Error> {
         let api_key = std::env::var("ANTHROPIC_API_KEY").map_err(|_| Error::Auth)?;
         
@@ -175,6 +214,7 @@ impl Llm {
             "model": model,
             "messages": messages_json,
             "system": system,
+            "stream": streaming
         });
 
         // Add optional parameters
@@ -193,9 +233,10 @@ impl Llm {
         model: &str,
         format: ResponseFormat,
         messages: &[Message],
+        streaming: bool
     ) -> Result<reqwest::RequestBuilder, Error> {
         let api_key = std::env::var("GOOGLE_API_KEY").map_err(|_| Error::Auth)?;
-        
+
         // Extract system messages and combine them
         let system_messages: Vec<String> = messages
             .iter()
@@ -244,13 +285,22 @@ impl Llm {
             }
         }
 
-        Ok(self.client
-            .post(&format!(
-                "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent",
-                model
-            ))
-            .query(&[("key", api_key)])
-            .json(&body))
+        match streaming {
+            true => {
+                let url = &format!("https://generativelanguage.googleapis.com/v1beta/models/{}:streamGenerateContent", model);
+                Ok(self.client
+                    .get(url)
+                    .query(&[("key", api_key)])
+                    .json(&body))
+            },
+            false => {
+                let url = &format!("https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent", model);
+                Ok(self.client
+                    .post(url)
+                    .query(&[("key", api_key)])
+                    .json(&body))
+            }
+        }
     }
 
     fn build_deepseek_request(
@@ -258,6 +308,7 @@ impl Llm {
         model: &str,
         format: ResponseFormat,
         messages: &[Message],
+        streaming: bool
     ) -> Result<reqwest::RequestBuilder, Error> {
         let api_key = std::env::var("DEEPSEEK_API_KEY").map_err(|_| Error::Auth)?;
 
@@ -267,7 +318,8 @@ impl Llm {
 
         let mut body = serde_json::json!({
             "model": model,
-            "messages": messages_json
+            "messages": messages_json,
+            "stream": streaming
         });
 
         body["temperature"] = self.props.temperature.into();

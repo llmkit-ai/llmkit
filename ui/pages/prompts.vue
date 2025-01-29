@@ -2,14 +2,13 @@
   <div v-if="!promptsLoading" class="font-mono">
     <!-- Sidebar -->
     <aside 
-      class="bg-gray-50 fixed inset-y-0 left-72 w-96 overflow-y-auto border-r border-gray-200 px-4 py-6 sm:px-6 lg:px-8 xl:block"
+      class="bg-gray-50 dark:bg-gray-800 fixed inset-y-0 left-72 w-96 overflow-y-auto border-r border-gray-200 dark:border-gray-700 px-4 py-6 sm:px-6 lg:px-8 xl:block"
     >
       <div class="flex justify-between items-center">
-        <h2 class="font-mono font-bold">Prompts</h2>
-        <button @click="handleNewClick" class="text-sm">+ New prompt</button>
+        <h2 class="font-mono font-bold text-black dark:text-white">Prompts</h2>
+        <button @click="handleNewClick" class="text-sm text-black dark:text-gray-200 hover:text-gray-700 dark:hover:text-gray-300">+ New prompt</button>
       </div>
-
-      <ul v-if="prompts && prompts.length > 0" role="list" class="mt-5 space-y-3 divide-y divide-gray-100">
+      <ul v-if="prompts && prompts.length > 0" role="list" class="mt-5 space-y-3 divide-y divide-gray-100 dark:divide-gray-700">
         <li 
           v-for="p in prompts" 
           :key="p.id"
@@ -17,11 +16,11 @@
         >
           <div 
             v-if="selectedPrompt?.id === p.id" 
-            class="absolute -left-3 inset-y-0 border-l-4 border-black"
+            class="absolute -left-3 inset-y-0 border-l-4 border-black dark:border-white"
           />
           <button @click="selectedPrompt = p, promptMode = 'view'" class="w-full text-left">
-            <p class="text-sm/6 text-black">{{ p.key }}</p>
-            <div class="flex items-center gap-x-2 text-xs/5 text-gray-500">
+            <p class="text-sm/6 text-black dark:text-white">{{ p.key }}</p>
+            <div class="flex items-center gap-x-2 text-xs/5 text-gray-500 dark:text-gray-400">
               <p>{{ p.model }}</p>
               <svg viewBox="0 0 2 2" class="size-0.5 fill-current">
                 <circle cx="1" cy="1" r="1" />
@@ -32,7 +31,6 @@
         </li>
       </ul>
     </aside>
-
     <!-- Main Content -->
     <div class="pl-96">
       <ViewAddEditPrompt 

@@ -3,6 +3,7 @@ use axum::{
     Json,
 };
 use serde_json::Value;
+use tokio::sync::mpsc;
 
 use crate::{services::{llm::Llm, types::llm_props::LlmProps}, AppError, AppState};
 
@@ -124,9 +125,37 @@ pub async fn execute_prompt(
             Ok(res)
         },
         false => {
-            Ok(llm.text()
-                .await
-                .map_err(|_| AppError::InternalServerError("Something went wrong".to_string()))?)
+            match llm.text().await {
+                Ok(t) => Ok(t),
+                Err(e) => {
+                    println!("error: {}", e);
+                    return Err(AppError::InternalServerError("Something went wrong".to_string()));
+                }
+            }
         }
     }
+}
+
+pub async fn execute_prompt_stream(
+    Path(id): Path<i64>,
+    State(state): State<AppState>,
+    Json(payload): Json<Value>,
+) -> Result<String, AppError> {
+    let prompt = match state.prompt_cache.get(&id).await {
+        Some(p) => p,
+        None => { 
+            let prompt = state.db.prompt.get_prompt(id).await?;
+            state.prompt_cache.insert(id, prompt.clone()).await;
+            prompt
+        }
+    };
+
+    let (tx, mut rx) = mpsc::channel(100);
+
+    let llm_props = LlmProps::from_prompt(prompt.clone(), payload);
+    let llm = Llm::new(llm_props).map_err(|_| AppError::InternalServerError("Something went wrong".to_string()))?;
+
+    llm.stream(tx).await.unwrap();
+
+    todo!()
 }
