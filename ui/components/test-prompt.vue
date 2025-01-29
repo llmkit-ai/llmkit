@@ -1,40 +1,40 @@
 <template>
   <div>
     <div class="px-4 sm:px-0">
-      <h3 class="text-base/7 font-semibold text-gray-900 dark:text-white">Test Prompt</h3>
-      <p class="mt-1 max-w-2xl text-sm/6 text-gray-500 dark:text-gray-400">Execute, test, and evaluate prompt.</p>
+      <h3 class="text-base/7 font-semibold text-neutral-900 dark:text-white">Test Prompt</h3>
+      <p class="mt-1 max-w-2xl text-sm/6 text-neutral-500 dark:text-neutral-400">Execute, test, and evaluate prompt.</p>
     </div>
     <div class="mt-6">
       <dl class="grid grid-cols-1 sm:grid-cols-2">
-        <div class="border-t border-gray-100 dark:border-gray-700 px-4 py-6 sm:col-span-2 sm:px-0">
-          <dt class="text-sm/6 font-medium text-gray-900 dark:text-white">Prompt preview</dt>
-          <dd class="mt-1 text-sm/6 text-gray-700 dark:text-gray-300 sm:mt-2 whitespace-pre-wrap">{{ promptPreview }}</dd>
+        <div class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-2 sm:px-0">
+          <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">Prompt preview</dt>
+          <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 sm:mt-2 whitespace-pre-wrap">{{ promptPreview }}</dd>
         </div>
       </dl>
     </div>
     <div class="grid grid-cols-4 gap-x-2">
       <div v-for="f in templateFields">
-        <label :for="f" class="block text-sm/6 font-medium text-gray-900 dark:text-white">{{ f }}</label>
+        <label :for="f" class="block text-sm/6 font-medium text-neutral-900 dark:text-white">{{ f }}</label>
         <div class="mt-0.5">
           <input 
             v-on:input="templateFieldInput" 
             type="text" 
             :name="f" 
             :id="f" 
-            class="block w-full bg-white dark:bg-gray-800 px-3 py-1.5 text-base text-gray-900 dark:text-white outline outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-black dark:focus:outline-white sm:text-sm/6"
+            class="block w-full bg-white dark:bg-neutral-800 px-3 py-1.5 text-base text-neutral-900 dark:text-white outline outline-1 -outline-offset-1 outline-neutral-300 dark:outline-neutral-600 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-black dark:focus:outline-white sm:text-sm/6"
           >
         </div>
       </div>
     </div>
-    <div class="mt-5 bg-gray-100 dark:bg-gray-800 p-4">
-      <p class="text-xs text-gray-900 dark:text-gray-300">Json context</p>
-      <div class="mt-4 text-gray-700 dark:text-gray-300">
+    <div class="mt-5 bg-neutral-100 dark:bg-neutral-800 p-4">
+      <p class="text-xs text-neutral-900 dark:text-neutral-300">Json context</p>
+      <div class="mt-4 text-neutral-700 dark:text-neutral-300">
         {{ jsonContext }}
       </div>
     </div>
-    <div v-if="testResponse" class="mt-5 bg-gray-100 dark:bg-gray-800 p-4">
-      <p class="text-xs text-gray-900 dark:text-gray-300">Response</p>
-      <div class="mt-4 text-gray-700 dark:text-gray-300">
+    <div v-if="testResponse" class="mt-5 bg-neutral-100 dark:bg-neutral-800 p-4">
+      <p class="text-xs text-neutral-900 dark:text-neutral-300">Response</p>
+      <div class="mt-4 text-neutral-700 dark:text-neutral-300">
         {{ testResponse }}
       </div>
     </div>
@@ -42,21 +42,21 @@
       <button
         type="button"
         @click="handleCancel"
-        class="text-sm/6 p-2 text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-gray-200"
+        class="text-sm/6 p-2 text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-neutral-200"
       >
         Cancel
       </button>
       <button
         type="button"
         @click="handleEdit"
-        class="text-sm/6 p-2 border-2 border-black dark:border-white text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800"
+        class="text-sm/6 p-2 border-2 border-black dark:border-white text-black dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800"
       >
         Edit
       </button>
       <button
         type="button"
         @click="execute()"
-        class="text-sm/6 p-2 border-2 border-black dark:border-white bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200"
+        class="text-sm/6 p-2 border-2 border-black dark:border-white bg-black dark:bg-white text-white dark:text-black hover:bg-neutral-800 dark:hover:bg-neutral-200"
       >
         Execute
       </button>

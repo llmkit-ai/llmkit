@@ -1,6 +1,6 @@
 <template>
   <Html>
-    <Body class="bg-white dark:bg-gray-900 transition-colors duration-300">
+    <Body class="bg-white dark:bg-neutral-900 transition-colors duration-300">
       <NuxtLayout>
         <NuxtPage />
       </NuxtLayout>

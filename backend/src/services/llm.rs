@@ -6,7 +6,7 @@ use futures_util::StreamExt;
 use dotenv::dotenv;
 use tera::{Tera, Context as TeraContext};
 
-use std::time::Duration;
+use std::{str::Utf8Error, time::Duration};
 
 use crate::common::types::models::ModelName;
 use super::types::llm_props::LlmProps;
@@ -32,6 +32,10 @@ pub enum Error {
     NoRoleSections,
     #[error("Invalid role specified in template: {0}")]
     InvalidRole(String),
+    #[error("MPSC Sender failed to send message in channel: {0}")]
+    MpscSender(#[from] tokio::sync::mpsc::error::SendError<std::string::String>),
+    #[error("Invalid UTF8 in chunk: {0}")]
+    Utf8Error(#[from] Utf8Error)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -116,7 +120,7 @@ impl Llm {
         }
     }
 
-    async fn send_request_stream(&self, format: ResponseFormat) -> Result<(), Error> {
+    async fn send_request_stream(&self, format: ResponseFormat, sender: Sender<String>) -> Result<(), Error> {
         let mut tera_ctx = TeraContext::new();
         if let Value::Object(context) = &self.props.context {
             for (k, v) in context {
@@ -144,7 +148,10 @@ impl Llm {
         
         while let Some(chunk) = res.next().await {
             let chunk = chunk?;
-            println!("{:?}", std::str::from_utf8(&chunk));
+            let chunk = std::str::from_utf8(&chunk)?;
+
+            println!("{:?}", chunk);
+            sender.send(chunk.to_string()).await?;
         }
 
         Ok(())        
@@ -289,8 +296,11 @@ impl Llm {
             true => {
                 let url = &format!("https://generativelanguage.googleapis.com/v1beta/models/{}:streamGenerateContent", model);
                 Ok(self.client
-                    .get(url)
-                    .query(&[("key", api_key)])
+                    .post(url)
+                    .query(&[
+                        ("key", api_key),
+                        ("alt", "sse".to_string()),
+                    ])
                     .json(&body))
             },
             false => {
