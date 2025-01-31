@@ -16,7 +16,7 @@ use controllers::{
     }, 
     models::list_models, 
     prompts::{
-        create_prompt, delete_prompt, execute_prompt, get_prompt, list_prompts, update_prompt
+        create_prompt, delete_prompt, execute_prompt, execute_prompt_stream, get_prompt, list_prompts, update_prompt
     }
 };
 
@@ -60,6 +60,7 @@ fn api_v1_routes() -> Router<AppState> {
 fn execute_routes() -> Router<AppState> {
     Router::new()
         .route("/{id}", post(execute_prompt))
+        .route("/{id}/stream", post(execute_prompt_stream))
 }
 
 fn prompt_routes() -> Router<AppState> {

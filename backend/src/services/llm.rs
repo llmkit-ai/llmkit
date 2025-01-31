@@ -1,16 +1,22 @@
+use dotenv::dotenv;
+use futures_util::StreamExt;
+
 use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
+
+use tera::{Context as TeraContext, Tera};
 use tokio::sync::mpsc::Sender;
-use tokio_retry::{Retry, strategy::{ExponentialBackoff, jitter}};
-use futures_util::StreamExt;
-use dotenv::dotenv;
-use tera::{Tera, Context as TeraContext};
+use tokio_retry::{
+    strategy::{jitter, ExponentialBackoff},
+    Retry,
+};
+
+use reqwest_eventsource::{Event, EventSource, RequestBuilderExt};
 
 use std::{str::Utf8Error, time::Duration};
 
-use crate::common::types::models::ModelName;
 use super::types::llm_props::LlmProps;
-
+use crate::{common::types::models::ModelName, services::types::stream::LlmStreamingError};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -35,7 +41,7 @@ pub enum Error {
     #[error("MPSC Sender failed to send message in channel: {0}")]
     MpscSender(#[from] tokio::sync::mpsc::error::SendError<std::string::String>),
     #[error("Invalid UTF8 in chunk: {0}")]
-    Utf8Error(#[from] Utf8Error)
+    Utf8Error(#[from] Utf8Error),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -53,7 +59,7 @@ pub struct Llm {
 impl Llm {
     pub fn new(props: LlmProps) -> Result<Self, Error> {
         dotenv().ok();
-        
+
         let mut tera = Tera::default();
         tera.add_raw_template("prompt", &props.prompt)
             .map_err(|e| Error::Template(e))?;
@@ -67,8 +73,7 @@ impl Llm {
 
     pub async fn text(&self) -> Result<String, Error> {
         let retry_strategy = self.retry_strategy();
-        Retry::spawn(retry_strategy, || self.send_request(ResponseFormat::Text))
-            .await
+        Retry::spawn(retry_strategy, || self.send_request(ResponseFormat::Text)).await
     }
 
     pub async fn json<T: DeserializeOwned>(&self) -> Result<T, Error> {
@@ -80,9 +85,10 @@ impl Llm {
         .await
     }
 
-    pub async fn stream(&self, sender: Sender<String>) -> Result<String, Error> {
-        // let (tx, mut rx) = mpsc::channel(10);
-        todo!();
+    pub async fn stream(&self, tx: Sender<Result<String, LlmStreamingError>>) -> Result<(), Error> {
+        self.send_request_stream(ResponseFormat::Text, tx)
+            .await?;
+        Ok(())
     }
 
     async fn send_request(&self, format: ResponseFormat) -> Result<String, Error> {
@@ -92,16 +98,24 @@ impl Llm {
                 tera_ctx.insert(k, v);
             }
         }
-        
+
         let rendered_prompt = self.tera.render("prompt", &tera_ctx)?;
         let messages = parse_rendered_prompt(&rendered_prompt)?;
 
         let model_name: String = self.props.model.clone().into();
         let request = match &self.props.model {
-            ModelName::OpenAi(_) => self.build_openai_request(&model_name, format, &messages, false),
-            ModelName::Anthropic(_) => self.build_anthropic_request(&model_name, format, &messages, false),
-            ModelName::Gemini(_) => self.build_google_request(&model_name, format, &messages, false),
-            ModelName::Deepseek(_) => self.build_deepseek_request(&model_name, format, &messages, false),
+            ModelName::OpenAi(_) => {
+                self.build_openai_request(&model_name, format, &messages, false)
+            }
+            ModelName::Anthropic(_) => {
+                self.build_anthropic_request(&model_name, format, &messages, false)
+            }
+            ModelName::Gemini(_) => {
+                self.build_google_request(&model_name, format, &messages, false)
+            }
+            ModelName::Deepseek(_) => {
+                self.build_deepseek_request(&model_name, format, &messages, false)
+            }
         }?;
 
         let response = request.send().await?;
@@ -120,41 +134,38 @@ impl Llm {
         }
     }
 
-    async fn send_request_stream(&self, format: ResponseFormat, sender: Sender<String>) -> Result<(), Error> {
+    async fn send_request_stream(
+        &self,
+        format: ResponseFormat,
+        tx: Sender<Result<String, LlmStreamingError>>
+    ) -> Result<(), Error> {
         let mut tera_ctx = TeraContext::new();
         if let Value::Object(context) = &self.props.context {
             for (k, v) in context {
                 tera_ctx.insert(k, v);
             }
         }
-        
+
         let rendered_prompt = self.tera.render("prompt", &tera_ctx)?;
         let messages = parse_rendered_prompt(&rendered_prompt)?;
-
         let model_name: String = self.props.model.clone().into();
         let request = match &self.props.model {
             ModelName::OpenAi(_) => self.build_openai_request(&model_name, format, &messages, true),
             ModelName::Anthropic(_) => self.build_anthropic_request(&model_name, format, &messages, true),
             ModelName::Gemini(_) => self.build_google_request(&model_name, format, &messages, true),
-            ModelName::Deepseek(_) => self.build_deepseek_request(&model_name, format, &messages, true),
+            ModelName::Deepseek(_) => self.build_deepseek_request(&model_name, format, &messages, true)
         }?;
 
-        let res = request
-            .send()
-            .await?
-            .error_for_status()?;
+        let event_source = request.eventsource().unwrap();
 
-        let mut res = res.bytes_stream();
-        
-        while let Some(chunk) = res.next().await {
-            let chunk = chunk?;
-            let chunk = std::str::from_utf8(&chunk)?;
-
-            println!("{:?}", chunk);
-            sender.send(chunk.to_string()).await?;
+        match &self.props.model {
+            ModelName::OpenAi(_) => Self::stream_eventsource_openai(event_source, tx).await,
+            ModelName::Anthropic(_) => Self::stream_eventsource_anthropic(event_source, tx).await,
+            ModelName::Gemini(_) => Self::stream_eventsource_gemini(event_source, tx).await,
+            ModelName::Deepseek(_) => Self::stream_eventsource_openai(event_source, tx).await
         }
 
-        Ok(())        
+        Ok(())
     }
 
     fn build_openai_request(
@@ -162,10 +173,11 @@ impl Llm {
         model: &str,
         format: ResponseFormat,
         messages: &[Message],
-        streaming: bool
+        streaming: bool,
     ) -> Result<reqwest::RequestBuilder, Error> {
         let api_key = std::env::var("OPENAI_API_KEY").map_err(|_| Error::Auth)?;
-        let messages_json: Vec<_> = messages.iter()
+        let messages_json: Vec<_> = messages
+            .iter()
             .map(|msg| json!({ "role": msg.role, "content": msg.content }))
             .collect();
 
@@ -181,8 +193,9 @@ impl Llm {
 
         body["temperature"] = self.props.temperature.into();
         body["max_completion_tokens"] = self.props.max_tokens.into();
-        
-        Ok(self.client
+
+        Ok(self
+            .client
             .post("https://api.openai.com/v1/chat/completions")
             .header("Authorization", format!("Bearer {}", api_key))
             .json(&body))
@@ -193,10 +206,10 @@ impl Llm {
         model: &str,
         _format: ResponseFormat,
         messages: &[Message],
-        streaming: bool
+        streaming: bool,
     ) -> Result<reqwest::RequestBuilder, Error> {
         let api_key = std::env::var("ANTHROPIC_API_KEY").map_err(|_| Error::Auth)?;
-        
+
         // Extract system messages and combine them
         let system_messages: Vec<String> = messages
             .iter()
@@ -228,7 +241,8 @@ impl Llm {
         body["temperature"] = self.props.temperature.into();
         body["max_tokens"] = self.props.max_tokens.into();
 
-        Ok(self.client
+        Ok(self
+            .client
             .post("https://api.anthropic.com/v1/messages")
             .header("x-api-key", api_key)
             .header("anthropic-version", "2023-06-01")
@@ -240,7 +254,7 @@ impl Llm {
         model: &str,
         format: ResponseFormat,
         messages: &[Message],
-        streaming: bool
+        streaming: bool,
     ) -> Result<reqwest::RequestBuilder, Error> {
         let api_key = std::env::var("GOOGLE_API_KEY").map_err(|_| Error::Auth)?;
 
@@ -295,20 +309,18 @@ impl Llm {
         match streaming {
             true => {
                 let url = &format!("https://generativelanguage.googleapis.com/v1beta/models/{}:streamGenerateContent", model);
-                Ok(self.client
+                Ok(self
+                    .client
                     .post(url)
-                    .query(&[
-                        ("key", api_key),
-                        ("alt", "sse".to_string()),
-                    ])
+                    .query(&[("key", api_key), ("alt", "sse".to_string())])
                     .json(&body))
-            },
+            }
             false => {
-                let url = &format!("https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent", model);
-                Ok(self.client
-                    .post(url)
-                    .query(&[("key", api_key)])
-                    .json(&body))
+                let url = &format!(
+                    "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent",
+                    model
+                );
+                Ok(self.client.post(url).query(&[("key", api_key)]).json(&body))
             }
         }
     }
@@ -318,11 +330,12 @@ impl Llm {
         model: &str,
         format: ResponseFormat,
         messages: &[Message],
-        streaming: bool
+        streaming: bool,
     ) -> Result<reqwest::RequestBuilder, Error> {
         let api_key = std::env::var("DEEPSEEK_API_KEY").map_err(|_| Error::Auth)?;
 
-        let messages_json: Vec<_> = messages.iter()
+        let messages_json: Vec<_> = messages
+            .iter()
             .map(|msg| json!({ "role": msg.role, "content": msg.content }))
             .collect();
 
@@ -338,8 +351,9 @@ impl Llm {
         if format == ResponseFormat::Json {
             body["response_format"] = serde_json::json!({ "type": "json_object" });
         }
-        
-        Ok(self.client
+
+        Ok(self
+            .client
             .post("https://api.deepseek.com/v1/chat/completions")
             .header("Authorization", format!("Bearer {}", api_key))
             .json(&body))
@@ -348,14 +362,21 @@ impl Llm {
     // Response parsing functions remain the same as previous implementation
     fn parse_openai_response(text: &str) -> Result<String, Error> {
         #[derive(serde::Deserialize)]
-        struct Response { choices: Vec<Choice> }
+        struct Response {
+            choices: Vec<Choice>,
+        }
         #[derive(serde::Deserialize)]
-        struct Choice { message: Message }
+        struct Choice {
+            message: Message,
+        }
         #[derive(serde::Deserialize)]
-        struct Message { content: String }
+        struct Message {
+            content: String,
+        }
 
         let response: Response = serde_json::from_str(text)?;
-        response.choices
+        response
+            .choices
             .first()
             .and_then(|c| Some(c.message.content.clone()))
             .ok_or(Error::Provider("Empty OpenAI response".into()))
@@ -363,12 +384,17 @@ impl Llm {
 
     fn parse_anthropic_response(text: &str) -> Result<String, Error> {
         #[derive(serde::Deserialize)]
-        struct Response { content: Vec<Content> }
+        struct Response {
+            content: Vec<Content>,
+        }
         #[derive(serde::Deserialize)]
-        struct Content { text: String }
+        struct Content {
+            text: String,
+        }
 
         let response: Response = serde_json::from_str(text)?;
-        response.content
+        response
+            .content
             .first()
             .and_then(|c| Some(c.text.clone()))
             .ok_or(Error::Provider("Empty Anthropic response".into()))
@@ -376,16 +402,25 @@ impl Llm {
 
     fn parse_google_response(text: &str) -> Result<String, Error> {
         #[derive(serde::Deserialize)]
-        struct Response { candidates: Vec<Candidate> }
+        struct Response {
+            candidates: Vec<Candidate>,
+        }
         #[derive(serde::Deserialize)]
-        struct Candidate { content: Content }
+        struct Candidate {
+            content: Content,
+        }
         #[derive(serde::Deserialize)]
-        struct Content { parts: Vec<Part> }
+        struct Content {
+            parts: Vec<Part>,
+        }
         #[derive(serde::Deserialize)]
-        struct Part { text: String }
+        struct Part {
+            text: String,
+        }
 
         let response: Response = serde_json::from_str(text)?;
-        response.candidates
+        response
+            .candidates
             .first()
             .and_then(|c| c.content.parts.first())
             .and_then(|p| Some(p.text.clone()))
@@ -394,14 +429,21 @@ impl Llm {
 
     fn parse_deepseek_response(text: &str) -> Result<String, Error> {
         #[derive(serde::Deserialize)]
-        struct Response { choices: Vec<Choice> }
+        struct Response {
+            choices: Vec<Choice>,
+        }
         #[derive(serde::Deserialize)]
-        struct Choice { message: Message }
+        struct Choice {
+            message: Message,
+        }
         #[derive(serde::Deserialize)]
-        struct Message { content: String }
+        struct Message {
+            content: String,
+        }
 
         let response: Response = serde_json::from_str(text)?;
-        response.choices
+        response
+            .choices
             .first()
             .and_then(|c| Some(c.message.content.clone()))
             .ok_or(Error::Provider("Empty Deepseek response".into()))
@@ -412,6 +454,183 @@ impl Llm {
             .max_delay(Duration::from_secs(10))
             .map(jitter)
             .take(3)
+    }
+
+    async fn stream_eventsource_openai(mut event_source: EventSource, tx: Sender<Result<String, LlmStreamingError>>) {
+        #[derive(Debug, serde::Deserialize)]
+        struct OpenAiResponseChunk {
+            choices: Vec<Choice>,
+        }
+        #[derive(Debug, serde::Deserialize)]
+        struct Choice {
+            delta: Delta,
+        }
+        #[derive(Debug, serde::Deserialize)]
+        struct Delta {
+            content: Option<String>,
+        }
+
+        tokio::spawn(async move {
+            while let Some(event_result) = event_source.next().await {
+                match event_result {
+                    Ok(event) => {
+                        if let Event::Message(message) = event {
+                            if message.data == "[DONE]" {
+                                let _ = tx.send(Ok("[DONE]".to_string())).await;
+                                break;
+                            }
+
+                            match serde_json::from_str::<OpenAiResponseChunk>(&message.data) {
+                                Ok(chunk) => {
+                                    if let Some(content) = chunk.choices
+                                        .first()
+                                        .and_then(|c| c.delta.content.as_ref())
+                                    {
+                                        if let Err(_) = tx.send(Ok(content.clone())).await {
+                                            break; // Receiver dropped
+                                        }
+                                    }
+                                }
+                                Err(e) => {
+                                    let _ = tx.send(Err(LlmStreamingError::ParseError(e.to_string()))).await;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        let _ = tx.send(Err(LlmStreamingError::StreamError(e.to_string()))).await;
+                        break;
+                    }
+                }
+            }
+            
+            event_source.close();
+        });
+    }
+
+    async fn stream_eventsource_anthropic(mut event_source: EventSource, tx: Sender<Result<String, LlmStreamingError>>) {
+        #[derive(Debug, serde::Deserialize)]
+        struct AnthropicResponseChunk {
+            #[serde(rename = "type")]
+            event_type: String,
+            delta: Option<Delta>,
+            content_block: Option<ContentBlock>,
+        }
+
+        #[derive(Debug, serde::Deserialize)]
+        struct Delta {
+            text: Option<String>,
+        }
+
+        #[derive(Debug, serde::Deserialize)]
+        struct ContentBlock {
+            text: Option<String>,
+        }
+
+        tokio::spawn(async move {
+            while let Some(event_result) = event_source.next().await {
+                match event_result {
+                    Ok(event) => {
+                        if let Event::Message(message) = event {
+                            match serde_json::from_str::<AnthropicResponseChunk>(&message.data) {
+                                Ok(chunk) => {
+                                    match chunk.event_type.as_str() {
+                                        "content_block_start" => {
+                                            if let Some(content_block) = chunk.content_block {
+                                                if let Some(text) = content_block.text {
+                                                    if let Err(_) = tx.send(Ok(text)).await {
+                                                        break; // Receiver dropped
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        "content_block_delta" => {
+                                            if let Some(delta) = chunk.delta {
+                                                if let Some(text) = delta.text {
+                                                    if let Err(_) = tx.send(Ok(text)).await {
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        "message_stop" => {
+                                            let _ = tx.send(Ok("[DONE]".to_string())).await;
+                                            break;
+                                        }
+                                        _ => {} // Ignore other event types
+                                    }
+                                }
+                                Err(e) => {
+                                    let _ = tx.send(Err(LlmStreamingError::ParseError(e.to_string()))).await;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        let _ = tx.send(Err(LlmStreamingError::StreamError(e.to_string()))).await;
+                        break;
+                    }
+                }
+            }
+            
+            event_source.close();
+        });
+    }
+
+    async fn stream_eventsource_gemini(mut event_source: EventSource, tx: Sender<Result<String, LlmStreamingError>>) {
+        #[derive(Debug, serde::Deserialize)]
+        struct GeminiResponseChunk {
+            candidates: Vec<Candidate>,
+        }
+        #[derive(Debug, serde::Deserialize)]
+        struct Candidate {
+            content: Content,
+        }
+        #[derive(Debug, serde::Deserialize)]
+        struct Content {
+            parts: Vec<Part>,
+        }
+        #[derive(Debug, serde::Deserialize)]
+        struct Part {
+            text: String,
+        }
+
+        tokio::spawn(async move {
+            while let Some(event_result) = event_source.next().await {
+                match event_result {
+                    Ok(event) => {
+                        if let Event::Message(message) = event {
+                            match serde_json::from_str::<GeminiResponseChunk>(&message.data) {
+                                Ok(response_chunk) => {
+                                    if let Some(text) = response_chunk.candidates
+                                        .first()
+                                        .and_then(|c| c.content.parts.first())
+                                        .map(|p| p.text.clone())
+                                    {
+                                        if let Err(_) = tx.send(Ok(text)).await {
+                                            break; // Receiver dropped
+                                        }
+                                    }
+                                }
+                                Err(e) => {
+                                    let _ = tx.send(Err(LlmStreamingError::ParseError(e.to_string()))).await;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        let _ = tx.send(Err(LlmStreamingError::StreamError(e.to_string()))).await;
+                        break;
+                    }
+                }
+            }
+
+            // Send completion marker
+            let _ = tx.send(Ok("[DONE]".to_string())).await;
+        });
     }
 }
 
@@ -460,12 +679,14 @@ fn parse_rendered_prompt(rendered_prompt: &str) -> Result<Vec<Message>, Error> {
 fn parse_role_line(line: &str) -> Option<String> {
     const PREFIX: &str = "<!-- role:";
     const SUFFIX: &str = "-->";
-    
+
     if line.starts_with(PREFIX) && line.ends_with(SUFFIX) {
-        let role = line[PREFIX.len()..line.len()-SUFFIX.len()].trim().to_string();
+        let role = line[PREFIX.len()..line.len() - SUFFIX.len()]
+            .trim()
+            .to_string();
         match role.as_str() {
             "system" | "user" | "assistant" => Some(role),
-            _ => None
+            _ => None,
         }
     } else {
         None
@@ -475,10 +696,10 @@ fn parse_role_line(line: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::json;
     use crate::common::types::models::{
-        ModelName, OpenAiModel, AnthropicModel, GeminiModel, DeepseekModel
+        AnthropicModel, DeepseekModel, GeminiModel, ModelName, OpenAiModel,
     };
+    use serde_json::json;
 
     // Unit tests for response parsing
     #[test]
@@ -489,8 +710,9 @@ mod tests {
                     "content": "test response"
                 }
             }]
-        }).to_string();
-        
+        })
+        .to_string();
+
         let result = Llm::parse_openai_response(&response);
         assert_eq!(result.unwrap(), "test response");
     }
@@ -501,8 +723,9 @@ mod tests {
             "content": [{
                 "text": "test response"
             }]
-        }).to_string();
-        
+        })
+        .to_string();
+
         let result = Llm::parse_anthropic_response(&response);
         assert_eq!(result.unwrap(), "test response");
     }
@@ -517,8 +740,9 @@ mod tests {
                     }]
                 }
             }]
-        }).to_string();
-        
+        })
+        .to_string();
+
         let result = Llm::parse_google_response(&response);
         assert_eq!(result.unwrap(), "test response");
     }
@@ -531,8 +755,9 @@ mod tests {
                     "content": "test response"
                 }
             }]
-        }).to_string();
-        
+        })
+        .to_string();
+
         let result = Llm::parse_deepseek_response(&response);
         assert_eq!(result.unwrap(), "test response");
     }
@@ -543,16 +768,16 @@ mod tests {
             prompt: r#"<!-- role:system -->
                 You are a helpful assistant
                 <!-- role:user -->
-                Hello, {{ name }}!"#.to_string(),
+                Hello, {{ name }}!"#
+                .to_string(),
             context: json!({
                 "name": "World",
             }),
             temperature: 0.5,
             max_tokens: 100,
-            json_mode: false
+            json_mode: false,
         }
     }
-
 
     #[tokio::test]
     #[ignore]
@@ -560,15 +785,17 @@ mod tests {
         dotenv().ok();
         let props = create_test_props(ModelName::OpenAi(OpenAiModel::Gpt4oMini202407)).await;
         let llm = Llm::new(props).unwrap();
-        
+
         // Test text response
         let text = llm.text().await.unwrap();
         assert!(text.contains("Hello"));
-        
+
         // Test JSON response
         #[derive(serde::Deserialize)]
-        struct TestResponse { message: String }
-        
+        struct TestResponse {
+            message: String,
+        }
+
         let props = LlmProps {
             prompt: r#"<!-- role:system -->
                 You must respond with valid JSON only
@@ -580,7 +807,7 @@ mod tests {
             }),
             ..create_test_props(ModelName::OpenAi(OpenAiModel::Gpt4oMini202407)).await
         };
-        
+
         let llm = Llm::new(props).unwrap();
         let response: TestResponse = llm.json().await.unwrap();
         assert_eq!(response.message, "Hello in JSON");
@@ -590,11 +817,10 @@ mod tests {
     #[ignore]
     async fn test_anthropic_integration() {
         dotenv().ok();
-        let props = create_test_props(
-            ModelName::Anthropic(AnthropicModel::Claude35Haiku20241022)
-        ).await;
+        let props =
+            create_test_props(ModelName::Anthropic(AnthropicModel::Claude35Haiku20241022)).await;
         let llm = Llm::new(props).unwrap();
-        
+
         let text = llm.text().await.unwrap();
         assert!(text.contains("Hello"));
     }
@@ -603,7 +829,7 @@ mod tests {
     #[ignore]
     async fn test_google_integration() {
         dotenv().ok();
-        
+
         // Test text response
         let props = create_test_props(ModelName::Gemini(GeminiModel::Gemini15Flash)).await;
         let llm = Llm::new(props).unwrap();
@@ -612,8 +838,10 @@ mod tests {
 
         // Test JSON response
         #[derive(serde::Deserialize)]
-        struct TestResponse { message: String }
-        
+        struct TestResponse {
+            message: String,
+        }
+
         let props = LlmProps {
             prompt: r#"<!-- role:system -->
                 You must respond with valid JSON only
@@ -625,7 +853,7 @@ mod tests {
             }),
             ..create_test_props(ModelName::Gemini(GeminiModel::Gemini15Flash)).await
         };
-        
+
         let llm = Llm::new(props).unwrap();
         let response: TestResponse = llm.json().await.unwrap();
         assert_eq!(response.message, "Hello in JSON");
@@ -635,7 +863,7 @@ mod tests {
     #[ignore]
     async fn test_deepseek_integration() {
         dotenv().ok();
-        
+
         // Test text response
         let props = create_test_props(ModelName::Deepseek(DeepseekModel::DeepseekChat)).await;
         let llm = Llm::new(props).unwrap();
@@ -644,23 +872,24 @@ mod tests {
 
         // Test JSON response
         #[derive(serde::Deserialize)]
-        struct TestResponse { 
+        struct TestResponse {
             #[serde(rename = "content")]
-            message: String 
+            message: String,
         }
-        
+
         let props = LlmProps {
             prompt: r#"<!-- role:system -->
                 Respond with JSON containing a 'content' field
                 <!-- role:user -->
-                Return JSON with format: {"content": "<message>"}. Context: {{ message }}"#.to_string(),
+                Return JSON with format: {"content": "<message>"}. Context: {{ message }}"#
+                .to_string(),
             context: json!({
                 "message": "Hello in JSON",
                 "response_format": {"type": "json_object"}
             }),
             ..create_test_props(ModelName::Deepseek(DeepseekModel::DeepseekChat)).await
         };
-        
+
         let llm = Llm::new(props).unwrap();
         let response: TestResponse = llm.json().await.unwrap();
         assert_eq!(response.message, "Hello in JSON");
@@ -674,10 +903,10 @@ mod tests {
             context: json!({}),
             temperature: 0.5,
             max_tokens: 100,
-            json_mode: false
+            json_mode: false,
         };
         let llm = Llm::new(props).unwrap();
-        
+
         let strategy = llm.retry_strategy();
         assert_eq!(strategy.count(), 3);
     }

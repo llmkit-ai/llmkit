@@ -1,8 +1,15 @@
+use core::panic;
+use std::convert::Infallible;
+
 use axum::{
     extract::{Path, State},
+    response::sse::{Event, KeepAlive, Sse},
     Json,
 };
+use futures::Stream;
+use hyper::StatusCode;
 use serde_json::Value;
+
 use tokio::sync::mpsc;
 
 use crate::{services::{llm::Llm, types::llm_props::LlmProps}, AppError, AppState};
@@ -140,22 +147,44 @@ pub async fn execute_prompt_stream(
     Path(id): Path<i64>,
     State(state): State<AppState>,
     Json(payload): Json<Value>,
-) -> Result<String, AppError> {
+) -> Result<Sse<impl Stream<Item = Result<Event, Infallible>>>, StatusCode> {
     let prompt = match state.prompt_cache.get(&id).await {
         Some(p) => p,
-        None => { 
-            let prompt = state.db.prompt.get_prompt(id).await?;
+        None => {
+            let prompt = state.db.prompt.get_prompt(id).await.unwrap();
             state.prompt_cache.insert(id, prompt.clone()).await;
             prompt
         }
     };
 
     let (tx, mut rx) = mpsc::channel(100);
-
     let llm_props = LlmProps::from_prompt(prompt.clone(), payload);
-    let llm = Llm::new(llm_props).map_err(|_| AppError::InternalServerError("Something went wrong".to_string()))?;
+    let llm = Llm::new(llm_props).unwrap();
 
-    llm.stream(tx).await.unwrap();
+    tokio::spawn(async move {
+        if let Err(e) = llm.stream(tx).await {
+            eprintln!("LLM streaming error: {}", e);
+        }
+    });
 
-    todo!()
+    let stream = async_stream::stream! {
+        while let Some(result) = rx.recv().await {
+            match result {
+                Ok(content) => {
+                    let event = Event::default().data(content.clone());
+                    if content == "[DONE]" {
+                        break;
+                    }
+                    
+                    yield Ok(event)
+                }
+                Err(e) => {
+                    eprintln!("error in stream: {:?}", e);
+                    panic!()
+                }
+            }
+        }
+    };
+
+    Ok(Sse::new(stream).keep_alive(KeepAlive::default()))
 }

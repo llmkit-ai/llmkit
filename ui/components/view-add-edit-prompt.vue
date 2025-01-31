@@ -67,7 +67,7 @@
                       v-for="model in models"
                       :key="model.id"
                       class="relative cursor-default select-none py-2 pl-3 pr-9 text-neutral-900 dark:text-white"
-                      :class="{ 'bg-black dark:bg-white text-white dark:text-black': model.id === selectedModel?.id }"
+                      :class="{ 'bg-black text-white dark:text-black': model.id === selectedModel?.id }"
                       role="option"
                       @click="selectModel(model)"
                     >

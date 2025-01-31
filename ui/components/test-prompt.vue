@@ -60,6 +60,13 @@
       >
         Execute
       </button>
+      <button
+        type="button"
+        @click="executeStream()"
+        class="text-sm/6 p-2 border-2 border-black dark:border-white bg-black dark:bg-white text-white dark:text-black hover:bg-neutral-800 dark:hover:bg-neutral-200"
+      >
+        Stream
+      </button>
     </div>
   </div>
 </template>
@@ -75,8 +82,10 @@ const handleCancel = inject('handleCancel', () => {});
 const handleEdit = inject('handleEdit', () => {});
 
 const { 
-  executePrompt
+  executePrompt,
+  executePromptStream
 } = usePrompts();
+
 
 const promptPreview = ref(props.prompt.prompt)
 const jsonContext = ref({})
@@ -112,4 +121,53 @@ async function execute() {
   const res = await executePrompt(props.prompt.id, jsonContext.value)
   testResponse.value = res
 }
+
+const { startStream } = useSSE()
+const error = ref<Error | null>(null)
+
+const executeStream = async () => {
+  testResponse.value = ''
+  error.value = null
+
+  await startStream(
+    jsonContext.value,
+    `/api/v1/prompts/execute/${props.prompt.id}/stream`,
+    {
+      onMessage: (chunk) => {
+        testResponse.value += chunk
+      },
+      onError: (err) => {
+        error.value = err
+      },
+      onComplete: () => {
+        console.log('Stream completed')
+      }
+    }
+  )
+}
+
+let eventSource: EventSource | null = null
+const messageIsTransmitting = ref(false)
+
+async function initSSE(prompt_id: number) {
+  eventSource = new EventSource(`/api/v1/prompts/execute/${prompt_id}/stream`)
+
+  eventSource.onmessage = (event) => {
+    console.log(event.data)
+    testResponse.value = event.data
+  }
+
+  eventSource.addEventListener('complete', () => {
+    eventSource?.close()
+    eventSource = null
+    messageIsTransmitting.value = false
+  })
+
+  eventSource.onerror = (e) => {
+    console.error('SSE error:', e)
+    eventSource?.close()
+    eventSource = null
+  }
+}
+
 </script>

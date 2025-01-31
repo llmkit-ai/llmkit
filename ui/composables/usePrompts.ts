@@ -96,6 +96,18 @@ export const usePrompts = () => {
     }
   }
 
+  const executePromptStream = async (id: number, body: any) => {
+    try {
+      return await $fetch<string>(`/api/v1/prompts/execute/${id}/stream`, { 
+        method: 'POST',
+        body 
+      })
+    } catch (err) {
+      error.value = 'Failed to execute prompt'
+      throw err
+    }
+  }
+
   return {
     prompts,
     loading,
@@ -104,6 +116,7 @@ export const usePrompts = () => {
     createPrompt,
     updatePrompt,
     deletePrompt,
-    executePrompt
+    executePrompt,
+    executePromptStream
   }
 }

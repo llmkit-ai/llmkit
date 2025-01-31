@@ -29,7 +29,7 @@ useServerSeoMeta({
 })
 
 // Client-side watcher
-if (process.client) {
+if (import.meta.client) {
   watchEffect(() => {
     document.documentElement.classList.toggle('dark', colorMode.value === 'dark')
   })
