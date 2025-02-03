@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use crate::{common::types::models::ModelName, db::types::models::ModelRow};
+use crate::{common::types::models::LlmModel, db::types::models::ModelRow};
 
 
 #[derive(Debug, Serialize)]
@@ -13,7 +13,7 @@ pub struct ModelResponse {
 
 impl From<ModelRow> for ModelResponse {
     fn from(model: ModelRow) -> Self {
-        let model_name: ModelName = model.model_name.into();
+        let model_name: LlmModel = model.model_name.into();
 
         ModelResponse {
             id: model.id,

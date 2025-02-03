@@ -1,5 +1,5 @@
 use sqlx::FromRow;
-use crate::common::types::models::ModelName;
+use crate::common::types::models::LlmModel;
 
 #[derive(Debug, Clone, FromRow)]
 pub struct PromptRow {
@@ -45,7 +45,7 @@ pub struct PromptWithModel {
 
 impl Into<PromptWithModel> for PromptRowWithModel {
     fn into(self) -> PromptWithModel {
-        let model: ModelName = self.model_name.into();
+        let model: LlmModel = self.model_name.into();
         PromptWithModel {
             id: self.id,
             key: self.key,

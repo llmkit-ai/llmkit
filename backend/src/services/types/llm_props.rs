@@ -1,30 +1,32 @@
-use serde_json::Value;
+use serde::Serialize;
 
 use crate::{
-    common::types::models::ModelName, 
+    common::types::models::LlmModel, 
     db::types::prompt::PromptWithModel
 };
 
+use super::message::Message;
+
+
+#[derive(Serialize)]
 pub struct LlmProps {
-    pub model: ModelName,
+    pub model: LlmModel,
     pub max_tokens: i64,
     pub temperature: f64,
     pub json_mode: bool,
-    pub prompt: String,
-    pub context: Value,
+    pub messages: Vec<Message>
 }
 
 impl LlmProps {
-    pub fn from_prompt(prompt: PromptWithModel, context: Value) -> Self {
-        let model_name: ModelName = prompt.model_name.into();
+    pub fn new(prompt: PromptWithModel, messages: Vec<Message>) -> Self {
+        let model_name: LlmModel = prompt.model_name.into();
 
         LlmProps {
             model: model_name,
             max_tokens: prompt.max_tokens,
             temperature: prompt.temperature,
             json_mode: prompt.json_mode,
-            prompt: prompt.prompt,
-            context,
+            messages
         }
     }
 }
