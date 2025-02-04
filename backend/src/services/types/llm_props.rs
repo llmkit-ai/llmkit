@@ -14,11 +14,12 @@ pub struct LlmProps {
     pub max_tokens: i64,
     pub temperature: f64,
     pub json_mode: bool,
-    pub messages: Vec<Message>
+    pub messages: Vec<Message>,
+    pub streaming: bool
 }
 
 impl LlmProps {
-    pub fn new(prompt: PromptWithModel, messages: Vec<Message>) -> Self {
+    pub fn new(prompt: PromptWithModel, messages: Vec<Message>, streaming: bool) -> Self {
         let model_name: LlmModel = prompt.model_name.into();
 
         LlmProps {
@@ -26,7 +27,8 @@ impl LlmProps {
             max_tokens: prompt.max_tokens,
             temperature: prompt.temperature,
             json_mode: prompt.json_mode,
-            messages
+            messages,
+            streaming
         }
     }
 }
