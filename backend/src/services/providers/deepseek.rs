@@ -27,7 +27,7 @@ struct MessageContent {
 
 
 impl LlmProvider for DeepseekProvider {
-    fn build_request(props: &LlmProps) -> Result<RequestBuilder, Error> {
+    fn build_request(props: &LlmProps, streaming: bool) -> Result<RequestBuilder, Error> {
         let client = reqwest::Client::new();
         let api_key = std::env::var("DEEPSEEK_API_KEY").map_err(|_| Error::Auth)?;
 
@@ -52,7 +52,7 @@ impl LlmProvider for DeepseekProvider {
         let mut body = json!({
             "model": model,
             "messages": messages,
-            "stream": props.streaming,
+            "stream": streaming,
             "temperature": props.temperature,
             "max_tokens": props.max_tokens
         });

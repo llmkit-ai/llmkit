@@ -14,7 +14,7 @@ pub struct AnthropicProvider;
 
 
 impl LlmProvider for AnthropicProvider {
-    fn build_request(props: &LlmProps) -> Result<RequestBuilder, Error> {
+    fn build_request(props: &LlmProps, streaming: bool) -> Result<RequestBuilder, Error> {
         let client = reqwest::Client::new();
         let api_key = std::env::var("ANTHROPIC_API_KEY").map_err(|_| Error::Auth)?;
 
@@ -58,7 +58,7 @@ impl LlmProvider for AnthropicProvider {
             "model": model,
             "messages": messages,
             "system": system_message,
-            "stream": props.streaming,
+            "stream": streaming,
             "temperature": props.temperature,
             "max_tokens": props.max_tokens,
         });

@@ -32,7 +32,7 @@ struct ContentPart {
 
 
 impl LlmProvider for GeminiProvider {
-    fn build_request(props: &LlmProps) -> Result<RequestBuilder, Error> {
+    fn build_request(props: &LlmProps, streaming: bool) -> Result<RequestBuilder, Error> {
         let client = reqwest::Client::new();
         let api_key = std::env::var("GOOGLE_API_KEY").map_err(|_| Error::Auth)?;
 
@@ -94,13 +94,13 @@ impl LlmProvider for GeminiProvider {
         let url = format!(
             "https://generativelanguage.googleapis.com/v1beta/models/{}:{}",
             model,
-            if props.streaming { "streamGenerateContent" } else { "generateContent" }
+            if streaming { "streamGenerateContent" } else { "generateContent" }
         );
 
         let mut request = client.post(&url)
             .query(&[("key", api_key)]);
 
-        if props.streaming {
+        if streaming {
             request = request.query(&[("alt", "sse")]);
         }
 

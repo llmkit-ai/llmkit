@@ -103,88 +103,88 @@ pub async fn delete_prompt(
     Ok(())
 }
 
-// pub async fn execute_prompt(
-//     Path(id): Path<i64>,
-//     State(state): State<AppState>,
-//     Json(payload): Json<Value>,
-// ) -> Result<String, AppError> {
-//     let prompt = match state.prompt_cache.get(&id).await {
-//         Some(p) => p,
-//         None => { 
-//             let prompt = state.db.prompt.get_prompt(id).await?;
-//             state.prompt_cache.insert(id, prompt.clone()).await;
-//             prompt
-//         }
-//     };
-//
-//     let llm_props = LlmProps::new(prompt.clone(), payload);
-//     let llm = Llm::new(llm_props).map_err(|_| AppError::InternalServerError("Something went wrong".to_string()))?;
-//
-//     match prompt.json_mode {
-//         true => {
-//             let res: Value = llm.json()
-//                 .await
-//                 .map_err(|_| AppError::InternalServerError("Something went wrong".to_string()))?;
-//
-//             let res = serde_json::to_string(&res)
-//                 .map_err(|_| AppError::InternalServerError("Something went wrong".to_string()))?;
-//
-//             Ok(res)
-//         },
-//         false => {
-//             match llm.text().await {
-//                 Ok(t) => Ok(t),
-//                 Err(e) => {
-//                     println!("error: {}", e);
-//                     return Err(AppError::InternalServerError("Something went wrong".to_string()));
-//                 }
-//             }
-//         }
-//     }
-// }
-//
-// pub async fn execute_prompt_stream(
-//     Path(id): Path<i64>,
-//     State(state): State<AppState>,
-//     Json(payload): Json<Value>,
-// ) -> Result<Sse<impl Stream<Item = Result<Event, Infallible>>>, StatusCode> {
-//     let prompt = match state.prompt_cache.get(&id).await {
-//         Some(p) => p,
-//         None => {
-//             let prompt = state.db.prompt.get_prompt(id).await.unwrap();
-//             state.prompt_cache.insert(id, prompt.clone()).await;
-//             prompt
-//         }
-//     };
-//
-//     let (tx, mut rx) = mpsc::channel(100);
-//     let llm_props = LlmProps::new(prompt.clone(), payload);
-//     let llm = Llm::new(llm_props).unwrap();
-//
-//     tokio::spawn(async move {
-//         if let Err(e) = llm.stream(tx).await {
-//             eprintln!("LLM streaming error: {}", e);
-//         }
-//     });
-//
-//     let stream = async_stream::stream! {
-//         while let Some(result) = rx.recv().await {
-//             match result {
-//                 Ok(content) => {
-//                     let event = Event::default().data(content.clone());
-//                     if content == "[DONE]" {
-//                         break;
-//                     }
-//                     
-//                     yield Ok(event)
-//                 }
-//                 Err(e) => {
-//                     eprintln!("error in stream: {:?}", e);
-//                     panic!()
-//                 }
-//             }
-//         }
-//     };
-//
-//     Ok(Sse::new(stream).keep_alive(KeepAlive::default()))
-// }
+pub async fn execute_prompt(
+    Path(id): Path<i64>,
+    State(state): State<AppState>,
+    Json(payload): Json<Value>,
+) -> Result<String, AppError> {
+    let prompt = match state.prompt_cache.get(&id).await {
+        Some(p) => p,
+        None => { 
+            let prompt = state.db.prompt.get_prompt(id).await?;
+            state.prompt_cache.insert(id, prompt.clone()).await;
+            prompt
+        }
+    };
+
+    let llm_props = LlmProps::new(prompt.clone(), payload);
+    let llm = Llm::new(llm_props).map_err(|_| AppError::InternalServerError("Something went wrong".to_string()))?;
+
+    match prompt.json_mode {
+        true => {
+            let res: Value = llm.json()
+                .await
+                .map_err(|_| AppError::InternalServerError("Something went wrong".to_string()))?;
+
+            let res = serde_json::to_string(&res)
+                .map_err(|_| AppError::InternalServerError("Something went wrong".to_string()))?;
+
+            Ok(res)
+        },
+        false => {
+            match llm.text().await {
+                Ok(t) => Ok(t),
+                Err(e) => {
+                    println!("error: {}", e);
+                    return Err(AppError::InternalServerError("Something went wrong".to_string()));
+                }
+            }
+        }
+    }
+}
+
+pub async fn execute_prompt_stream(
+    Path(id): Path<i64>,
+    State(state): State<AppState>,
+    Json(payload): Json<Value>,
+) -> Result<Sse<impl Stream<Item = Result<Event, Infallible>>>, StatusCode> {
+    let prompt = match state.prompt_cache.get(&id).await {
+        Some(p) => p,
+        None => {
+            let prompt = state.db.prompt.get_prompt(id).await.unwrap();
+            state.prompt_cache.insert(id, prompt.clone()).await;
+            prompt
+        }
+    };
+
+    let (tx, mut rx) = mpsc::channel(100);
+    let llm_props = LlmProps::new(prompt.clone(), payload);
+    let llm = Llm::new(llm_props).unwrap();
+
+    tokio::spawn(async move {
+        if let Err(e) = llm.stream(tx).await {
+            eprintln!("LLM streaming error: {}", e);
+        }
+    });
+
+    let stream = async_stream::stream! {
+        while let Some(result) = rx.recv().await {
+            match result {
+                Ok(content) => {
+                    let event = Event::default().data(content.clone());
+                    if content == "[DONE]" {
+                        break;
+                    }
+                    
+                    yield Ok(event)
+                }
+                Err(e) => {
+                    eprintln!("error in stream: {:?}", e);
+                    panic!()
+                }
+            }
+        }
+    };
+
+    Ok(Sse::new(stream).keep_alive(KeepAlive::default()))
+}

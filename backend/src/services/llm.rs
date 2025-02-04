@@ -58,7 +58,7 @@ pub enum Error {
 }
 
 pub trait LlmProvider {
-    fn build_request(props: &LlmProps) -> Result<RequestBuilder, Error>;
+    fn build_request(props: &LlmProps, streaming: bool) -> Result<RequestBuilder, Error>;
     fn parse_response(json_text: &str) -> Result<String, Error>;
     fn stream_eventsource(event_source: EventSource, tx: Sender<Result<String, LlmStreamingError>>);
 }
@@ -111,10 +111,10 @@ impl Llm {
 
     async fn send_request(&self) -> Result<String, Error> {
         let request = match &self.props.model {
-            LlmModel::OpenAi(_) => OpenaiProvider::build_request(&self.props),
-            LlmModel::Anthropic(_) => AnthropicProvider::build_request(&self.props),
-            LlmModel::Gemini(_) => GeminiProvider::build_request(&self.props),
-            LlmModel::Deepseek(_) => DeepseekProvider::build_request(&self.props)
+            LlmModel::OpenAi(_) => OpenaiProvider::build_request(&self.props, false),
+            LlmModel::Anthropic(_) => AnthropicProvider::build_request(&self.props, false),
+            LlmModel::Gemini(_) => GeminiProvider::build_request(&self.props, false),
+            LlmModel::Deepseek(_) => DeepseekProvider::build_request(&self.props, false)
         }?;
 
         let response = request.send().await?;
@@ -138,10 +138,10 @@ impl Llm {
         tx: Sender<Result<String, LlmStreamingError>>
     ) -> Result<(), Error> {
         let request = match &self.props.model {
-            LlmModel::OpenAi(_) => OpenaiProvider::build_request(&self.props),
-            LlmModel::Anthropic(_) => AnthropicProvider::build_request(&self.props),
-            LlmModel::Gemini(_) => GeminiProvider::build_request(&self.props),
-            LlmModel::Deepseek(_) => DeepseekProvider::build_request(&self.props)
+            LlmModel::OpenAi(_) => OpenaiProvider::build_request(&self.props, true),
+            LlmModel::Anthropic(_) => AnthropicProvider::build_request(&self.props, true),
+            LlmModel::Gemini(_) => GeminiProvider::build_request(&self.props, true),
+            LlmModel::Deepseek(_) => DeepseekProvider::build_request(&self.props, true)
         }?;
 
         let event_source = request.eventsource()?;
@@ -172,8 +172,7 @@ mod tests {
             temperature: 0.5,
             max_tokens: 100,
             json_mode: false,
-            messages: Message::defaults(),
-            streaming: false
+            messages: Message::defaults()
         }
     }
 
@@ -202,8 +201,7 @@ mod tests {
             messages: vec![
                 Message::System { content: "You must respond with valid JSON onlyl".to_string() },
                 Message::User { content: "Return a JSON object with a 'message' field containing 'Hello in JSON'".to_string() },
-            ],
-            streaming: false
+            ]
         };
 
 
@@ -225,8 +223,7 @@ mod tests {
             messages: vec![
                 Message::System { content: "You are a friendly assistance".to_string() },
                 Message::User { content: "You return a message saying 'Hello'".to_string() },
-            ],
-            streaming: false
+            ]
         };
         let llm = Llm::new(props);
 
@@ -249,8 +246,7 @@ mod tests {
             messages: vec![
                 Message::System { content: "You are a friendly assistance".to_string() },
                 Message::User { content: "You return a message saying 'Hello'".to_string() },
-            ],
-            streaming: false
+            ]
         };
         let llm = Llm::new(props);
         let text = llm.text().await.unwrap();
@@ -274,8 +270,7 @@ mod tests {
                 Message::User { 
                     content: "Return a JSON object with a 'message' field containing 'Hello in JSON'".to_string() 
                 },
-            ],
-            streaming: false
+            ]
         };
 
         let llm = Llm::new(props);
@@ -314,8 +309,7 @@ mod tests {
                 Message::User { 
                     content: "Return JSON with format: {\"content\": \"Hello in JSON\"}".to_string() 
                 },
-            ],
-            streaming: false
+            ]
         };
 
         let llm = Llm::new(props);
