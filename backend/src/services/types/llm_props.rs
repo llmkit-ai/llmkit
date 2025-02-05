@@ -15,7 +15,9 @@ pub struct LlmProps {
     pub max_tokens: i64,
     pub temperature: f64,
     pub json_mode: bool,
-    pub messages: Vec<Message>
+    pub messages: Vec<Message>,
+    pub prompt_id: i64,
+    pub model_id: i64
 }
 
 impl LlmProps {
@@ -39,7 +41,9 @@ impl LlmProps {
             max_tokens: prompt.max_tokens,
             temperature: prompt.temperature,
             json_mode: prompt.json_mode,
-            messages
+            messages,
+            prompt_id: prompt.id,
+            model_id: prompt.model_id,
         }
     }
 }

@@ -54,18 +54,19 @@
         Edit
       </button>
       <button
+        v-if="!prompt.json_mode"
+        type="button"
+        @click="executeStream()"
+        class="text-sm/6 p-2 border-2 border-neutral-700 dark:border-neutral-300 bg-neutral-700 dark:bg-neutral-300 text-white dark:text-black hover:bg-neutral-800 dark:hover:bg-neutral-400"
+      >
+        Stream
+      </button>
+      <button
         type="button"
         @click="execute()"
         class="text-sm/6 p-2 border-2 border-black dark:border-white bg-black dark:bg-white text-white dark:text-black hover:bg-neutral-800 dark:hover:bg-neutral-200"
       >
         Execute
-      </button>
-      <button
-        type="button"
-        @click="executeStream()"
-        class="text-sm/6 p-2 border-2 border-black dark:border-white bg-black dark:bg-white text-white dark:text-black hover:bg-neutral-800 dark:hover:bg-neutral-200"
-      >
-        Stream
       </button>
     </div>
   </div>

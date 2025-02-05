@@ -12,12 +12,18 @@ impl LogRepository {
         Ok(LogRepository { pool })
     }
 
-    // Create a new API trace
     pub async fn create_trace(
         &self,
         prompt_id: Option<i64>,
         model_id: i64,
         request_data: &str,
+        response_data: Option<&str>,
+        status_code: Option<i64>,
+        latency_ms: Option<i64>,
+        input_tokens: Option<i64>,
+        output_tokens: Option<i64>,
+        error_code: Option<&str>,
+        error_message: Option<&str>,
     ) -> Result<i64> {
         let mut conn = self.pool.acquire().await?;
         let id = sqlx::query!(
@@ -25,12 +31,27 @@ impl LogRepository {
             INSERT INTO llm_api_traces (
                 prompt_id,
                 model_id,
-                request_data
-            ) VALUES (?, ?, ?)
+                request_data,
+                response_data,
+                status_code,
+                latency_ms,
+                input_tokens,
+                output_tokens,
+                error_code,
+                error_message,
+                created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             "#,
             prompt_id,
             model_id,
-            request_data
+            request_data,
+            response_data,
+            status_code,
+            latency_ms,
+            input_tokens,
+            output_tokens,
+            error_code,
+            error_message
         )
         .execute(&mut *conn)
         .await?

@@ -10,14 +10,27 @@ use serde_json::json;
 use tokio::sync::mpsc::Sender;
 use futures_util::StreamExt;
 
-pub struct OpenaiProvider;
+pub struct OpenaiProvider<'a> {
+    props: &'a LlmProps,
+    streaming: bool
+}
 
-impl LlmProvider for OpenaiProvider {
-    fn build_request(props: &LlmProps, streaming: bool) -> Result<RequestBuilder, Error> {
+
+impl<'a> OpenaiProvider<'a> {
+    pub fn new(props: &'a LlmProps, streaming: bool) -> Self {
+        OpenaiProvider {
+            props,
+            streaming
+        }
+    }
+}
+
+impl<'a> LlmProvider for OpenaiProvider<'a> {
+    fn build_request(&self) -> Result<RequestBuilder, Error> {
         let client = reqwest::Client::new();
         let api_key = std::env::var("OPENAI_API_KEY").map_err(|_| Error::Auth)?;
 
-        let body = OpenaiProvider::create_body(props, streaming);
+        let body = self.create_body();
 
         Ok(client
             .post("https://api.openai.com/v1/chat/completions")
@@ -46,7 +59,10 @@ impl LlmProvider for OpenaiProvider {
             .first()
             .and_then(|c| Some(c.message.content.clone()))
             .ok_or(Error::Provider("Empty OpenAI response".into()))
-    
+    }
+
+    fn log_response(&self, request_text: &str, response_text: &str) -> Result<(), Error> {
+        todo!()    
     }
 
     fn stream_eventsource(
@@ -105,9 +121,9 @@ impl LlmProvider for OpenaiProvider {
         });
     }
 
-    fn create_body(props: &LlmProps, streaming: bool) -> serde_json::Value {
-        let model: String = props.model.clone().into();
-        let messages = props.messages.iter()
+    fn create_body(&self) -> serde_json::Value {
+        let model: String = self.props.model.clone().into();
+        let messages = self.props.messages.iter()
             .map(|msg| match msg {
                 Message::System { content } => json!({
                     "role": "system",
@@ -127,12 +143,12 @@ impl LlmProvider for OpenaiProvider {
         let mut body = json!({
             "model": model,
             "messages": messages,
-            "stream": streaming,
-            "temperature": props.temperature,
-            "max_completion_tokens": props.max_tokens
+            "stream": self.streaming,
+            "temperature": self.props.temperature,
+            "max_completion_tokens": self.props.max_tokens
         });
 
-        if props.json_mode {
+        if self.props.json_mode {
             body["response_format"] = json!({ "type": "json_object" });
         }
 

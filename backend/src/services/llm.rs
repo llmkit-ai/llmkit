@@ -58,10 +58,11 @@ pub enum Error {
 }
 
 pub trait LlmProvider {
-    fn build_request(props: &LlmProps, streaming: bool) -> Result<RequestBuilder, Error>;
+    fn build_request(&self) -> Result<RequestBuilder, Error>;
     fn parse_response(json_text: &str) -> Result<String, Error>;
+    fn log_response(&self, request_text: &str, response_text: &str) -> Result<(), Error>;
     fn stream_eventsource(event_source: EventSource, tx: Sender<Result<String, LlmStreamingError>>);
-    fn create_body(props: &LlmProps, streaming: bool) -> serde_json::Value;
+    fn create_body(&self) -> serde_json::Value;
 }
 
 pub struct Llm {
@@ -110,11 +111,16 @@ impl Llm {
     }
 
     async fn send_request(&self) -> Result<String, Error> {
+        let openai_provider = OpenaiProvider::new(&self.props, false);
+        let anthropic_provider = AnthropicProvider::new(&self.props, false);
+        let gemini_provider = GeminiProvider::new(&self.props, false);
+        let deepseek_provider = DeepseekProvider::new(&self.props, false);
+
         let request = match &self.props.model {
-            LlmModel::OpenAi(_) => OpenaiProvider::build_request(&self.props, false),
-            LlmModel::Anthropic(_) => AnthropicProvider::build_request(&self.props, false),
-            LlmModel::Gemini(_) => GeminiProvider::build_request(&self.props, false),
-            LlmModel::Deepseek(_) => DeepseekProvider::build_request(&self.props, false)
+            LlmModel::OpenAi(_) => openai_provider.build_request(),
+            LlmModel::Anthropic(_) => anthropic_provider.build_request(),
+            LlmModel::Gemini(_) => gemini_provider.build_request(),
+            LlmModel::Deepseek(_) => deepseek_provider.build_request()
         }?;
 
         let response = request.send().await?;
@@ -137,11 +143,16 @@ impl Llm {
         &self,
         tx: Sender<Result<String, LlmStreamingError>>
     ) -> Result<(), Error> {
+        let openai_provider = OpenaiProvider::new(&self.props, true);
+        let anthropic_provider = AnthropicProvider::new(&self.props, true);
+        let gemini_provider = GeminiProvider::new(&self.props, true);
+        let deepseek_provider = DeepseekProvider::new(&self.props, true);
+
         let request = match &self.props.model {
-            LlmModel::OpenAi(_) => OpenaiProvider::build_request(&self.props, true),
-            LlmModel::Anthropic(_) => AnthropicProvider::build_request(&self.props, true),
-            LlmModel::Gemini(_) => GeminiProvider::build_request(&self.props, true),
-            LlmModel::Deepseek(_) => DeepseekProvider::build_request(&self.props, true)
+            LlmModel::OpenAi(_) => openai_provider.build_request(),
+            LlmModel::Anthropic(_) => anthropic_provider.build_request(),
+            LlmModel::Gemini(_) => gemini_provider.build_request(),
+            LlmModel::Deepseek(_) => deepseek_provider.build_request()
         }?;
 
         let event_source = request.eventsource()?;
@@ -173,7 +184,9 @@ mod tests {
             temperature: 0.5,
             max_tokens: 100,
             json_mode: false,
-            messages: Message::defaults()
+            messages: Message::defaults(),
+            prompt_id: 1,
+            model_id: 1,
         }
     }
 
@@ -202,7 +215,9 @@ mod tests {
             messages: vec![
                 Message::System { content: "You must respond with valid JSON onlyl".to_string() },
                 Message::User { content: "Return a JSON object with a 'message' field containing 'Hello in JSON'".to_string() },
-            ]
+            ],
+            prompt_id: 1,
+            model_id: 1,
         };
 
 
@@ -224,7 +239,9 @@ mod tests {
             messages: vec![
                 Message::System { content: "You are a friendly assistance".to_string() },
                 Message::User { content: "You return a message saying 'Hello'".to_string() },
-            ]
+            ],
+            prompt_id: 1,
+            model_id: 1,
         };
         let llm = Llm::new(props);
 
@@ -247,7 +264,9 @@ mod tests {
             messages: vec![
                 Message::System { content: "You are a friendly assistance".to_string() },
                 Message::User { content: "You return a message saying 'Hello'".to_string() },
-            ]
+            ],
+            prompt_id: 1,
+            model_id: 1,
         };
         let llm = Llm::new(props);
         let text = llm.text().await.unwrap();
@@ -271,7 +290,9 @@ mod tests {
                 Message::User { 
                     content: "Return a JSON object with a 'message' field containing 'Hello in JSON'".to_string() 
                 },
-            ]
+            ],
+            prompt_id: 1,
+            model_id: 1,
         };
 
         let llm = Llm::new(props);
@@ -310,7 +331,9 @@ mod tests {
                 Message::User { 
                     content: "Return JSON with format: {\"content\": \"Hello in JSON\"}".to_string() 
                 },
-            ]
+            ],
+            prompt_id: 1,
+            model_id: 1,
         };
 
         let llm = Llm::new(props);
@@ -333,6 +356,8 @@ mod tests {
                     content: "Say 'Hello, world!' in a few words".to_string(),
                 },
             ],
+            prompt_id: 1,
+            model_id: 1,
         }
     }
 
@@ -444,6 +469,8 @@ mod tests {
                     content: "Great! Now what is x + 5?".to_string(),
                 },
             ],
+            prompt_id: 1,
+            model_id: 1,
         }
     }
 

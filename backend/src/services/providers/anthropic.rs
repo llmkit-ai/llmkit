@@ -10,14 +10,26 @@ use serde_json::json;
 use tokio::sync::mpsc::Sender;
 use futures_util::StreamExt;
 
-pub struct AnthropicProvider;
+pub struct AnthropicProvider<'a> {
+    props: &'a LlmProps,
+    streaming: bool
+}
+
+impl<'a> AnthropicProvider<'a> {
+    pub fn new(props: &'a LlmProps, streaming: bool) -> Self {
+        AnthropicProvider {
+            props,
+            streaming
+        }
+    }
+}
 
 
-impl LlmProvider for AnthropicProvider {
-    fn build_request(props: &LlmProps, streaming: bool) -> Result<RequestBuilder, Error> {
+impl<'a> LlmProvider for AnthropicProvider<'a> {
+    fn build_request(&self) -> Result<RequestBuilder, Error> {
         let client = reqwest::Client::new();
         let api_key = std::env::var("ANTHROPIC_API_KEY").map_err(|_| Error::Auth)?;
-        let body = AnthropicProvider::create_body(props, streaming);
+        let body = self.create_body();
 
         Ok(client
             .post("https://api.anthropic.com/v1/messages")
@@ -27,6 +39,8 @@ impl LlmProvider for AnthropicProvider {
     }
 
     fn parse_response(json_text: &str) -> Result<String, Error> {
+        println!("{:?}", json_text);
+
         #[derive(serde::Deserialize)]
         struct ResponseJson {
             content: Vec<MessageContent>,
@@ -42,6 +56,10 @@ impl LlmProvider for AnthropicProvider {
             .first()
             .and_then(|c| Some(c.text.clone()))
             .ok_or(Error::Provider("Empty Anthropic response".into()))
+    }
+
+    fn log_response(&self, request_text: &str, response_text: &str) -> Result<(), Error> {
+        todo!()         
     }
 
     fn stream_eventsource(
@@ -117,15 +135,15 @@ impl LlmProvider for AnthropicProvider {
         });
     }
 
-    fn create_body(props: &LlmProps, streaming: bool) -> serde_json::Value {
-        let system_content = props.messages.iter()
+    fn create_body(&self) -> serde_json::Value {
+        let system_content = self.props.messages.iter()
             .find_map(|msg| match msg {
                 Message::System { content } => Some(content.as_str()),
                 _ => None
             });
 
         // Convert conversation history to Anthropic's format
-        let filtered_messages: Vec<serde_json::Value> = props.messages.iter()
+        let filtered_messages: Vec<serde_json::Value> = self.props.messages.iter()
             .filter_map(|msg| match msg {
                 Message::System { .. } => None,
                 Message::User { content } => Some(json!({
@@ -147,12 +165,12 @@ impl LlmProvider for AnthropicProvider {
             body["system"] = json!(content);
         }
 
-        let model: String = props.model.clone().into();
+        let model: String = self.props.model.clone().into();
 
         body["model"] = json!(model);
-        body["stream"] = json!(streaming);
-        body["temperature"] = json!(props.temperature);
-        body["max_tokens"] = json!(props.max_tokens);
+        body["stream"] = json!(self.streaming);
+        body["temperature"] = json!(self.props.temperature);
+        body["max_tokens"] = json!(self.props.max_tokens);
 
         body
     }

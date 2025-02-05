@@ -10,7 +10,19 @@ use serde_json::json;
 use tokio::sync::mpsc::Sender;
 use futures_util::StreamExt;
 
-pub struct GeminiProvider;
+pub struct GeminiProvider<'a> {
+    props: &'a LlmProps,
+    streaming: bool
+}
+
+impl<'a> GeminiProvider<'a > {
+    pub fn new(props: &'a LlmProps, streaming: bool) -> Self {
+        GeminiProvider {
+            props,
+            streaming
+        }
+    }
+}
 
 #[derive(serde::Deserialize)]
 struct ResponseJson {
@@ -31,24 +43,24 @@ struct ContentPart {
 }
 
 
-impl LlmProvider for GeminiProvider {
-    fn build_request(props: &LlmProps, streaming: bool) -> Result<RequestBuilder, Error> {
+impl<'a> LlmProvider for GeminiProvider<'a> {
+    fn build_request(&self) -> Result<RequestBuilder, Error> {
         let client = reqwest::Client::new();
         let api_key = std::env::var("GOOGLE_API_KEY").map_err(|_| Error::Auth)?;
 
-        let body = GeminiProvider::create_body(props, streaming);
+        let body = self.create_body();
 
-        let model: String = props.model.clone().into();
+        let model: String = self.props.model.clone().into();
         let url = format!(
             "https://generativelanguage.googleapis.com/v1beta/models/{}:{}",
             model,
-            if streaming { "streamGenerateContent" } else { "generateContent" }
+            if self.streaming { "streamGenerateContent" } else { "generateContent" }
         );
 
         let mut request = client.post(&url)
             .query(&[("key", api_key)]);
 
-        if streaming {
+        if self.streaming {
             request = request.query(&[("alt", "sse")]);
         }
 
@@ -65,6 +77,10 @@ impl LlmProvider for GeminiProvider {
             .and_then(|p| Some(p.text.clone()))
             .ok_or(Error::Provider("Empty Google response".into()))
 
+    }
+
+    fn log_response(&self, request_text: &str, response_text: &str) -> Result<(), Error> {
+        todo!()
     }
 
     fn stream_eventsource(
@@ -129,8 +145,8 @@ impl LlmProvider for GeminiProvider {
 
     }
 
-    fn create_body(props: &LlmProps, streaming: bool) -> serde_json::Value {
-        let system_instruction = props.messages.iter()
+    fn create_body(&self) -> serde_json::Value {
+        let system_instruction = self.props.messages.iter()
             .filter_map(|msg| match msg {
                 Message::System { content } => Some(content.as_str()),
                 _ => None
@@ -139,7 +155,7 @@ impl LlmProvider for GeminiProvider {
             .join("\n\n");
 
         // Convert conversation history to Gemini's format
-        let contents = props.messages.iter()
+        let contents = self.props.messages.iter()
             .filter_map(|msg| match msg {
                 Message::System { .. } => None,
                 Message::User { content } => Some(json!({
@@ -166,11 +182,11 @@ impl LlmProvider for GeminiProvider {
         }
 
         let mut generation_config = json!({
-            "temperature": props.temperature,
-            "maxOutputTokens": props.max_tokens
+            "temperature": self.props.temperature,
+            "maxOutputTokens": self.props.max_tokens
         });
 
-        if props.json_mode {
+        if self.props.json_mode {
             generation_config["responseMimeType"] = json!("application/json");
         } else {
             generation_config["responseMimeType"] = json!("text/plain");
