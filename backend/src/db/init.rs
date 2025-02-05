@@ -15,13 +15,13 @@ static MIGRATOR: Migrator = sqlx::migrate!();
 
 #[derive(Clone, Debug)]
 #[allow(dead_code)]
-pub struct DbInit {
+pub struct DbData {
     pub prompt: PromptRepository,
     pub log: LogRepository,
     pub model: ModelRepository,
 }
 
-impl DbInit {
+impl DbData {
     pub async fn new(db_url: &str) -> Result<Self> {
         let pool = sqlx::SqlitePool::connect_with(
             sqlx::sqlite::SqliteConnectOptions::from_str(db_url)?
@@ -36,7 +36,7 @@ impl DbInit {
         let log = LogRepository::new(pool.clone()).await?;
         let model = ModelRepository::new(pool.clone()).await?;
 
-        Ok(DbInit {
+        Ok(DbData {
             prompt,
             log,
             model

@@ -23,7 +23,7 @@ pub struct LlmProps {
 impl LlmProps {
     pub fn new(prompt: PromptWithModel, context: serde_json::Value) -> Self {
         let mut tera = Tera::default();
-        tera.add_raw_template("prompt", &prompt.prompt);
+        tera.add_raw_template("prompt", &prompt.prompt).unwrap();
 
         let mut tera_ctx = Context::new();
         if let serde_json::Value::Object(context) = context {

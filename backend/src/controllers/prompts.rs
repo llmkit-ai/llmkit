@@ -118,7 +118,7 @@ pub async fn execute_prompt(
     };
 
     let llm_props = LlmProps::new(prompt.clone(), payload);
-    let llm = Llm::new(llm_props);
+    let llm = Llm::new(llm_props, state.db.log);
 
     match prompt.json_mode {
         true => {
@@ -159,7 +159,7 @@ pub async fn execute_prompt_stream(
 
     let (tx, mut rx) = mpsc::channel(100);
     let llm_props = LlmProps::new(prompt.clone(), payload);
-    let llm = Llm::new(llm_props);
+    let llm = Llm::new(llm_props, state.db.log);
 
     tokio::spawn(async move {
         if let Err(e) = llm.stream(tx).await {

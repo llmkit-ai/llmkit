@@ -44,7 +44,7 @@ struct ContentPart {
 
 
 impl<'a> LlmProvider for GeminiProvider<'a> {
-    fn build_request(&self) -> Result<RequestBuilder, Error> {
+    fn build_request(&mut self) -> Result<RequestBuilder, Error> {
         let client = reqwest::Client::new();
         let api_key = std::env::var("GOOGLE_API_KEY").map_err(|_| Error::Auth)?;
 
@@ -79,7 +79,7 @@ impl<'a> LlmProvider for GeminiProvider<'a> {
 
     }
 
-    fn log_response(&self, request_text: &str, response_text: &str) -> Result<(), Error> {
+    fn log_response(&self, response_text: &str) -> Result<(), Error> {
         todo!()
     }
 

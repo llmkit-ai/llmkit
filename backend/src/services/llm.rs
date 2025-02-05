@@ -8,7 +8,7 @@ use tokio_retry::{strategy::{jitter, ExponentialBackoff}, Retry};
 use tracing;
 
 
-use crate::common::types::models::LlmModel;
+use crate::{common::types::models::LlmModel, db::logs::LogRepository};
 use super::{
     providers::{
         anthropic::AnthropicProvider, 
@@ -58,21 +58,23 @@ pub enum Error {
 }
 
 pub trait LlmProvider {
-    fn build_request(&self) -> Result<RequestBuilder, Error>;
-    fn parse_response(json_text: &str) -> Result<String, Error>;
-    fn log_response(&self, request_text: &str, response_text: &str) -> Result<(), Error>;
+    fn build_request(&mut self) -> Result<RequestBuilder, Error>;
+    fn parse_response(&mut self, json_text: &str) -> Result<String, Error>;
+    fn log_response(&self) -> Result<(), Error>;
     fn stream_eventsource(event_source: EventSource, tx: Sender<Result<String, LlmStreamingError>>);
     fn create_body(&self) -> serde_json::Value;
 }
 
 pub struct Llm {
-    props: LlmProps
+    props: LlmProps,
+    db_log: LogRepository
 }
 
 impl Llm {
-    pub fn new(props: LlmProps) -> Self {
+    pub fn new(props: LlmProps, db_log: LogRepository) -> Self {
         Llm {
-            props
+            props,
+            db_log
         } 
     }
 
@@ -97,7 +99,7 @@ impl Llm {
             // need to make sure it is a valid JSON (hence Value) and then convert
             // it back into text and be on our way
             let json: serde_json::Value = serde_json::from_str(&text)?;
-            Ok(serde_json::to_string(&json).expect("Failed to convert json back into string"))
+            Ok(json.to_string())
         }).await
     }
 
@@ -111,10 +113,10 @@ impl Llm {
     }
 
     async fn send_request(&self) -> Result<String, Error> {
-        let openai_provider = OpenaiProvider::new(&self.props, false);
-        let anthropic_provider = AnthropicProvider::new(&self.props, false);
-        let gemini_provider = GeminiProvider::new(&self.props, false);
-        let deepseek_provider = DeepseekProvider::new(&self.props, false);
+        let mut openai_provider = OpenaiProvider::new(&self.props, false);
+        let mut anthropic_provider = AnthropicProvider::new(&self.props, false, &self.db_log);
+        let mut gemini_provider = GeminiProvider::new(&self.props, false);
+        let mut deepseek_provider = DeepseekProvider::new(&self.props, false);
 
         let request = match &self.props.model {
             LlmModel::OpenAi(_) => openai_provider.build_request(),
@@ -132,10 +134,10 @@ impl Llm {
         }
 
         match &self.props.model {
-            LlmModel::OpenAi(_) => OpenaiProvider::parse_response(&text),
-            LlmModel::Anthropic(_) => AnthropicProvider::parse_response(&text),
-            LlmModel::Gemini(_) => GeminiProvider::parse_response(&text),
-            LlmModel::Deepseek(_) => DeepseekProvider::parse_response(&text)
+            LlmModel::OpenAi(_) => openai_provider.parse_response(&text),
+            LlmModel::Anthropic(_) => anthropic_provider.parse_response(&text),
+            LlmModel::Gemini(_) => gemini_provider.parse_response(&text),
+            LlmModel::Deepseek(_) => deepseek_provider.parse_response(&text)
         }
     }
 
@@ -143,10 +145,10 @@ impl Llm {
         &self,
         tx: Sender<Result<String, LlmStreamingError>>
     ) -> Result<(), Error> {
-        let openai_provider = OpenaiProvider::new(&self.props, true);
-        let anthropic_provider = AnthropicProvider::new(&self.props, true);
-        let gemini_provider = GeminiProvider::new(&self.props, true);
-        let deepseek_provider = DeepseekProvider::new(&self.props, true);
+        let mut openai_provider = OpenaiProvider::new(&self.props, true);
+        let mut anthropic_provider = AnthropicProvider::new(&self.props, true, &self.db_log);
+        let mut gemini_provider = GeminiProvider::new(&self.props, true);
+        let mut deepseek_provider = DeepseekProvider::new(&self.props, true);
 
         let request = match &self.props.model {
             LlmModel::OpenAi(_) => openai_provider.build_request(),
@@ -195,7 +197,8 @@ mod tests {
     async fn test_openai_integration() {
         dotenv().ok();
         let props = create_test_props(LlmModel::OpenAi(OpenAiModel::Gpt4oMini202407)).await;
-        let llm = Llm::new(props);
+        let logs = LogRepository::in_memory().await.unwrap();
+        let llm = Llm::new(props, logs);
 
         // Test text response
         let text = llm.text().await.unwrap();
@@ -221,7 +224,8 @@ mod tests {
         };
 
 
-        let llm = Llm::new(props);
+        let logs = LogRepository::in_memory().await.unwrap();
+        let llm = Llm::new(props, logs);
         let response = llm.json().await.unwrap();
         let json: TestResponse = serde_json::from_str(&response).unwrap();
         assert_eq!(json.message, "Hello in JSON");
@@ -243,7 +247,9 @@ mod tests {
             prompt_id: 1,
             model_id: 1,
         };
-        let llm = Llm::new(props);
+
+        let logs = LogRepository::in_memory().await.unwrap();
+        let llm = Llm::new(props, logs);
 
         // Test text response - Anthropic doesn't support JSON mode
         let text = llm.text().await.unwrap();
@@ -268,7 +274,9 @@ mod tests {
             prompt_id: 1,
             model_id: 1,
         };
-        let llm = Llm::new(props);
+
+        let logs = LogRepository::in_memory().await.unwrap();
+        let llm = Llm::new(props, logs);
         let text = llm.text().await.unwrap();
         assert!(text.contains("Hello"));
 
@@ -295,7 +303,8 @@ mod tests {
             model_id: 1,
         };
 
-        let llm = Llm::new(props);
+        let logs = LogRepository::in_memory().await.unwrap();
+        let llm = Llm::new(props, logs);
         let response = llm.json().await.unwrap();
         let json: TestResponse = serde_json::from_str(&response).unwrap();
         assert_eq!(json.message, "Hello in JSON");
@@ -308,7 +317,8 @@ mod tests {
 
         // Test text response
         let props = create_test_props(LlmModel::Deepseek(DeepseekModel::DeepseekChat)).await;
-        let llm = Llm::new(props);
+        let logs = LogRepository::in_memory().await.unwrap();
+        let llm = Llm::new(props, logs);
         let text = llm.text().await.unwrap();
         assert!(text.contains("Hello"));
 
@@ -336,7 +346,8 @@ mod tests {
             model_id: 1,
         };
 
-        let llm = Llm::new(props);
+        let logs = LogRepository::in_memory().await.unwrap();
+        let llm = Llm::new(props, logs);
         let response = llm.json().await.unwrap();
         let json: TestResponse = serde_json::from_str(&response).unwrap();
         assert_eq!(json.message, "Hello in JSON");
@@ -366,7 +377,8 @@ mod tests {
     async fn test_openai_stream() {
         dotenv().ok();
         let props = create_stream_test_props(LlmModel::OpenAi(OpenAiModel::Gpt4oMini202407)).await;
-        let llm = Llm::new(props);
+        let logs = LogRepository::in_memory().await.unwrap();
+        let llm = Llm::new(props, logs);
         let (tx, mut rx) = mpsc::channel(10);
 
         llm.stream(tx).await.expect("Streaming failed");
@@ -389,7 +401,8 @@ mod tests {
         let props =
             create_stream_test_props(LlmModel::Anthropic(AnthropicModel::Claude35Haiku20241022))
                 .await;
-        let llm = Llm::new(props);
+        let logs = LogRepository::in_memory().await.unwrap();
+        let llm = Llm::new(props, logs);
         let (tx, mut rx) = mpsc::channel(10);
 
         llm.stream(tx).await.expect("Streaming failed");
@@ -411,7 +424,8 @@ mod tests {
         dotenv().ok();
         let props =
             create_stream_test_props(LlmModel::Gemini(GeminiModel::Gemini15Flash)).await;
-        let llm = Llm::new(props);
+        let logs = LogRepository::in_memory().await.unwrap();
+        let llm = Llm::new(props, logs);
         let (tx, mut rx) = mpsc::channel(10);
 
         llm.stream(tx).await.expect("Streaming failed");
@@ -433,7 +447,8 @@ mod tests {
         dotenv().ok();
         let props =
             create_stream_test_props(LlmModel::Deepseek(DeepseekModel::DeepseekChat)).await;
-        let llm = Llm::new(props);
+        let logs = LogRepository::in_memory().await.unwrap();
+        let llm = Llm::new(props, logs);
         let (tx, mut rx) = mpsc::channel(10);
 
         llm.stream(tx).await.expect("Streaming failed");
@@ -489,7 +504,8 @@ mod tests {
 
         for model in models {
             let props = create_multi_turn_test_props(model.clone()).await;
-            let llm = Llm::new(props);
+            let logs = LogRepository::in_memory().await.unwrap();
+            let llm = Llm::new(props, logs);
 
             // The response should continue the conversation naturally
             let response = llm.text().await.unwrap();
@@ -511,7 +527,8 @@ mod tests {
 
         for model in models {
             let props = create_multi_turn_test_props(model.clone()).await;
-            let llm = Llm::new(props);
+            let logs = LogRepository::in_memory().await.unwrap();
+            let llm = Llm::new(props, logs);
             let (tx, mut rx) = mpsc::channel(10);
 
             llm.stream(tx).await.expect("Streaming failed");

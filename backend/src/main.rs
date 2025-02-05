@@ -20,7 +20,7 @@ use controllers::{
     }
 };
 
-use db::{init::DbInit, types::prompt::PromptWithModel};
+use db::{init::DbData, types::prompt::PromptWithModel};
 use moka::future::Cache;
 
 pub mod common;
@@ -33,7 +33,7 @@ async fn main() -> Result<()> {
     dotenv::dotenv().ok();
 
     let database_url = std::env::var("DATABASE_URL")?;
-    let data = DbInit::new(&database_url).await?;
+    let data = DbData::new(&database_url).await?;
     let app_state = AppState::new(data).await;
 
     let router = Router::new()
@@ -87,12 +87,12 @@ async fn api_version_handler() -> &'static str {
 // APP STATE
 #[derive(Clone)]
 pub struct AppState {
-    pub db: DbInit,
+    pub db: DbData,
     pub prompt_cache: Cache<i64, PromptWithModel>,
 }
 
 impl AppState {
-    pub async fn new(data: DbInit) -> Self {
+    pub async fn new(data: DbData) -> Self {
         let prompt_cache: Cache<i64, PromptWithModel> = Cache::new(500);
 
         AppState { db: data, prompt_cache }

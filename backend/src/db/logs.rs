@@ -12,6 +12,12 @@ impl LogRepository {
         Ok(LogRepository { pool })
     }
 
+    #[cfg(test)]
+    pub async fn in_memory() -> Result<Self> {
+        let pool = sqlx::SqlitePool::connect("sqlite::memory:").await?;
+        Self::new(pool.clone()).await
+    }
+
     pub async fn create_trace(
         &self,
         prompt_id: Option<i64>,
