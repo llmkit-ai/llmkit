@@ -118,11 +118,11 @@ pub async fn execute_prompt(
     };
 
     let llm_props = LlmProps::new(prompt.clone(), payload);
-    let llm = Llm::new(llm_props).map_err(|_| AppError::InternalServerError("Something went wrong".to_string()))?;
+    let llm = Llm::new(llm_props);
 
     match prompt.json_mode {
         true => {
-            let res: Value = llm.json()
+            let res = llm.json()
                 .await
                 .map_err(|_| AppError::InternalServerError("Something went wrong".to_string()))?;
 
@@ -159,7 +159,7 @@ pub async fn execute_prompt_stream(
 
     let (tx, mut rx) = mpsc::channel(100);
     let llm_props = LlmProps::new(prompt.clone(), payload);
-    let llm = Llm::new(llm_props).unwrap();
+    let llm = Llm::new(llm_props);
 
     tokio::spawn(async move {
         if let Err(e) = llm.stream(tx).await {

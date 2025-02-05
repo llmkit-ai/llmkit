@@ -17,36 +17,7 @@ impl LlmProvider for OpenaiProvider {
         let client = reqwest::Client::new();
         let api_key = std::env::var("OPENAI_API_KEY").map_err(|_| Error::Auth)?;
 
-        // Convert messages to OpenAI format
-        let messages = props.messages.iter()
-            .map(|msg| match msg {
-                Message::System { content } => json!({
-                    "role": "system",
-                    "content": content
-                }),
-                Message::User { content } => json!({
-                    "role": "user",
-                    "content": content
-                }),
-                Message::Assistant { content } => json!({
-                    "role": "assistant",
-                    "content": content
-                }),
-            })
-            .collect::<Vec<_>>();
-
-        let model: String = props.model.clone().into();
-        let mut body = json!({
-            "model": model,
-            "messages": messages,
-            "stream": streaming,
-            "temperature": props.temperature,
-            "max_completion_tokens": props.max_tokens
-        });
-
-        if props.json_mode {
-            body["response_format"] = json!({ "type": "json_object" });
-        }
+        let body = OpenaiProvider::create_body(props, streaming);
 
         Ok(client
             .post("https://api.openai.com/v1/chat/completions")
@@ -133,8 +104,41 @@ impl LlmProvider for OpenaiProvider {
             event_source.close();
         });
     }
-}
 
+    fn create_body(props: &LlmProps, streaming: bool) -> serde_json::Value {
+        let model: String = props.model.clone().into();
+        let messages = props.messages.iter()
+            .map(|msg| match msg {
+                Message::System { content } => json!({
+                    "role": "system",
+                    "content": content
+                }),
+                Message::User { content } => json!({
+                    "role": "user",
+                    "content": content
+                }),
+                Message::Assistant { content } => json!({
+                    "role": "assistant",
+                    "content": content
+                }),
+            })
+            .collect::<Vec<_>>();
+
+        let mut body = json!({
+            "model": model,
+            "messages": messages,
+            "stream": streaming,
+            "temperature": props.temperature,
+            "max_completion_tokens": props.max_tokens
+        });
+
+        if props.json_mode {
+            body["response_format"] = json!({ "type": "json_object" });
+        }
+
+        body
+    }
+}
 
 #[cfg(test)]
 mod tests {

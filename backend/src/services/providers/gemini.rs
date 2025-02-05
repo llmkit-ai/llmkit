@@ -36,61 +36,9 @@ impl LlmProvider for GeminiProvider {
         let client = reqwest::Client::new();
         let api_key = std::env::var("GOOGLE_API_KEY").map_err(|_| Error::Auth)?;
 
-        // Extract and combine system messages
-        let system_instruction = props.messages.iter()
-            .filter_map(|msg| {
-                if let Message::System { content } = msg {
-                    Some(content.clone())
-                } else {
-                    None
-                }
-            })
-            .collect::<Vec<String>>()
-            .join("\n\n");
-
-        // Process conversation history into Gemini's format
-        let contents = props.messages.iter()
-            .filter_map(|msg| match msg {
-                Message::System { .. } => None,
-                Message::User { content } => Some(json!({
-                    "role": "user",
-                    "parts": [{ "text": content }]
-                })),
-                Message::Assistant { content } => Some(json!({
-                    "role": "model",
-                    "parts": [{ "text": content }]
-                })),
-            })
-            .collect::<Vec<_>>();
-
-        // Build generation config
-        let mut generation_config = json!({
-            "temperature": props.temperature,
-            "maxOutputTokens": props.max_tokens
-        });
-
-        if props.json_mode {
-            generation_config["responseMimeType"] = json!("application/json");
-        } else {
-            generation_config["responseMimeType"] = json!("text/plain");
-        }
-
-        // Construct base body
-        let mut body = json!({
-            "contents": contents,
-            "generationConfig": generation_config
-        });
-
-        // Add system instruction if present
-        if !system_instruction.is_empty() {
-            body["systemInstruction"] = json!({
-                "parts": [{ "text": system_instruction }]
-            });
-        }
+        let body = GeminiProvider::create_body(props, streaming);
 
         let model: String = props.model.clone().into();
-
-        // Build URL and query parameters
         let url = format!(
             "https://generativelanguage.googleapis.com/v1beta/models/{}:{}",
             model,
@@ -165,6 +113,10 @@ impl LlmProvider for GeminiProvider {
                         }
                     }
                     Err(e) => {
+                        if e.to_string() == "Stream ended" {
+                            break;
+                        }
+
                         let _ = tx.send(Err(LlmStreamingError::StreamError(e.to_string()))).await;
                         break;
                     }
@@ -175,6 +127,58 @@ impl LlmProvider for GeminiProvider {
             let _ = tx.send(Ok("[DONE]".to_string())).await;
         });
 
+    }
+
+    fn create_body(props: &LlmProps, streaming: bool) -> serde_json::Value {
+        let system_instruction = props.messages.iter()
+            .filter_map(|msg| match msg {
+                Message::System { content } => Some(content.as_str()),
+                _ => None
+            })
+            .collect::<Vec<&str>>()
+            .join("\n\n");
+
+        // Convert conversation history to Gemini's format
+        let contents = props.messages.iter()
+            .filter_map(|msg| match msg {
+                Message::System { .. } => None,
+                Message::User { content } => Some(json!({
+                    "role": "user",
+                    "parts": [{ "text": content }]
+                })),
+                Message::Assistant { content } => Some(json!({
+                    "role": "model",
+                    "parts": [{ "text": content }]
+                })),
+            })
+            .collect::<Vec<_>>();
+
+        // Build base JSON body
+        let mut body = json!({
+            "contents": contents
+        });
+
+        // Add system instruction if present
+        if !system_instruction.is_empty() {
+            body["systemInstruction"] = json!({
+                "parts": [{ "text": system_instruction }]
+            });
+        }
+
+        let mut generation_config = json!({
+            "temperature": props.temperature,
+            "maxOutputTokens": props.max_tokens
+        });
+
+        if props.json_mode {
+            generation_config["responseMimeType"] = json!("application/json");
+        } else {
+            generation_config["responseMimeType"] = json!("text/plain");
+        }
+
+        body["generationConfig"] = generation_config;
+
+        body
     }
 }
 

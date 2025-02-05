@@ -17,53 +17,7 @@ impl LlmProvider for AnthropicProvider {
     fn build_request(props: &LlmProps, streaming: bool) -> Result<RequestBuilder, Error> {
         let client = reqwest::Client::new();
         let api_key = std::env::var("ANTHROPIC_API_KEY").map_err(|_| Error::Auth)?;
-
-        // Extract system messages and combine them
-        let system_message = props.messages.iter()
-            .find_map(|msg| {
-                if let Message::System { content } = msg {
-                    Some(content.clone())
-                } else {
-                    None
-                }
-            })
-            .ok_or(Error::MissingSystemMessage)?;
-
-
-        // Convert remaining messages to Anthropic format
-        let messages = props.messages.iter()
-            .find_map(|msg| {
-                match msg {
-                    Message::System { content: _ } => None,
-                    Message::User { content } => {
-                        Some(json!({
-                            "role": "user",
-                            "content": content
-                        }))
-                    },
-                    Message::Assistant { content } => {
-                        Some(json!({
-                            "role": "assistant",
-                            "content": content
-                        }))
-                    }
-                }
-            })
-            .ok_or(Error::MissingUserMessage)?;
-
-        let messages = json!([messages]);
-
-        let model: String = props.model.clone().into();
-        let body = json!({
-            "model": model,
-            "messages": messages,
-            "system": system_message,
-            "stream": streaming,
-            "temperature": props.temperature,
-            "max_tokens": props.max_tokens,
-        });
-
-        println!("body: {:?}", body);
+        let body = AnthropicProvider::create_body(props, streaming);
 
         Ok(client
             .post("https://api.anthropic.com/v1/messages")
@@ -161,6 +115,46 @@ impl LlmProvider for AnthropicProvider {
             
             event_source.close();
         });
+    }
+
+    fn create_body(props: &LlmProps, streaming: bool) -> serde_json::Value {
+        let system_content = props.messages.iter()
+            .find_map(|msg| match msg {
+                Message::System { content } => Some(content.as_str()),
+                _ => None
+            });
+
+        // Convert conversation history to Anthropic's format
+        let filtered_messages: Vec<serde_json::Value> = props.messages.iter()
+            .filter_map(|msg| match msg {
+                Message::System { .. } => None,
+                Message::User { content } => Some(json!({
+                    "role": "user",
+                    "content": content
+                })),
+                Message::Assistant { content } => Some(json!({
+                    "role": "assistant",
+                    "content": content
+                })),
+            })
+            .collect();
+
+        let mut body = json!({
+            "messages": filtered_messages
+        });
+
+        if let Some(content) = system_content {
+            body["system"] = json!(content);
+        }
+
+        let model: String = props.model.clone().into();
+
+        body["model"] = json!(model);
+        body["stream"] = json!(streaming);
+        body["temperature"] = json!(props.temperature);
+        body["max_tokens"] = json!(props.max_tokens);
+
+        body
     }
 }
 

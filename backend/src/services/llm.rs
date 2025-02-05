@@ -61,6 +61,7 @@ pub trait LlmProvider {
     fn build_request(props: &LlmProps, streaming: bool) -> Result<RequestBuilder, Error>;
     fn parse_response(json_text: &str) -> Result<String, Error>;
     fn stream_eventsource(event_source: EventSource, tx: Sender<Result<String, LlmStreamingError>>);
+    fn create_body(props: &LlmProps, streaming: bool) -> serde_json::Value;
 }
 
 pub struct Llm {
@@ -105,8 +106,7 @@ impl Llm {
             return Err(Error::UnsupportedMode("Json".to_string(), "Chat".to_string()));
         }
 
-        self.send_request_stream(tx).await?;
-        todo!()
+        Ok(self.send_request_stream(tx).await?)
     }
 
     async fn send_request(&self) -> Result<String, Error> {
@@ -165,6 +165,7 @@ mod tests {
         AnthropicModel, DeepseekModel, GeminiModel, LlmModel, OpenAiModel,
     }, services::types::message::Message};
     use dotenv::dotenv;
+    use tokio::sync::mpsc;
 
     async fn create_test_props(model: LlmModel) -> LlmProps {
         LlmProps {
@@ -234,7 +235,7 @@ mod tests {
 
     #[tokio::test]
     #[ignore]
-    async fn test_google_integration() {
+    async fn test_gemini_integration() {
         dotenv().ok();
 
         // Test text response
@@ -316,6 +317,189 @@ mod tests {
         let response = llm.json().await.unwrap();
         let json: TestResponse = serde_json::from_str(&response).unwrap();
         assert_eq!(json.message, "Hello in JSON");
+    }
+
+    async fn create_stream_test_props(model: LlmModel) -> LlmProps {
+        LlmProps {
+            model,
+            temperature: 0.5,
+            max_tokens: 100,
+            json_mode: false,
+            messages: vec![
+                Message::System {
+                    content: "You are a helpful assistant".to_string(),
+                },
+                Message::User {
+                    content: "Say 'Hello, world!' in a few words".to_string(),
+                },
+            ],
+        }
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_openai_stream() {
+        dotenv().ok();
+        let props = create_stream_test_props(LlmModel::OpenAi(OpenAiModel::Gpt4oMini202407)).await;
+        let llm = Llm::new(props);
+        let (tx, mut rx) = mpsc::channel(10);
+
+        llm.stream(tx).await.expect("Streaming failed");
+
+        let mut received_chunks = Vec::new();
+        while let Some(result) = rx.recv().await {
+            let chunk = result.expect("Failed to receive chunk");
+            received_chunks.push(chunk);
+        }
+
+        assert!(!received_chunks.is_empty());
+        let combined = received_chunks.join("");
+        assert!(combined.contains("Hello"));
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_anthropic_stream() {
+        dotenv().ok();
+        let props =
+            create_stream_test_props(LlmModel::Anthropic(AnthropicModel::Claude35Haiku20241022))
+                .await;
+        let llm = Llm::new(props);
+        let (tx, mut rx) = mpsc::channel(10);
+
+        llm.stream(tx).await.expect("Streaming failed");
+
+        let mut received_chunks = Vec::new();
+        while let Some(result) = rx.recv().await {
+            let chunk = result.expect("Failed to receive chunk");
+            received_chunks.push(chunk);
+        }
+
+        assert!(!received_chunks.is_empty());
+        let combined = received_chunks.join("");
+        assert!(combined.contains("Hello"));
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_gemini_stream() {
+        dotenv().ok();
+        let props =
+            create_stream_test_props(LlmModel::Gemini(GeminiModel::Gemini15Flash)).await;
+        let llm = Llm::new(props);
+        let (tx, mut rx) = mpsc::channel(10);
+
+        llm.stream(tx).await.expect("Streaming failed");
+
+        let mut received_chunks = Vec::new();
+        while let Some(result) = rx.recv().await {
+            let chunk = result.expect("Failed to receive chunk");
+            received_chunks.push(chunk);
+        }
+
+        assert!(!received_chunks.is_empty());
+        let combined = received_chunks.join("");
+        assert!(combined.contains("Hello"));
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_deepseek_stream() {
+        dotenv().ok();
+        let props =
+            create_stream_test_props(LlmModel::Deepseek(DeepseekModel::DeepseekChat)).await;
+        let llm = Llm::new(props);
+        let (tx, mut rx) = mpsc::channel(10);
+
+        llm.stream(tx).await.expect("Streaming failed");
+
+        let mut received_chunks = Vec::new();
+        while let Some(result) = rx.recv().await {
+            let chunk = result.expect("Failed to receive chunk");
+            received_chunks.push(chunk);
+        }
+
+        assert!(!received_chunks.is_empty());
+        let combined = received_chunks.join("");
+        assert!(combined.contains("Hello"));
+    }
+
+    async fn create_multi_turn_test_props(model: LlmModel) -> LlmProps {
+        LlmProps {
+            model,
+            temperature: 0.5,
+            max_tokens: 100,
+            json_mode: false,
+            messages: vec![
+                Message::System {
+                    content: "You are a math tutor who loves to help with algebra".to_string(),
+                },
+                Message::User {
+                    content: "What is 2x + 3 = 7?".to_string(),
+                },
+                Message::Assistant {
+                    content: "Let me help solve this. First, subtract 3 from both sides: 2x = 4. Then divide both sides by 2: x = 2".to_string(),
+                },
+                Message::User {
+                    content: "Great! Now what is x + 5?".to_string(),
+                },
+            ],
+        }
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_multi_turn_conversation() {
+        dotenv().ok();
+        
+        // Test each model implementation
+        let models = vec![
+            LlmModel::OpenAi(OpenAiModel::Gpt4oMini202407),
+            LlmModel::Anthropic(AnthropicModel::Claude35Haiku20241022),
+            LlmModel::Gemini(GeminiModel::Gemini15Flash),
+            LlmModel::Deepseek(DeepseekModel::DeepseekChat),
+        ];
+
+        for model in models {
+            let props = create_multi_turn_test_props(model.clone()).await;
+            let llm = Llm::new(props);
+
+            // The response should continue the conversation naturally
+            let response = llm.text().await.unwrap();
+            assert!(response.contains("7"), "Response should solve x + 5 = 7 for model {:?}", model);
+        }
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_multi_turn_stream() {
+        dotenv().ok();
+        
+        let models = vec![
+            LlmModel::OpenAi(OpenAiModel::Gpt4oMini202407),
+            LlmModel::Anthropic(AnthropicModel::Claude35Haiku20241022),
+            LlmModel::Gemini(GeminiModel::Gemini15Flash),
+            LlmModel::Deepseek(DeepseekModel::DeepseekChat),
+        ];
+
+        for model in models {
+            let props = create_multi_turn_test_props(model.clone()).await;
+            let llm = Llm::new(props);
+            let (tx, mut rx) = mpsc::channel(10);
+
+            llm.stream(tx).await.expect("Streaming failed");
+
+            let mut received_chunks = Vec::new();
+            while let Some(result) = rx.recv().await {
+                let chunk = result.expect("Failed to receive chunk");
+                received_chunks.push(chunk);
+            }
+
+            assert!(!received_chunks.is_empty(), "Should receive chunks for model {:?}", model);
+            let combined = received_chunks.join("");
+            assert!(combined.contains("7"), 
+                "Streamed response should solve x + 5 = 7 for model {:?}", model);
+        }
     }
 
 }
