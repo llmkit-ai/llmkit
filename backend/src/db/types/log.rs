@@ -16,4 +16,3 @@ pub struct LogRow {
     pub error_message: Option<String>,
     pub created_at: Option<chrono::NaiveDateTime>,
 }
-

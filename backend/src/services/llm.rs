@@ -8,7 +8,7 @@ use tokio_retry::{strategy::{jitter, ExponentialBackoff}, Retry};
 use tracing;
 
 
-use crate::{common::types::models::LlmModel, db::logs::LogRepository};
+use crate::{common::types::models::LlmModel, db::logs::LogRepository, services::types::parse_response::LlmApiRequestProps};
 use super::{
     providers::{
         anthropic::AnthropicProvider, 
@@ -17,8 +17,7 @@ use super::{
         openai::OpenaiProvider
     }, 
     types::{
-        llm_props::LlmProps, 
-        stream::LlmStreamingError
+        llm_props::LlmProps, parse_response::LlmApiResponseProps, stream::LlmStreamingError
     }
 };
 
@@ -58,9 +57,8 @@ pub enum Error {
 }
 
 pub trait LlmProvider {
-    fn build_request(&mut self) -> Result<RequestBuilder, Error>;
-    fn parse_response(&mut self, json_text: &str) -> Result<String, Error>;
-    fn log_response(&self) -> Result<(), Error>;
+    fn build_request(&self) -> Result<(RequestBuilder, String), Error>;
+    fn parse_response(json_text: &str) -> Result<LlmApiResponseProps, Error>;
     fn stream_eventsource(event_source: EventSource, tx: Sender<Result<String, LlmStreamingError>>);
     fn create_body(&self) -> serde_json::Value;
 }
@@ -113,44 +111,62 @@ impl Llm {
     }
 
     async fn send_request(&self) -> Result<String, Error> {
-        let mut openai_provider = OpenaiProvider::new(&self.props, false);
-        let mut anthropic_provider = AnthropicProvider::new(&self.props, false, &self.db_log);
-        let mut gemini_provider = GeminiProvider::new(&self.props, false);
-        let mut deepseek_provider = DeepseekProvider::new(&self.props, false);
+        let openai_provider = OpenaiProvider::new(&self.props, false);
+        let anthropic_provider = AnthropicProvider::new(&self.props, false);
+        let gemini_provider = GeminiProvider::new(&self.props, false);
+        let deepseek_provider = DeepseekProvider::new(&self.props, false);
 
-        let request = match &self.props.model {
+        let (request_builder, body) = match &self.props.model {
             LlmModel::OpenAi(_) => openai_provider.build_request(),
             LlmModel::Anthropic(_) => anthropic_provider.build_request(),
             LlmModel::Gemini(_) => gemini_provider.build_request(),
-            LlmModel::Deepseek(_) => deepseek_provider.build_request()
+            LlmModel::Deepseek(_) => deepseek_provider.build_request(),
         }?;
 
-        let response = request.send().await?;
+        // Convert RequestBuilder to Request to capture details
+        let request = request_builder.build()?;
+        let method = request.method().to_string();
+        let url = request.url().to_string();
+        let headers = request.headers().clone();
+
+        // Send the request
+        let response = reqwest::Client::new().execute(request).await?;
         let status = response.status();
         let text = response.text().await?;
+
+        // Create request props with captured details
+        let request = LlmApiRequestProps::new(
+            status.as_u16(),
+            body,
+            method,
+            url,
+            headers
+        );
 
         if !status.is_success() {
             return Err(Error::Http(status));
         }
 
-        match &self.props.model {
-            LlmModel::OpenAi(_) => openai_provider.parse_response(&text),
-            LlmModel::Anthropic(_) => anthropic_provider.parse_response(&text),
-            LlmModel::Gemini(_) => gemini_provider.parse_response(&text),
-            LlmModel::Deepseek(_) => deepseek_provider.parse_response(&text)
-        }
+        let mut response = match &self.props.model {
+            LlmModel::OpenAi(_) => OpenaiProvider::parse_response(&text)?,
+            LlmModel::Anthropic(_) => AnthropicProvider::parse_response(&text)?,
+            LlmModel::Gemini(_) => GeminiProvider::parse_response(&text)?,
+            LlmModel::Deepseek(_) => DeepseekProvider::parse_response(&text)?
+        };
+
+        todo!()
     }
 
     async fn send_request_stream(
         &self,
         tx: Sender<Result<String, LlmStreamingError>>
     ) -> Result<(), Error> {
-        let mut openai_provider = OpenaiProvider::new(&self.props, true);
-        let mut anthropic_provider = AnthropicProvider::new(&self.props, true, &self.db_log);
-        let mut gemini_provider = GeminiProvider::new(&self.props, true);
-        let mut deepseek_provider = DeepseekProvider::new(&self.props, true);
+        let openai_provider = OpenaiProvider::new(&self.props, true);
+        let anthropic_provider = AnthropicProvider::new(&self.props, true);
+        let gemini_provider = GeminiProvider::new(&self.props, true);
+        let deepseek_provider = DeepseekProvider::new(&self.props, true);
 
-        let request = match &self.props.model {
+        let (request, body) = match &self.props.model {
             LlmModel::OpenAi(_) => openai_provider.build_request(),
             LlmModel::Anthropic(_) => anthropic_provider.build_request(),
             LlmModel::Gemini(_) => gemini_provider.build_request(),

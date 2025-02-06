@@ -1,18 +1,19 @@
 use crate::services::{
     llm::{Error, LlmProvider}, 
-    types::{llm_props::LlmProps, message::Message, stream::LlmStreamingError}
+    types::{llm_props::LlmProps, message::Message, parse_response::LlmApiResponseProps, stream::LlmStreamingError}
 };
 
 use anyhow::Result;
 use reqwest::RequestBuilder;
 use reqwest_eventsource::Event;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tokio::sync::mpsc::Sender;
 use futures_util::StreamExt;
 
 pub struct GeminiProvider<'a> {
     props: &'a LlmProps,
-    streaming: bool
+    streaming: bool,
 }
 
 impl<'a> GeminiProvider<'a > {
@@ -24,31 +25,101 @@ impl<'a> GeminiProvider<'a > {
     }
 }
 
-#[derive(serde::Deserialize)]
-struct ResponseJson {
-    candidates: Vec<ResponseCandidate>,
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct GeminiResponse {
+    candidates: Vec<GeminiResponseCandidate>,
+    #[serde(rename = "promptFeedback")]
+    prompt_feedback: Option<GeminiPromptFeedback>,
+    #[serde(rename = "usageMetadata")]
+    usage_metadata: Option<GeminiUsageMetadata>,
 }
 
-#[derive(serde::Deserialize)]
-struct ResponseCandidate {
-    content: MessageContent,
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct GeminiResponseCandidate {
+    content: GeminiMessageContent,
+    #[serde(rename = "finishReason")]
+    finish_reason: Option<String>,
+    index: Option<i64>,
+    #[serde(rename = "safetyRatings")]
+    safety_ratings: Option<Vec<GeminiSafetyRating>>,
 }
-#[derive(serde::Deserialize)]
-struct MessageContent {
-    parts: Vec<ContentPart>,
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct GeminiMessageContent {
+    parts: Vec<GeminiContentPart>,
+    role: Option<String>,
 }
-#[derive(serde::Deserialize)]
-struct ContentPart {
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct GeminiContentPart {
     text: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct GeminiPromptFeedback {
+    #[serde(rename = "blockReason")]
+    block_reason: Option<String>,
+    #[serde(rename = "safetyRatings")]
+    safety_ratings: Option<Vec<GeminiSafetyRating>>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct GeminiUsageMetadata {
+    #[serde(rename = "promptTokenCount")]
+    prompt_token_count: i64,
+    #[serde(rename = "candidatesTokenCount")]
+    candidates_token_count: i64,
+    #[serde(rename = "totalTokenCount")]
+    total_token_count: i64,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct GeminiSafetyRating {
+    category: String,
+    probability: String,
+}
+
+impl From<GeminiResponse> for LlmApiResponseProps {
+    fn from(response: GeminiResponse) -> Self {
+        let response_content = response
+            .candidates
+            .first()
+            .and_then(|c| c.content.parts.first())
+            .and_then(|p| Some(p.text.clone()))
+            .unwrap_or_default();
+
+        // Extract token counts
+        let (input_tokens, output_tokens) = response.clone().usage_metadata
+            .map(|um| (Some(um.prompt_token_count), Some(um.candidates_token_count)))
+            .unwrap_or((None, None));
+
+        // Extract error information
+        let (error_code, error_message) = response.clone().prompt_feedback
+            .and_then(|pf| pf.block_reason
+                .map(|br| (Some(br.clone()), Some(format!("Prompt blocked: {}", br)))))
+            .unwrap_or((None, None));
+
+        LlmApiResponseProps {
+            response_content,
+            raw_response: serde_json::to_string(&response).unwrap_or_default(),
+            latency_ms: None,
+            input_tokens,
+            output_tokens,
+            error_code,
+            error_message,
+        }
+    }
 }
 
 
 impl<'a> LlmProvider for GeminiProvider<'a> {
-    fn build_request(&mut self) -> Result<RequestBuilder, Error> {
+    fn build_request(&self) -> Result<(RequestBuilder, String), Error> {
         let client = reqwest::Client::new();
         let api_key = std::env::var("GOOGLE_API_KEY").map_err(|_| Error::Auth)?;
 
         let body = self.create_body();
+        let body_string = body.to_string();
 
         let model: String = self.props.model.clone().into();
         let url = format!(
@@ -64,23 +135,15 @@ impl<'a> LlmProvider for GeminiProvider<'a> {
             request = request.query(&[("alt", "sse")]);
         }
 
-        Ok(request.json(&body))
-    
+        let request = request.json(&body);
+
+        Ok((request, body_string))
     }
 
-    fn parse_response(json_text: &str) -> Result<String, Error> {
-        let response: ResponseJson = serde_json::from_str(json_text)?;
-        response
-            .candidates
-            .first()
-            .and_then(|c| c.content.parts.first())
-            .and_then(|p| Some(p.text.clone()))
-            .ok_or(Error::Provider("Empty Google response".into()))
+    fn parse_response(json_text: &str) -> Result<LlmApiResponseProps, Error> {
+        let response: GeminiResponse = serde_json::from_str(json_text)?;
+        Ok(response.into())
 
-    }
-
-    fn log_response(&self, response_text: &str) -> Result<(), Error> {
-        todo!()
     }
 
     fn stream_eventsource(
@@ -217,7 +280,8 @@ mod tests {
         })
         .to_string();
 
-        let result = GeminiProvider::parse_response(&response);
-        assert_eq!(result.unwrap(), "test response");
+        let result = GeminiProvider::parse_response(&response).unwrap();
+        let result: LlmApiResponseProps = result.into();
+        assert_eq!(result.response_content, "test response");
     }
 }

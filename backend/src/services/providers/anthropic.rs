@@ -1,7 +1,7 @@
-use crate::{db::logs::LogRepository, services::{
+use crate::services::{
     llm::{Error, LlmProvider}, 
-    types::{llm_props::LlmProps, message::Message, stream::LlmStreamingError}
-}};
+    types::{llm_props::LlmProps, message::Message, parse_response::LlmApiResponseProps, stream::LlmStreamingError}
+};
 
 use anyhow::Result;
 use reqwest::RequestBuilder;
@@ -14,19 +14,13 @@ use futures_util::StreamExt;
 pub struct AnthropicProvider<'a> {
     props: &'a LlmProps,
     streaming: bool,
-    request: Option<String>,
-    response: Option<AnthropicResponse>,
-    db_log: &'a LogRepository
 }
 
 impl<'a> AnthropicProvider<'a> {
-    pub fn new(props: &'a LlmProps, streaming: bool, db_log: &'a LogRepository) -> Self {
+    pub fn new(props: &'a LlmProps, streaming: bool) -> Self {
         AnthropicProvider {
             props,
             streaming,
-            request: None,
-            response: None,
-            db_log
         }
     }
 }
@@ -62,48 +56,44 @@ struct AnthropicUsage {
     output_tokens: u32,
 }
 
+impl From<AnthropicResponse> for LlmApiResponseProps {
+    fn from(response: AnthropicResponse) -> Self {
+        let response_text = response.content
+            .first()
+            .map(|msg| msg.text.clone())
+            .unwrap_or_default();
+
+        LlmApiResponseProps {
+            response_content: response_text,
+            raw_response: serde_json::to_string(&response).unwrap_or_default(),
+            latency_ms: None,
+            input_tokens: Some(response.usage.input_tokens as i64),
+            output_tokens: Some(response.usage.output_tokens as i64),
+            error_code: None,
+            error_message: None,
+        }
+    }
+}
+
 impl<'a> LlmProvider for AnthropicProvider<'a> {
-    fn build_request(&mut self) -> Result<RequestBuilder, Error> {
+    fn build_request(&self) -> Result<(RequestBuilder, String), Error> {
         let client = reqwest::Client::new();
         let api_key = std::env::var("ANTHROPIC_API_KEY").map_err(|_| Error::Auth)?;
         let body = self.create_body();
+        let body_string = body.to_string();
 
-        self.request = Some(body.to_string());
-
-        Ok(client
+        let request = client
             .post("https://api.anthropic.com/v1/messages")
             .header("x-api-key", api_key)
             .header("anthropic-version", "2023-06-01")
-            .json(&body))
+            .json(&body);
+
+        Ok((request, body_string))
     }
 
-    fn parse_response(&mut self, json_text: &str) -> Result<String, Error> {
+    fn parse_response(json_text: &str) -> Result<LlmApiResponseProps, Error> {
         let response: AnthropicResponse = serde_json::from_str(json_text)?;
-        self.response = Some(response.clone());
-        self.log_response().await.unwrap();
-
-        response
-            .content
-            .first()
-            .and_then(|c| Some(c.text.clone()))
-            .ok_or(Error::Provider("Empty Anthropic response".into()))
-    }
-
-    async fn log_response(&self) -> Result<(), Error> {
-        // self.db_log.create_trace(
-        //     Some(self.props.prompt_id), 
-        //     self.props.model_id, 
-        //     &self.request, 
-        //     Some(self.response), 
-        //     status_code, 
-        //     latency_ms, 
-        //     input_tokens, 
-        //     output_tokens, 
-        //     error_code, 
-        //     error_message
-        // )
-        
-        todo!()
+        Ok(response.into())
     }
 
     fn stream_eventsource(
@@ -235,8 +225,9 @@ mod tests {
         })
         .to_string();
 
-        let result = AnthropicProvider::parse_response(&response);
-        assert_eq!(result.unwrap(), "test response");
+        let result = AnthropicProvider::parse_response(&response).unwrap();
+        let result: LlmApiResponseProps = result.into();
+        assert_eq!(result.response_content, "test response");
     }
 }
 

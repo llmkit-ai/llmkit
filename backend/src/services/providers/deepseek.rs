@@ -38,16 +38,19 @@ impl<'a> DeepseekProvider<'a> {
 }
 
 impl<'a> LlmProvider for DeepseekProvider<'a> {
-    fn build_request(&mut self) -> Result<RequestBuilder, Error> {
+    fn build_request(&self) -> Result<(RequestBuilder, String), Error> {
         let client = reqwest::Client::new();
         let api_key = std::env::var("DEEPSEEK_API_KEY").map_err(|_| Error::Auth)?;
 
         let body = self.create_body();
+        let body_string = body.to_string();
 
-        Ok(client
+        let request = client
             .post("https://api.deepseek.com/v1/chat/completions")
             .header("Authorization", format!("Bearer {}", api_key))
-            .json(&body))
+            .json(&body);
+
+        Ok((request, body_string))
     }
 
     fn parse_response(json_text: &str) -> Result<String, Error> {
