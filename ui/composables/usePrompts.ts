@@ -1,4 +1,4 @@
-import type { Prompt } from '../types/response/prompts'
+import type { Prompt, PromptExecutionResponse } from '../types/response/prompts'
 
 export const usePrompts = () => {
   const prompts = ref<Prompt[]>([])
@@ -86,7 +86,7 @@ export const usePrompts = () => {
 
   const executePrompt = async (id: number, body: any) => {
     try {
-      return await $fetch<string>(`/api/v1/prompts/execute/${id}`, { 
+      return await $fetch<PromptExecutionResponse>(`/api/v1/prompts/execute/${id}`, { 
         method: 'POST',
         body 
       })

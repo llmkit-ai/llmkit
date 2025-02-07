@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            SELECT \n                id,\n                prompt_id,\n                model_id,\n                request_data,\n                response_data,\n                status_code,\n                latency_ms,\n                input_tokens,\n                output_tokens,\n                error_code,\n                error_message,\n                created_at\n            FROM llm_api_traces\n            WHERE prompt_id = ?\n            ORDER BY created_at DESC\n            ",
+  "query": "\n            SELECT \n                id,\n                prompt_id,\n                model_id,\n                response_data,\n                status_code,\n                latency_ms,\n                input_tokens,\n                output_tokens,\n                created_at,\n                request_body,\n                request_method,\n                request_url,\n                request_headers\n            FROM llm_api_traces\n            WHERE id = ?\n            ",
   "describe": {
     "columns": [
       {
@@ -19,49 +19,54 @@
         "type_info": "Integer"
       },
       {
-        "name": "request_data",
+        "name": "response_data",
         "ordinal": 3,
         "type_info": "Text"
       },
       {
-        "name": "response_data",
-        "ordinal": 4,
-        "type_info": "Text"
-      },
-      {
         "name": "status_code",
-        "ordinal": 5,
+        "ordinal": 4,
         "type_info": "Integer"
       },
       {
         "name": "latency_ms",
-        "ordinal": 6,
+        "ordinal": 5,
         "type_info": "Integer"
       },
       {
         "name": "input_tokens",
-        "ordinal": 7,
+        "ordinal": 6,
         "type_info": "Integer"
       },
       {
         "name": "output_tokens",
-        "ordinal": 8,
+        "ordinal": 7,
         "type_info": "Integer"
       },
       {
-        "name": "error_code",
+        "name": "created_at",
+        "ordinal": 8,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "request_body",
         "ordinal": 9,
         "type_info": "Text"
       },
       {
-        "name": "error_message",
+        "name": "request_method",
         "ordinal": 10,
         "type_info": "Text"
       },
       {
-        "name": "created_at",
+        "name": "request_url",
         "ordinal": 11,
-        "type_info": "Datetime"
+        "type_info": "Text"
+      },
+      {
+        "name": "request_headers",
+        "ordinal": 12,
+        "type_info": "Text"
       }
     ],
     "parameters": {
@@ -71,7 +76,8 @@
       false,
       true,
       false,
-      false,
+      true,
+      true,
       true,
       true,
       true,
@@ -82,5 +88,5 @@
       true
     ]
   },
-  "hash": "0d2fe1ac09a83f944bd6b1d6a752c522d757273092861bce1b31229a81d137ab"
+  "hash": "a3a1a4427dbed0ae24434bfc3782ac6a40084459e7fefc48b11e7df3ffcafb82"
 }

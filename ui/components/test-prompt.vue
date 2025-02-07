@@ -38,6 +38,12 @@
         {{ testResponse }}
       </div>
     </div>
+    <div v-if="logResponse" class="mt-5 bg-neutral-100 dark:bg-neutral-800 p-4">
+      <p class="text-xs text-neutral-900 dark:text-neutral-300">Trace</p>
+      <div class="mt-4 text-neutral-700 dark:text-neutral-300">
+        {{ logResponse }}
+      </div>
+    </div>
     <div class="mt-6 flex justify-end px-4 sm:px-0 space-x-2">
       <button
         type="button"
@@ -91,6 +97,7 @@ const {
 const promptPreview = ref(props.prompt.prompt)
 const jsonContext = ref({})
 const testResponse = ref<string | null>(null)
+const logResponse = ref<string | null>(null)
 
 const templateFields = computed<string[]>(() => {
   if (!props.prompt) return [];
@@ -120,7 +127,8 @@ function templateFieldInput(event: any) {
 
 async function execute() {
   const res = await executePrompt(props.prompt.id, jsonContext.value)
-  testResponse.value = res
+  testResponse.value = res.content
+  logResponse.value = JSON.stringify(res.trace)
 }
 
 const { startStream } = useSSE()

@@ -1,4 +1,6 @@
 -- Create models table
+PRAGMA foreign_keys = ON;
+
 CREATE TABLE models (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     model_name TEXT NOT NULL,        -- Model identifier (e.g., 'gpt-4', 'claude-2')
@@ -23,19 +25,21 @@ CREATE TABLE llm_prompts (
 CREATE TABLE llm_api_traces (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     prompt_id INTEGER,
-    model_id INTEGER NOT NULL,       -- Foreign key to models
-    request_data TEXT NOT NULL,
+    model_id INTEGER NOT NULL,
     response_data TEXT,
     status_code INTEGER,
     latency_ms INTEGER,
     input_tokens INTEGER,
     output_tokens INTEGER,
-    error_code TEXT,
-    error_message TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    request_body TEXT,
+    request_method TEXT,
+    request_url TEXT,
+    request_headers TEXT,
     FOREIGN KEY(prompt_id) REFERENCES llm_prompts(id),
     FOREIGN KEY(model_id) REFERENCES models(id)
 );
+
 
 -- Indexes remain similar but reference new FKs
 CREATE INDEX idx_traces_prompt ON llm_api_traces(prompt_id);

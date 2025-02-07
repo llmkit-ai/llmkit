@@ -38,7 +38,8 @@ pub enum AnthropicModel {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub enum GeminiModel {
    Gemini20FlashThinkingExp0121,
-   Gemini20FlashExp,
+   Gemini20Flash001,
+   Gemini20FlashLite,
    Gemini15Flash,
    Gemini15Flash8b,
    Gemini15Pro,
@@ -51,29 +52,30 @@ pub enum DeepseekModel {
 }
 
 impl From<String> for LlmModel {
-   fn from(value: String) -> Self {
-       match value.as_str() {
-           "gpt-4o-2024-11-20" => LlmModel::OpenAi(OpenAiModel::Gpt4o202411),
-           "gpt-4o-mini-2024-07-18" => LlmModel::OpenAi(OpenAiModel::Gpt4oMini202407),
-           "o1-2024-12-17" => LlmModel::OpenAi(OpenAiModel::O1202412),
-           "o1-mini-2024-09-12" => LlmModel::OpenAi(OpenAiModel::O1Mini202409),
+    fn from(value: String) -> Self {
+        match value.as_str() {
+            "gpt-4o-2024-11-20" => LlmModel::OpenAi(OpenAiModel::Gpt4o202411),
+            "gpt-4o-mini-2024-07-18" => LlmModel::OpenAi(OpenAiModel::Gpt4oMini202407),
+            "o1-2024-12-17" => LlmModel::OpenAi(OpenAiModel::O1202412),
+            "o1-mini-2024-09-12" => LlmModel::OpenAi(OpenAiModel::O1Mini202409),
 
-           "claude-3-5-sonnet-latest" => LlmModel::Anthropic(AnthropicModel::Claude35SonnetLatest),
-           "claude-3-5-sonnet-20241022" => LlmModel::Anthropic(AnthropicModel::Claude35Sonnet20241022),
-           "claude-3-5-haiku-latest" => LlmModel::Anthropic(AnthropicModel::Claude35HaikuLatest),
-           "claude-3-5-haiku-20241022" => LlmModel::Anthropic(AnthropicModel::Claude35Haiku20241022),
+            "claude-3-5-sonnet-latest" => LlmModel::Anthropic(AnthropicModel::Claude35SonnetLatest),
+            "claude-3-5-sonnet-20241022" => LlmModel::Anthropic(AnthropicModel::Claude35Sonnet20241022),
+            "claude-3-5-haiku-latest" => LlmModel::Anthropic(AnthropicModel::Claude35HaikuLatest),
+            "claude-3-5-haiku-20241022" => LlmModel::Anthropic(AnthropicModel::Claude35Haiku20241022),
 
-           "gemini-2.0-flash-thinking-exp-01-21" => LlmModel::Gemini(GeminiModel::Gemini20FlashThinkingExp0121),
-           "gemini-2.0-flash-exp" => LlmModel::Gemini(GeminiModel::Gemini20FlashExp),
-           "gemini-1.5-flash" => LlmModel::Gemini(GeminiModel::Gemini15Flash),
-           "gemini-1.5-flash-8b" => LlmModel::Gemini(GeminiModel::Gemini15Flash8b),
-           "gemini-1.5-pro" => LlmModel::Gemini(GeminiModel::Gemini15Pro),
+            "gemini-2.0-flash-thinking-exp-01-21" => LlmModel::Gemini(GeminiModel::Gemini20FlashThinkingExp0121),
+            "gemini-2.0-flash-001" => LlmModel::Gemini(GeminiModel::Gemini20Flash001),
+            "gemini-2.0-flash-lite-preview-02-05" => LlmModel::Gemini(GeminiModel::Gemini20FlashLite),
+            "gemini-1.5-flash" => LlmModel::Gemini(GeminiModel::Gemini15Flash),
+            "gemini-1.5-flash-8b" => LlmModel::Gemini(GeminiModel::Gemini15Flash8b),
+            "gemini-1.5-pro" => LlmModel::Gemini(GeminiModel::Gemini15Pro),
 
-           "deepseek-chat" => LlmModel::Deepseek(DeepseekModel::DeepseekChat),
-           "deepseek-reasoner" => LlmModel::Deepseek(DeepseekModel::DeepseekReasoner),
-           _ => unreachable!("Invalid ModelName")
-       }
-   }
+            "deepseek-chat" => LlmModel::Deepseek(DeepseekModel::DeepseekChat),
+            "deepseek-reasoner" => LlmModel::Deepseek(DeepseekModel::DeepseekReasoner),
+            _ => unreachable!("Invalid ModelName")
+        }
+    }
 }
 
 impl From<LlmModel> for String {
@@ -93,7 +95,8 @@ impl From<LlmModel> for String {
            },
            LlmModel::Gemini(model) => match model {
                GeminiModel::Gemini20FlashThinkingExp0121 => "gemini-2.0-flash-thinking-exp-01-21",
-               GeminiModel::Gemini20FlashExp => "gemini-2.0-flash-exp",
+               GeminiModel::Gemini20Flash001 => "gemini-2.0-flash-001",
+               GeminiModel::Gemini20FlashLite => "gemini-2.0-flash-lite-preview-02-05",
                GeminiModel::Gemini15Flash => "gemini-1.5-flash",
                GeminiModel::Gemini15Flash8b => "gemini-1.5-flash-8b",
                GeminiModel::Gemini15Pro => "gemini-1.5-pro",

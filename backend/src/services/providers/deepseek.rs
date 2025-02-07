@@ -1,11 +1,12 @@
 use crate::services::{
     llm::{Error, LlmProvider}, 
-    types::{llm_props::LlmProps, message::Message, stream::LlmStreamingError}
+    types::{llm_props::LlmProps, message::Message, parse_response::LlmApiResponseProps, stream::LlmStreamingError}
 };
 
 use anyhow::Result;
 use reqwest::RequestBuilder;
 use reqwest_eventsource::Event;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tokio::sync::mpsc::Sender;
 use futures_util::StreamExt;
@@ -15,18 +16,54 @@ pub struct DeepseekProvider<'a> {
     streaming: bool
 }
 
-#[derive(serde::Deserialize)]
-struct ResponseJson {
-    choices: Vec<ResponseChoice>,
+#[derive(Deserialize, Serialize, Clone)]
+struct DeepseekResponse {
+    choices: Vec<DeepseekResponseChoice>,
+    usage: Option<DeepseekUsage>,
 }
-#[derive(serde::Deserialize)]
-struct ResponseChoice {
-    message: MessageContent,
+
+#[derive(Deserialize, Serialize, Clone)]
+struct DeepseekResponseChoice {
+    message: DeepseekMessageContent,
 }
-#[derive(serde::Deserialize)]
-struct MessageContent {
+
+#[derive(Deserialize, Serialize, Clone)]
+struct DeepseekMessageContent {
     content: String,
 }
+
+#[derive(Deserialize, Serialize, Clone)]
+struct DeepseekUsage {
+    completion_tokens: i32,
+    prompt_tokens: i32,
+    total_tokens: i32,
+}
+
+impl From<DeepseekResponse> for LlmApiResponseProps {
+    fn from(response: DeepseekResponse) -> Self {
+        let response_content = response
+            .choices
+            .first()
+            .map(|choice| choice.message.content.clone())
+            .unwrap_or_default();
+
+        let raw_response = serde_json::to_string(&response).unwrap_or_default();
+
+        let input_tokens = response.usage.as_ref().map(|u| u.prompt_tokens as i64);
+        let output_tokens = response.usage.as_ref().map(|u| u.completion_tokens as i64);
+
+        LlmApiResponseProps {
+            response_content,
+            raw_response,
+            latency_ms: None,
+            input_tokens,
+            output_tokens,
+            error_code: None,
+            error_message: None,
+        }
+    }
+}
+
 
 impl<'a> DeepseekProvider<'a> {
     pub fn new(props: &'a LlmProps, streaming: bool) -> Self {
@@ -53,18 +90,9 @@ impl<'a> LlmProvider for DeepseekProvider<'a> {
         Ok((request, body_string))
     }
 
-    fn parse_response(json_text: &str) -> Result<String, Error> {
-        let response: ResponseJson = serde_json::from_str(json_text)?;
-        response
-            .choices
-            .first()
-            .and_then(|c| Some(c.message.content.clone()))
-            .ok_or(Error::Provider("Empty Deepseek response".into()))
-
-    }
-
-    fn log_response(&self, response_text: &str) -> Result<(), Error> {
-        todo!()
+    fn parse_response(json_text: &str) -> Result<LlmApiResponseProps, Error> {
+        let response: DeepseekResponse = serde_json::from_str(json_text)?;
+        Ok(response.into())
     }
 
     fn stream_eventsource(
@@ -171,11 +199,19 @@ mod tests {
                 "message": {
                     "content": "test response"
                 }
-            }]
+            }],
+            "usage": {
+                "completion_tokens": 20,
+                "prompt_tokens": 50,
+                "total_tokens": 70
+            }
         })
         .to_string();
 
-        let result = DeepseekProvider::parse_response(&response);
-        assert_eq!(result.unwrap(), "test response");
+        let result = DeepseekProvider::parse_response(&response).unwrap();
+        let result: LlmApiResponseProps = result.into();
+        assert_eq!(result.response_content, "test response");
+        assert_eq!(result.input_tokens, Some(50));
+        assert_eq!(result.output_tokens, Some(20));
     }
 }

@@ -6,6 +6,7 @@ use crate::services::{
 use anyhow::Result;
 use reqwest::RequestBuilder;
 use reqwest_eventsource::Event;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tokio::sync::mpsc::Sender;
 use futures_util::StreamExt;
@@ -26,18 +27,63 @@ impl<'a> OpenaiProvider<'a> {
 }
 
 
-#[derive(serde::Deserialize)]
-struct ResponseJson {
-    choices: Vec<ResponseJsonChoice>,
+#[derive(Deserialize, Serialize, Clone)]
+struct OpenaiResponse {
+    id: String,
+    object: String,
+    created: i64,
+    model: String,
+    system_fingerprint: String,
+    choices: Vec<OpenaiResponseChoice>,
+    usage: Option<OpenaiUsage>,
 }
-#[derive(serde::Deserialize)]
-struct ResponseJsonChoice {
-    message: MessageContent,
+
+#[derive(Deserialize, Serialize, Clone)]
+struct OpenaiResponseChoice {
+    index: i32,
+    message: OpenaiMessageContent,
 }
-#[derive(serde::Deserialize)]
-struct MessageContent {
+
+#[derive(Deserialize, Serialize, Clone)]
+struct OpenaiMessageContent {
+    role: String,
     content: String,
 }
+
+#[derive(Deserialize, Serialize, Clone)]
+struct OpenaiUsage {
+    prompt_tokens: i32,
+    completion_tokens: i32,
+    total_tokens: i32,
+}
+
+impl From<OpenaiResponse> for LlmApiResponseProps {
+    fn from(response: OpenaiResponse) -> Self {
+        // assuming we want the first choice's content, if it exists
+        let response_content = response
+            .choices
+            .first()
+            .map(|choice| choice.message.content.clone())
+            .unwrap_or_default();
+
+        // we'll serialize the full response back to a string for raw_response
+        let raw_response = serde_json::to_string(&response).unwrap_or_default();
+
+        let input_tokens = response.usage.as_ref().map(|u| u.prompt_tokens as i64);
+        let output_tokens = response.usage.as_ref().map(|u| u.completion_tokens as i64);
+
+        LlmApiResponseProps {
+            response_content,
+            raw_response,
+            latency_ms: None,
+            input_tokens,
+            output_tokens,
+            error_code: None,
+            error_message: None,
+        }
+    }
+}
+
 
 impl<'a> LlmProvider for OpenaiProvider<'a> {
     fn build_request(&self) -> Result<(RequestBuilder, String), Error> {
@@ -56,16 +102,8 @@ impl<'a> LlmProvider for OpenaiProvider<'a> {
     }
 
     fn parse_response(json_text: &str) -> Result<LlmApiResponseProps, Error> {
-        let response: ResponseJson = serde_json::from_str(json_text)?;
-        response
-            .choices
-            .first()
-            .and_then(|c| Some(c.message.content.clone()))
-            .ok_or(Error::Provider("Empty OpenAI response".into()))
-    }
-
-    fn log_response(&self, response_text: &str) -> Result<(), Error> {
-        todo!()    
+        let response: OpenaiResponse = serde_json::from_str(json_text)?;
+        Ok(response.into())
     }
 
     fn stream_eventsource(
@@ -168,15 +206,31 @@ mod tests {
     #[test]
     fn test_openai_response_parsing() {
         let response = json!({
+            "id": "cmpl-some-id",
+            "object": "chat.completion",
+            "created": 1678901234,
+            "model": "gpt-3.5-turbo",
+            "system_fingerprint": "fp_some_fingerprint",
             "choices": [{
+                "index": 0,
                 "message": {
+                    "role": "assistant",
                     "content": "test response"
                 }
-            }]
+            }],
+            "usage": {
+                "prompt_tokens": 50,
+                "completion_tokens": 20,
+                "total_tokens": 70
+            }
         })
         .to_string();
 
-        let result = OpenaiProvider::parse_response(&response);
-        assert_eq!(result.unwrap(), "test response");
+        let result = OpenaiProvider::parse_response(&response).unwrap();
+        let result: LlmApiResponseProps = result.into();
+        assert_eq!(result.response_content, "test response");
+        assert_eq!(result.input_tokens, Some(50));
+        assert_eq!(result.output_tokens, Some(20));
     }
+
 }

@@ -275,13 +275,27 @@ mod tests {
                     "parts": [{
                         "text": "test response"
                     }]
-                }
-            }]
+                },
+                "finishReason": "STOP",
+                "index": 0,
+                "safetyRatings": []
+            }],
+            "promptFeedback": {
+                "blockReason": null,
+                "safetyRatings": []
+            },
+            "usageMetadata": {
+                "promptTokenCount": 50,
+                "candidatesTokenCount": 20,
+                "totalTokenCount": 70
+            }
         })
         .to_string();
 
         let result = GeminiProvider::parse_response(&response).unwrap();
         let result: LlmApiResponseProps = result.into();
         assert_eq!(result.response_content, "test response");
+        assert_eq!(result.input_tokens, Some(50));
+        assert_eq!(result.output_tokens, Some(20));
     }
 }

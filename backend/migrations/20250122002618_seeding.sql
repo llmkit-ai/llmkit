@@ -14,8 +14,9 @@ INSERT INTO models (model_name) VALUES ('claude-3-5-haiku-latest');
 INSERT INTO models (model_name) VALUES ('claude-3-5-haiku-20241022');
 
 -- Gemini Models
+INSERT INTO models (model_name) VALUES ('gemini-2.0-flash-001');
+INSERT INTO models (model_name) VALUES ('gemini-2.0-flash-lite-preview-02-05');
 INSERT INTO models (model_name) VALUES ('gemini-2.0-flash-thinking-exp-01-21');
-INSERT INTO models (model_name) VALUES ('gemini-2.0-flash-exp');
 INSERT INTO models (model_name) VALUES ('gemini-1.5-flash');
 INSERT INTO models (model_name) VALUES ('gemini-1.5-flash-8b');
 INSERT INTO models (model_name) VALUES ('gemini-1.5-pro');

@@ -220,14 +220,27 @@ mod tests {
     fn test_anthropic_response_parsing() {
         let response = json!({
             "content": [{
-                "text": "test response"
-            }]
+                "text": "test response",
+                "type": "text"
+            }],
+            "id": "msg_some_id",
+            "model": "claude-v1",
+            "role": "assistant",
+            "stop_reason": "end_turn",
+            "stop_sequence": null,
+            "type": "message",
+            "usage": {
+                "input_tokens": 100,
+                "output_tokens": 50
+            }
         })
         .to_string();
 
         let result = AnthropicProvider::parse_response(&response).unwrap();
         let result: LlmApiResponseProps = result.into();
         assert_eq!(result.response_content, "test response");
+        assert_eq!(result.input_tokens, Some(100));
+        assert_eq!(result.output_tokens, Some(50));
     }
 }
 

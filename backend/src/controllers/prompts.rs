@@ -1,10 +1,9 @@
-use core::panic;
 use std::convert::Infallible;
 
 use axum::{
     extract::{Path, State},
     response::sse::{Event, KeepAlive, Sse},
-    Json,
+    Json
 };
 use futures::Stream;
 use hyper::StatusCode;
@@ -14,7 +13,7 @@ use tokio::sync::mpsc;
 
 use crate::{services::{llm::Llm, types::llm_props::LlmProps}, AppError, AppState};
 
-use super::types::{request::prompts::{CreatePromptRequest, UpdatePromptRequest}, response::prompts::PromptResponse};
+use super::types::{request::prompts::{CreatePromptRequest, UpdatePromptRequest}, response::prompts::{PromptExecutionResponse, PromptResponse}};
 
 
 pub async fn create_prompt(
@@ -103,11 +102,12 @@ pub async fn delete_prompt(
     Ok(())
 }
 
+#[axum::debug_handler]
 pub async fn execute_prompt(
     Path(id): Path<i64>,
     State(state): State<AppState>,
     Json(payload): Json<Value>,
-) -> Result<String, AppError> {
+) -> Result<Json<PromptExecutionResponse>, AppError> {
     let prompt = match state.prompt_cache.get(&id).await {
         Some(p) => p,
         None => { 
@@ -118,29 +118,28 @@ pub async fn execute_prompt(
     };
 
     let llm_props = LlmProps::new(prompt.clone(), payload);
-    let llm = Llm::new(llm_props, state.db.log);
+    let llm = Llm::new(llm_props, state.db.log.clone());
 
-    match prompt.json_mode {
+    let res = match prompt.json_mode {
         true => {
             let res = llm.json()
                 .await
                 .map_err(|_| AppError::InternalServerError("Something went wrong".to_string()))?;
 
-            let res = serde_json::to_string(&res)
-                .map_err(|_| AppError::InternalServerError("Something went wrong".to_string()))?;
-
-            Ok(res)
+            res
         },
         false => {
-            match llm.text().await {
-                Ok(t) => Ok(t),
-                Err(e) => {
-                    println!("error: {}", e);
-                    return Err(AppError::InternalServerError("Something went wrong".to_string()));
-                }
-            }
+            let res = llm.text()
+                .await
+                .map_err(|_| AppError::InternalServerError("Something went wrong".to_string()))?;
+
+            res
         }
-    }
+    };
+
+    let log = state.db.log.get_trace_by_id(res.log_id).await?.ok_or_else(|| AppError::NotFound("Log not found".to_string()))?;
+
+    Ok(Json(PromptExecutionResponse::from_log_row(res.content, log)))
 }
 
 pub async fn execute_prompt_stream(
@@ -180,7 +179,6 @@ pub async fn execute_prompt_stream(
                 }
                 Err(e) => {
                     eprintln!("error in stream: {:?}", e);
-                    panic!()
                 }
             }
         }

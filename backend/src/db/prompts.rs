@@ -12,6 +12,11 @@ impl PromptRepository {
         Ok(PromptRepository { pool })
     }
 
+    #[cfg(test)]
+    pub async fn in_memory(pool: sqlx::SqlitePool) -> Result<Self> {
+        Self::new(pool.clone()).await
+    }
+
     pub async fn create_prompt(
         &self,
         key: &str,

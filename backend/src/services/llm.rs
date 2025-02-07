@@ -54,6 +54,13 @@ pub enum Error {
     MissingSystemMessage,
     #[error("Missing system message")]
     MissingUserMessage,
+    #[error("DB Logging Error: {0}")]
+    DbLogginError(String),
+}
+
+pub struct ExecutionResponse {
+    pub content: String,
+    pub log_id: i64
 }
 
 pub trait LlmProvider {
@@ -83,21 +90,21 @@ impl Llm {
             .take(1) 
     }
 
-    pub async fn text(&self) -> Result<String, Error> {
+    pub async fn text(&self) -> Result<ExecutionResponse, Error> {
         let retry_strategy = self.retry_strategy();
         Retry::spawn(retry_strategy, || self.send_request()).await
     }
 
-    pub async fn json(&self) -> Result<String, Error> {
+    pub async fn json(&self) -> Result<ExecutionResponse, Error> {
         let retry_strategy = self.retry_strategy();
         Retry::spawn(retry_strategy, || async {
-            let text = self.send_request().await?;
+            let res = self.send_request().await?;
             // Since this is not a client library and will be invoked via API
             // we can't strongly enforce the shape of the JSON, therefore we just
             // need to make sure it is a valid JSON (hence Value) and then convert
             // it back into text and be on our way
-            let json: serde_json::Value = serde_json::from_str(&text)?;
-            Ok(json.to_string())
+            let _json: serde_json::Value = serde_json::from_str(&res.content)?;
+            Ok(res)
         }).await
     }
 
@@ -110,7 +117,7 @@ impl Llm {
         Ok(self.send_request_stream(tx).await?)
     }
 
-    async fn send_request(&self) -> Result<String, Error> {
+    async fn send_request(&self) -> Result<ExecutionResponse, Error> {
         let openai_provider = OpenaiProvider::new(&self.props, false);
         let anthropic_provider = AnthropicProvider::new(&self.props, false);
         let gemini_provider = GeminiProvider::new(&self.props, false);
@@ -147,15 +154,65 @@ impl Llm {
             return Err(Error::Http(status));
         }
 
-        let mut response = match &self.props.model {
+        let response = match &self.props.model {
             LlmModel::OpenAi(_) => OpenaiProvider::parse_response(&text)?,
             LlmModel::Anthropic(_) => AnthropicProvider::parse_response(&text)?,
             LlmModel::Gemini(_) => GeminiProvider::parse_response(&text)?,
             LlmModel::Deepseek(_) => DeepseekProvider::parse_response(&text)?
         };
 
-        todo!()
+        let log_id = self.db_log
+            .create_trace(
+                self.props.prompt_id,
+                self.props.model_id,
+                Some(&response.raw_response),
+                Some(request.status as i64),
+                None,
+                response.input_tokens,
+                response.output_tokens,
+                Some(&request.body),
+                Some(&request.method),
+                Some(&request.url),
+                Some(&request.headers),
+            )
+            .await
+            .map_err(|e| Error::DbLogginError(e.to_string()))?;
+
+        Ok(ExecutionResponse { content: response.response_content, log_id } )
     }
+
+    // async fn send_request(&self) -> Result<String, Error> {
+    //     let openai_provider = OpenaiProvider::new(&self.props, false);
+    //     let anthropic_provider = AnthropicProvider::new(&self.props, false);
+    //     let gemini_provider = GeminiProvider::new(&self.props, false);
+    //     let deepseek_provider = DeepseekProvider::new(&self.props, false);
+    //
+    //     let (request_builder, body) = match &self.props.model {
+    //         LlmModel::OpenAi(_) => openai_provider.build_request(),
+    //         LlmModel::Anthropic(_) => anthropic_provider.build_request(),
+    //         LlmModel::Gemini(_) => gemini_provider.build_request(),
+    //         LlmModel::Deepseek(_) => deepseek_provider.build_request(),
+    //     }?;
+    //
+    //     // Convert RequestBuilder to Request to capture details
+    //     let response = request_builder.send().await?;
+    //     let status = response.status();
+    //     let text = response.text().await?;
+    //
+    //     if !status.is_success() {
+    //         return Err(Error::Http(status));
+    //     }
+    //
+    //     let response = match &self.props.model {
+    //         LlmModel::OpenAi(_) => OpenaiProvider::parse_response(&text)?,
+    //         LlmModel::Anthropic(_) => AnthropicProvider::parse_response(&text)?,
+    //         LlmModel::Gemini(_) => GeminiProvider::parse_response(&text)?,
+    //         LlmModel::Deepseek(_) => DeepseekProvider::parse_response(&text)?
+    //     };
+    //
+    //     println!("{}", response.response_content);
+    //     Ok(response.response_content)
+    // }
 
     async fn send_request_stream(
         &self,
@@ -192,7 +249,7 @@ mod tests {
     use super::*;
     use crate::{common::types::models::{
         AnthropicModel, DeepseekModel, GeminiModel, LlmModel, OpenAiModel,
-    }, services::types::message::Message};
+    }, db::prompts::PromptRepository, services::types::message::Message};
     use dotenv::dotenv;
     use tokio::sync::mpsc;
 
@@ -208,44 +265,67 @@ mod tests {
         }
     }
 
+    async fn create_shared_in_memory_pool() -> Result<sqlx::SqlitePool, sqlx::Error> {
+        // Use the shared cache so all connections share the same in-memory database.
+        let pool = sqlx::SqlitePool::connect("sqlite::memory:?cache=shared").await?;
+        // Run migrations to set up your schema (this should include both logs and prompts tables).
+        sqlx::migrate!("./migrations").run(&pool).await?;
+        Ok(pool)
+    }
+
     #[tokio::test]
     #[ignore]
     async fn test_openai_integration() {
         dotenv().ok();
-        let props = create_test_props(LlmModel::OpenAi(OpenAiModel::Gpt4oMini202407)).await;
-        let logs = LogRepository::in_memory().await.unwrap();
-        let llm = Llm::new(props, logs);
 
-        // Test text response
-        let text = llm.text().await.unwrap();
-        assert!(text.contains("Hello"));
+        // Create a single shared pool.
+        let pool = create_shared_in_memory_pool().await.unwrap();
 
-        // Test JSON response
-        #[derive(serde::Deserialize)]
-        struct TestResponse {
-            message: String,
-        }
+        // Create your repositories using the shared pool.
+        let prompt_repo = PromptRepository::in_memory(pool.clone()).await.unwrap();
+        let log_repo = LogRepository::in_memory(pool.clone()).await.unwrap();
 
+        // Seed your prompt.
+        let prompt_id = prompt_repo.create_prompt(
+            "test_key",
+            "Test prompt content",
+            1,             // model_id (assuming models are seeded or available)
+            100,           // max_tokens
+            0.5,           // temperature
+            false          // json_mode
+        ).await.unwrap();
+
+        // Create the properties for your LLM request, using the prompt_id from the repository.
         let props = LlmProps {
             model: LlmModel::OpenAi(OpenAiModel::Gpt4oMini202407),
             temperature: 0.5,
             max_tokens: 100,
             json_mode: true,
             messages: vec![
-                Message::System { content: "You must respond with valid JSON onlyl".to_string() },
+                Message::System { content: "You must respond with valid JSON only".to_string() },
                 Message::User { content: "Return a JSON object with a 'message' field containing 'Hello in JSON'".to_string() },
             ],
-            prompt_id: 1,
+            prompt_id,  // Use the seeded prompt_id here.
             model_id: 1,
         };
 
+        // Create your LLM instance, passing in the repositories (or the shared pool as needed).
+        let llm = Llm::new(props, log_repo);
 
-        let logs = LogRepository::in_memory().await.unwrap();
-        let llm = Llm::new(props, logs);
+        // Run your tests.
+        let res = llm.text().await.unwrap();
+        assert!(res.content.contains("Hello"));
+
+        #[derive(serde::Deserialize)]
+        struct TestResponse {
+            message: String,
+        }
+        
         let response = llm.json().await.unwrap();
-        let json: TestResponse = serde_json::from_str(&response).unwrap();
+        let json: TestResponse = serde_json::from_str(&response.content).unwrap();
         assert_eq!(json.message, "Hello in JSON");
     }
+
 
     #[tokio::test]
     #[ignore]
@@ -264,12 +344,25 @@ mod tests {
             model_id: 1,
         };
 
-        let logs = LogRepository::in_memory().await.unwrap();
-        let llm = Llm::new(props, logs);
+        let pool = create_shared_in_memory_pool().await.unwrap();
+        let prompt_repo = PromptRepository::in_memory(pool.clone()).await.unwrap();
+        let log_repo = LogRepository::in_memory(pool.clone()).await.unwrap();
+
+        // Seed your prompt.
+        prompt_repo.create_prompt(
+            "test_key",
+            "Test prompt content",
+            1,             // model_id (assuming models are seeded or available)
+            100,           // max_tokens
+            0.5,           // temperature
+            false          // json_mode
+        ).await.unwrap();
+
+        let llm = Llm::new(props, log_repo);
 
         // Test text response - Anthropic doesn't support JSON mode
-        let text = llm.text().await.unwrap();
-        assert!(text.contains("Hello"));
+        let res = llm.text().await.unwrap();
+        assert!(res.content.contains("Hello"));
     }
 
     #[tokio::test]
@@ -291,10 +384,23 @@ mod tests {
             model_id: 1,
         };
 
-        let logs = LogRepository::in_memory().await.unwrap();
-        let llm = Llm::new(props, logs);
-        let text = llm.text().await.unwrap();
-        assert!(text.contains("Hello"));
+        let pool = create_shared_in_memory_pool().await.unwrap();
+        let prompt_repo = PromptRepository::in_memory(pool.clone()).await.unwrap();
+        let log_repo = LogRepository::in_memory(pool.clone()).await.unwrap();
+
+        // Seed your prompt.
+        prompt_repo.create_prompt(
+            "test_key",
+            "Test prompt content",
+            1,             // model_id (assuming models are seeded or available)
+            100,           // max_tokens
+            0.5,           // temperature
+            false          // json_mode
+        ).await.unwrap();
+
+        let llm = Llm::new(props, log_repo.clone());
+        let res = llm.text().await.unwrap();
+        assert!(res.content.contains("Hello"));
 
         // Test JSON response
         #[derive(serde::Deserialize)]
@@ -319,10 +425,9 @@ mod tests {
             model_id: 1,
         };
 
-        let logs = LogRepository::in_memory().await.unwrap();
-        let llm = Llm::new(props, logs);
-        let response = llm.json().await.unwrap();
-        let json: TestResponse = serde_json::from_str(&response).unwrap();
+        let llm = Llm::new(props, log_repo);
+        let res = llm.json().await.unwrap();
+        let json: TestResponse = serde_json::from_str(&res.content).unwrap();
         assert_eq!(json.message, "Hello in JSON");
     }
 
@@ -333,10 +438,24 @@ mod tests {
 
         // Test text response
         let props = create_test_props(LlmModel::Deepseek(DeepseekModel::DeepseekChat)).await;
-        let logs = LogRepository::in_memory().await.unwrap();
-        let llm = Llm::new(props, logs);
-        let text = llm.text().await.unwrap();
-        assert!(text.contains("Hello"));
+
+        let pool = create_shared_in_memory_pool().await.unwrap();
+        let prompt_repo = PromptRepository::in_memory(pool.clone()).await.unwrap();
+        let log_repo = LogRepository::in_memory(pool.clone()).await.unwrap();
+
+        // Seed your prompt.
+        prompt_repo.create_prompt(
+            "test_key",
+            "Test prompt content",
+            1,             // model_id (assuming models are seeded or available)
+            100,           // max_tokens
+            0.5,           // temperature
+            false          // json_mode
+        ).await.unwrap();
+
+        let llm = Llm::new(props, log_repo.clone());
+        let res = llm.text().await.unwrap();
+        assert!(res.content.contains("Hello"));
 
         // Test JSON response
         #[derive(serde::Deserialize)]
@@ -362,10 +481,9 @@ mod tests {
             model_id: 1,
         };
 
-        let logs = LogRepository::in_memory().await.unwrap();
-        let llm = Llm::new(props, logs);
-        let response = llm.json().await.unwrap();
-        let json: TestResponse = serde_json::from_str(&response).unwrap();
+        let llm = Llm::new(props, log_repo);
+        let res = llm.json().await.unwrap();
+        let json: TestResponse = serde_json::from_str(&res.content).unwrap();
         assert_eq!(json.message, "Hello in JSON");
     }
 
@@ -393,8 +511,21 @@ mod tests {
     async fn test_openai_stream() {
         dotenv().ok();
         let props = create_stream_test_props(LlmModel::OpenAi(OpenAiModel::Gpt4oMini202407)).await;
-        let logs = LogRepository::in_memory().await.unwrap();
-        let llm = Llm::new(props, logs);
+        let pool = create_shared_in_memory_pool().await.unwrap();
+        let prompt_repo = PromptRepository::in_memory(pool.clone()).await.unwrap();
+        let log_repo = LogRepository::in_memory(pool.clone()).await.unwrap();
+
+        // Seed your prompt.
+        prompt_repo.create_prompt(
+            "test_key",
+            "Test prompt content",
+            1,             // model_id (assuming models are seeded or available)
+            100,           // max_tokens
+            0.5,           // temperature
+            false          // json_mode
+        ).await.unwrap();
+
+        let llm = Llm::new(props, log_repo.clone());
         let (tx, mut rx) = mpsc::channel(10);
 
         llm.stream(tx).await.expect("Streaming failed");
@@ -417,8 +548,22 @@ mod tests {
         let props =
             create_stream_test_props(LlmModel::Anthropic(AnthropicModel::Claude35Haiku20241022))
                 .await;
-        let logs = LogRepository::in_memory().await.unwrap();
-        let llm = Llm::new(props, logs);
+
+        let pool = create_shared_in_memory_pool().await.unwrap();
+        let prompt_repo = PromptRepository::in_memory(pool.clone()).await.unwrap();
+        let log_repo = LogRepository::in_memory(pool.clone()).await.unwrap();
+
+        // Seed your prompt.
+        prompt_repo.create_prompt(
+            "test_key",
+            "Test prompt content",
+            1,             // model_id (assuming models are seeded or available)
+            100,           // max_tokens
+            0.5,           // temperature
+            false          // json_mode
+        ).await.unwrap();
+
+        let llm = Llm::new(props, log_repo.clone());
         let (tx, mut rx) = mpsc::channel(10);
 
         llm.stream(tx).await.expect("Streaming failed");
@@ -440,10 +585,24 @@ mod tests {
         dotenv().ok();
         let props =
             create_stream_test_props(LlmModel::Gemini(GeminiModel::Gemini15Flash)).await;
-        let logs = LogRepository::in_memory().await.unwrap();
-        let llm = Llm::new(props, logs);
-        let (tx, mut rx) = mpsc::channel(10);
 
+        let pool = create_shared_in_memory_pool().await.unwrap();
+        let prompt_repo = PromptRepository::in_memory(pool.clone()).await.unwrap();
+        let log_repo = LogRepository::in_memory(pool.clone()).await.unwrap();
+
+        // Seed your prompt.
+        prompt_repo.create_prompt(
+            "test_key",
+            "Test prompt content",
+            1,             // model_id (assuming models are seeded or available)
+            100,           // max_tokens
+            0.5,           // temperature
+            false          // json_mode
+        ).await.unwrap();
+
+        let llm = Llm::new(props, log_repo.clone());
+
+        let (tx, mut rx) = mpsc::channel(10);
         llm.stream(tx).await.expect("Streaming failed");
 
         let mut received_chunks = Vec::new();
@@ -463,8 +622,21 @@ mod tests {
         dotenv().ok();
         let props =
             create_stream_test_props(LlmModel::Deepseek(DeepseekModel::DeepseekChat)).await;
-        let logs = LogRepository::in_memory().await.unwrap();
-        let llm = Llm::new(props, logs);
+        let pool = create_shared_in_memory_pool().await.unwrap();
+        let prompt_repo = PromptRepository::in_memory(pool.clone()).await.unwrap();
+        let log_repo = LogRepository::in_memory(pool.clone()).await.unwrap();
+
+        // Seed your prompt.
+        prompt_repo.create_prompt(
+            "test_key",
+            "Test prompt content",
+            1,             // model_id (assuming models are seeded or available)
+            100,           // max_tokens
+            0.5,           // temperature
+            false          // json_mode
+        ).await.unwrap();
+
+        let llm = Llm::new(props, log_repo.clone());
         let (tx, mut rx) = mpsc::channel(10);
 
         llm.stream(tx).await.expect("Streaming failed");
@@ -520,12 +692,25 @@ mod tests {
 
         for model in models {
             let props = create_multi_turn_test_props(model.clone()).await;
-            let logs = LogRepository::in_memory().await.unwrap();
-            let llm = Llm::new(props, logs);
+            let pool = create_shared_in_memory_pool().await.unwrap();
+            let prompt_repo = PromptRepository::in_memory(pool.clone()).await.unwrap();
+            let log_repo = LogRepository::in_memory(pool.clone()).await.unwrap();
+
+            // Seed your prompt.
+            prompt_repo.create_prompt(
+                "test_key",
+                "Test prompt content",
+                1,             // model_id (assuming models are seeded or available)
+                100,           // max_tokens
+                0.5,           // temperature
+                false          // json_mode
+            ).await.unwrap();
+
+            let llm = Llm::new(props, log_repo.clone());
 
             // The response should continue the conversation naturally
             let response = llm.text().await.unwrap();
-            assert!(response.contains("7"), "Response should solve x + 5 = 7 for model {:?}", model);
+            assert!(response.content.contains("7"), "Response should solve x + 5 = 7 for model {:?}", model);
         }
     }
 
@@ -543,8 +728,21 @@ mod tests {
 
         for model in models {
             let props = create_multi_turn_test_props(model.clone()).await;
-            let logs = LogRepository::in_memory().await.unwrap();
-            let llm = Llm::new(props, logs);
+            let pool = create_shared_in_memory_pool().await.unwrap();
+            let prompt_repo = PromptRepository::in_memory(pool.clone()).await.unwrap();
+            let log_repo = LogRepository::in_memory(pool.clone()).await.unwrap();
+
+            // Seed your prompt.
+            prompt_repo.create_prompt(
+                "test_key",
+                "Test prompt content",
+                1,             // model_id (assuming models are seeded or available)
+                100,           // max_tokens
+                0.5,           // temperature
+                false          // json_mode
+            ).await.unwrap();
+
+            let llm = Llm::new(props, log_repo.clone());
             let (tx, mut rx) = mpsc::channel(10);
 
             llm.stream(tx).await.expect("Streaming failed");
