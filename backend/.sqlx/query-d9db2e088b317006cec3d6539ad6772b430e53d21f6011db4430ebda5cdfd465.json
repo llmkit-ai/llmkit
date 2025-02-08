@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n                SELECT \n                    id,\n                    model_name\n                FROM models\n            ",
+  "query": "\n            SELECT \n                id,\n                model_name\n            FROM model\n            WHERE id = ?\n            ",
   "describe": {
     "columns": [
       {
@@ -15,12 +15,12 @@
       }
     ],
     "parameters": {
-      "Right": 0
+      "Right": 1
     },
     "nullable": [
       false,
       false
     ]
   },
-  "hash": "b2fd36d478631bf2806499373ce98714ff81cd37dd53c5c16ab454bdd724dbb5"
+  "hash": "d9db2e088b317006cec3d6539ad6772b430e53d21f6011db4430ebda5cdfd465"
 }

@@ -1,25 +1,43 @@
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     Json,
 };
+use serde::Deserialize;
 
 use crate::{AppError, AppState};
+use super::types::response::logs::{ApiLogCountResponse, ApiLogResponse};
 
-use super::types::response::logs::ApiTraceResponse;
 
-
-pub async fn get_api_trace(
+pub async fn get_log(
     Path(trace_id): Path<i64>,
     State(state): State<AppState>,
-) -> Result<Json<ApiTraceResponse>, AppError> {
-    let trace = state.db.log.get_trace_by_id(trace_id).await?
+) -> Result<Json<ApiLogResponse>, AppError> {
+    let trace = state.db.log.get_log_by_id(trace_id).await?
         .ok_or(AppError::NotFound("API trace not found".into()))?;
     Ok(Json(trace.into()))
 }
 
-pub async fn list_api_traces(
+#[derive(Deserialize)]
+pub struct PaginationParams {
+    page: i64,
+    page_size: i64,
+}
+
+pub async fn list_logs(
     State(state): State<AppState>,
-) -> Result<Json<Vec<ApiTraceResponse>>, AppError> {
-    let traces = state.db.log.list_traces().await?;
+    Query(params): Query<PaginationParams>,
+) -> Result<Json<Vec<ApiLogResponse>>, AppError> {
+    let page = params.page;
+    let page_size = params.page_size;
+
+    let traces = state.db.log.list_logs(page, page_size).await?;
     Ok(Json(traces.into_iter().map(|t| t.into()).collect()))
 }
+
+pub async fn get_logs_count(
+    State(state): State<AppState>,
+) -> Result<Json<ApiLogCountResponse>, AppError> {
+    let count = state.db.log.get_logs_count().await?;
+    Ok(Json(ApiLogCountResponse { count }))
+}
+

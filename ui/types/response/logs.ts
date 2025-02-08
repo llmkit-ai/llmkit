@@ -1,16 +1,16 @@
-export interface ApiTraceResponse {
+export interface ApiLogReponse {
   id: number;
   prompt_id: number | null;
   model_id: number;
-  response_data: string | null;
+  model_name: string;
   status_code: number | null;
   latency_ms: number | null;
   input_tokens: number | null;
   output_tokens: number | null;
+  reasoning_tokens: number | null;
   request_body: string | null;
-  request_method: string | null;
-  request_url: string | null;
-  request_headers: string | null;
+  response_data: string | null;
+  created_at: string
 }
 
-export type ApiTraceResponseArray = ApiTraceResponse[];
+export type ApiLogResponseArray = ApiLogReponse[];

@@ -69,6 +69,7 @@ impl From<AnthropicResponse> for LlmApiResponseProps {
             latency_ms: None,
             input_tokens: Some(response.usage.input_tokens as i64),
             output_tokens: Some(response.usage.output_tokens as i64),
+            reasoning_tokens: None,
             error_code: None,
             error_message: None,
         }

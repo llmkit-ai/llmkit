@@ -55,7 +55,7 @@ pub enum Error {
     #[error("Missing system message")]
     MissingUserMessage,
     #[error("DB Logging Error: {0}")]
-    DbLogginError(String),
+    DbLoggingError(String),
 }
 
 pub struct ExecutionResponse {
@@ -151,6 +151,20 @@ impl Llm {
         );
 
         if !status.is_success() {
+            self.db_log
+                .create_log(
+                    self.props.prompt_id,
+                    self.props.model_id,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    Some(&request.body),
+                )
+                .await
+                .map_err(|e| Error::DbLoggingError(e.to_string()))?;
+
             return Err(Error::Http(status));
         }
 
@@ -162,21 +176,18 @@ impl Llm {
         };
 
         let log_id = self.db_log
-            .create_trace(
+            .create_log(
                 self.props.prompt_id,
                 self.props.model_id,
                 Some(&response.raw_response),
                 Some(request.status as i64),
-                None,
                 response.input_tokens,
                 response.output_tokens,
-                Some(&request.body),
-                Some(&request.method),
-                Some(&request.url),
-                Some(&request.headers),
+                response.reasoning_tokens,
+                Some(&request.body)
             )
             .await
-            .map_err(|e| Error::DbLogginError(e.to_string()))?;
+            .map_err(|e| Error::DbLoggingError(e.to_string()))?;
 
         Ok(ExecutionResponse { content: response.response_content, log_id } )
     }
@@ -223,7 +234,7 @@ impl Llm {
         let gemini_provider = GeminiProvider::new(&self.props, true);
         let deepseek_provider = DeepseekProvider::new(&self.props, true);
 
-        let (request, body) = match &self.props.model {
+        let (request, _body) = match &self.props.model {
             LlmModel::OpenAi(_) => openai_provider.build_request(),
             LlmModel::Anthropic(_) => anthropic_provider.build_request(),
             LlmModel::Gemini(_) => gemini_provider.build_request(),

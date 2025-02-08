@@ -20,7 +20,7 @@ impl ModelRepository {
             SELECT 
                 id,
                 model_name
-            FROM models
+            FROM model
             WHERE id = ?
             "#,
             id
@@ -38,7 +38,7 @@ impl ModelRepository {
                 SELECT 
                     id,
                     model_name
-                FROM models
+                FROM model
             "#
         )
         .fetch_all(&self.pool)

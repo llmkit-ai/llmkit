@@ -1,13 +1,13 @@
 -- Create models table
 PRAGMA foreign_keys = ON;
 
-CREATE TABLE models (
+CREATE TABLE model (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     model_name TEXT NOT NULL,        -- Model identifier (e.g., 'gpt-4', 'claude-2')
     UNIQUE(model_name)     -- Prevent duplicate model entries
 );
 
-CREATE TABLE llm_prompts (
+CREATE TABLE prompt (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     key TEXT NOT NULL UNIQUE,
     prompt TEXT NOT NULL,       
@@ -18,31 +18,27 @@ CREATE TABLE llm_prompts (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    FOREIGN KEY (model_id) REFERENCES models(id)
+    FOREIGN KEY (model_id) REFERENCES model(id)
 );
 
--- Updated api traces table
-CREATE TABLE llm_api_traces (
+CREATE TABLE log (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     prompt_id INTEGER,
     model_id INTEGER NOT NULL,
-    response_data TEXT,
-    status_code INTEGER,
-    latency_ms INTEGER,
     input_tokens INTEGER,
     output_tokens INTEGER,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    reasoning_tokens INTEGER,
+    status_code INTEGER,
     request_body TEXT,
-    request_method TEXT,
-    request_url TEXT,
-    request_headers TEXT,
-    FOREIGN KEY(prompt_id) REFERENCES llm_prompts(id),
-    FOREIGN KEY(model_id) REFERENCES models(id)
+    response_data TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(prompt_id) REFERENCES prompt(id),
+    FOREIGN KEY(model_id) REFERENCES model(id)
 );
 
 
 -- Indexes remain similar but reference new FKs
-CREATE INDEX idx_traces_prompt ON llm_api_traces(prompt_id);
-CREATE INDEX idx_traces_model ON llm_api_traces(model_id);  -- New index for model queries
-CREATE INDEX idx_traces_created ON llm_api_traces(created_at);
-CREATE INDEX idx_traces_status ON llm_api_traces(status_code);
+CREATE INDEX idx_traces_prompt ON log(prompt_id);
+CREATE INDEX idx_traces_model ON log(model_id);  -- New index for model queries
+CREATE INDEX idx_traces_created ON log(created_at);
+CREATE INDEX idx_traces_status ON log(status_code);

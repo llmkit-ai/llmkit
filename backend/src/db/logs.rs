@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-use crate::db::types::log::LogRow;
+use crate::db::types::log::{LogRow, LogRowModel};
 
 #[derive(Clone, Debug)]
 pub struct LogRepository {
@@ -17,49 +17,40 @@ impl LogRepository {
         Self::new(pool.clone()).await
     }
 
-    pub async fn create_trace(
+    pub async fn create_log(
         &self,
         prompt_id: i64,
         model_id: i64,
         response_data: Option<&str>,
         status_code: Option<i64>,
-        latency_ms: Option<i64>,
         input_tokens: Option<i64>,
         output_tokens: Option<i64>,
-        request_body: Option<&str>,
-        request_method: Option<&str>,
-        request_url: Option<&str>,
-        request_headers: Option<&str>,
+        reasoning_tokens: Option<i64>,
+        request_body: Option<&str>
     ) -> Result<i64> {
         let mut conn = self.pool.acquire().await?;
         let id = sqlx::query!(
             r#"
-            INSERT INTO llm_api_traces (
+            INSERT INTO log (
                 prompt_id,
                 model_id,
                 response_data,
                 status_code,
-                latency_ms,
                 input_tokens,
                 output_tokens,
+                reasoning_tokens,
                 created_at,
-                request_body,
-                request_method,
-                request_url,
-                request_headers
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?)
+                request_body
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
             "#,
             prompt_id,
             model_id,
             response_data,
             status_code,
-            latency_ms,
             input_tokens,
             output_tokens,
+            reasoning_tokens,
             request_body,
-            request_method,
-            request_url,
-            request_headers
         )
         .execute(&mut *conn)
         .await?
@@ -69,29 +60,26 @@ impl LogRepository {
 
 
     // Update trace with response data
-    pub async fn update_trace_response(
+    pub async fn update_log_response(
         &self,
         id: i64,
         response_data: &str,
         status_code: i32,
-        latency_ms: i32,
         input_tokens: i32,
         output_tokens: i32,
     ) -> Result<bool> {
         let rows_affected = sqlx::query!(
             r#"
-            UPDATE llm_api_traces
+            UPDATE log
             SET 
                 response_data = ?,
                 status_code = ?,
-                latency_ms = ?,
                 input_tokens = ?,
                 output_tokens = ?
             WHERE id = ?
             "#,
             response_data,
             status_code,
-            latency_ms,
             input_tokens,
             output_tokens,
             id
@@ -103,26 +91,25 @@ impl LogRepository {
     }
 
     // Get a single trace by ID
-    pub async fn get_trace_by_id(&self, id: i64) -> Result<Option<LogRow>> {
+    pub async fn get_log_by_id(&self, id: i64) -> Result<Option<LogRowModel>> {
         let trace = sqlx::query_as!(
-            LogRow,
+            LogRowModel,
             r#"
             SELECT 
-                id,
-                prompt_id,
-                model_id,
-                response_data,
-                status_code,
-                latency_ms,
-                input_tokens,
-                output_tokens,
-                created_at,
-                request_body,
-                request_method,
-                request_url,
-                request_headers
-            FROM llm_api_traces
-            WHERE id = ?
+                l.id,
+                l.prompt_id,
+                l.model_id,
+                m.model_name,
+                l.response_data,
+                l.status_code,
+                l.input_tokens,
+                l.output_tokens,
+                l.reasoning_tokens,
+                l.created_at,
+                l.request_body
+            FROM log l
+            INNER JOIN model m on m.id = l.model_id
+            WHERE l.id = ?
             "#,
             id
         )
@@ -132,27 +119,31 @@ impl LogRepository {
     }
 
     // List all traces ordered by creation time
-    pub async fn list_traces(&self) -> Result<Vec<LogRow>> {
+    pub async fn list_logs(&self, page: i64, page_size: i64) -> Result<Vec<LogRowModel>> {
+        let offset = (page - 1) * page_size;
+
         let traces = sqlx::query_as!(
-            LogRow,
+            LogRowModel,
             r#"
             SELECT 
-                id,
-                prompt_id,
-                model_id,
-                response_data,
-                status_code,
-                latency_ms,
-                input_tokens,
-                output_tokens,
-                created_at,
-                request_body,
-                request_method,
-                request_url,
-                request_headers
-            FROM llm_api_traces
+                l.id,
+                l.prompt_id,
+                l.model_id,
+                m.model_name,
+                l.response_data,
+                l.status_code,
+                l.input_tokens,
+                l.output_tokens,
+                l.reasoning_tokens,
+                l.created_at,
+                l.request_body
+            FROM log l
+            INNER JOIN model m on m.id = l.model_id
             ORDER BY created_at DESC
-            "#
+            LIMIT ? OFFSET ?
+            "#,
+            page_size,
+            offset
         )
         .fetch_all(&self.pool)
         .await?;
@@ -160,7 +151,7 @@ impl LogRepository {
     }
 
     // List traces by prompt ID
-    pub async fn list_traces_by_prompt(&self, prompt_id: i64) -> Result<Vec<LogRow>> {
+    pub async fn list_logs_by_prompt(&self, prompt_id: i64) -> Result<Vec<LogRow>> {
         let traces = sqlx::query_as!(
             LogRow,
             r#"
@@ -170,15 +161,12 @@ impl LogRepository {
                 model_id,
                 response_data,
                 status_code,
-                latency_ms,
                 input_tokens,
                 output_tokens,
+                reasoning_tokens,
                 created_at,
-                request_body,
-                request_method,
-                request_url,
-                request_headers
-            FROM llm_api_traces
+                request_body
+            FROM log
             WHERE prompt_id = ?
             ORDER BY created_at DESC
             "#,
@@ -189,18 +177,15 @@ impl LogRepository {
         Ok(traces)
     }
 
-    // Delete a trace
-    pub async fn delete_trace(&self, id: i64) -> Result<bool> {
-        let rows_affected = sqlx::query!(
+    pub async fn get_logs_count(&self) -> Result<i64> {
+        let count = sqlx::query_scalar!(
             r#"
-            DELETE FROM llm_api_traces
-            WHERE id = ?
-            "#,
-            id
+            SELECT COUNT(*) FROM log
+            "#
         )
-        .execute(&self.pool)
-        .await?
-        .rows_affected();
-        Ok(rows_affected > 0)
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(count)
     }
 }
+

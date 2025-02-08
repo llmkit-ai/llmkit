@@ -78,6 +78,7 @@ impl From<OpenaiResponse> for LlmApiResponseProps {
             latency_ms: None,
             input_tokens,
             output_tokens,
+            reasoning_tokens: None,
             error_code: None,
             error_message: None,
         }

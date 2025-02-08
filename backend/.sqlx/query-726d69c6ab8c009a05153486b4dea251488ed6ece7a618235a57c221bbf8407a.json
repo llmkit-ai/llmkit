@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            UPDATE prompt\n            SET \n                key = ?, \n                prompt = ?, \n                model_id = ?,\n                max_tokens = ?,\n                temperature = ?,\n                json_mode = ?,\n                updated_at = CURRENT_TIMESTAMP\n            WHERE id = ?\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 7
+    },
+    "nullable": []
+  },
+  "hash": "726d69c6ab8c009a05153486b4dea251488ed6ece7a618235a57c221bbf8407a"
+}

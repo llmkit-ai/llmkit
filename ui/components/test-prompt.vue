@@ -26,7 +26,7 @@
         </div>
       </div>
     </div>
-    <div class="mt-5 bg-neutral-100 dark:bg-neutral-800 p-4">
+    <div v-if="Object.keys(jsonContext).length > 0" class="mt-5 bg-neutral-100 dark:bg-neutral-800 p-4">
       <p class="text-xs text-neutral-900 dark:text-neutral-300">Json context</p>
       <div class="mt-4 text-neutral-700 dark:text-neutral-300">
         {{ jsonContext }}
@@ -39,10 +39,91 @@
       </div>
     </div>
     <div v-if="logResponse" class="mt-5 bg-neutral-100 dark:bg-neutral-800 p-4">
-      <p class="text-xs text-neutral-900 dark:text-neutral-300">Trace</p>
-      <div class="mt-4 text-neutral-700 dark:text-neutral-300">
-        {{ logResponse }}
+      <div class="flex items-center justify-between">
+        <p class="text-xs text-neutral-900 dark:text-neutral-300">Log</p>
+        <button
+          @click="showLog = !showLog"
+          class="text-xs text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-300"
+        >
+          {{ showLog ? 'Hide' : 'Show' }}
+        </button>
       </div>
+      <div v-if="showLog" class="mt-4">
+        <div v-if="logResponse" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <dt class="text-sm font-medium text-neutral-900 dark:text-white">
+              Prompt ID
+            </dt>
+            <dd class="mt-1 text-sm text-neutral-700 dark:text-neutral-300">
+              {{ logResponse.prompt_id }}
+            </dd>
+          </div>
+          <div>
+            <dt class="text-sm font-medium text-neutral-900 dark:text-white">
+              Model ID
+            </dt>
+            <dd class="mt-1 text-sm text-neutral-700 dark:text-neutral-300">
+              {{ logResponse.model_id }}
+            </dd>
+          </div>
+          <div>
+            <dt class="text-sm font-medium text-neutral-900 dark:text-white">
+              Status Code
+            </dt>
+            <dd class="mt-1 text-sm text-neutral-700 dark:text-neutral-300">
+              {{ logResponse.status_code }}
+            </dd>
+          </div>
+          <div>
+            <dt class="text-sm font-medium text-neutral-900 dark:text-white">
+              Input Tokens
+            </dt>
+            <dd class="mt-1 text-sm text-neutral-700 dark:text-neutral-300">
+              {{ logResponse.input_tokens }}
+            </dd>
+          </div>
+          <div>
+            <dt class="text-sm font-medium text-neutral-900 dark:text-white">
+              Output Tokens
+            </dt>
+            <dd class="mt-1 text-sm text-neutral-700 dark:text-neutral-300">
+              {{ logResponse.output_tokens }}
+            </dd>
+          </div>
+          <div>
+            <dt class="text-sm font-medium text-neutral-900 dark:text-white">
+              Reasoning Tokens
+            </dt>
+            <dd class="mt-1 text-sm text-neutral-700 dark:text-neutral-300">
+              {{ logResponse.reasoning_tokens }}
+            </dd>
+          </div>
+          <div>
+            <dt class="text-sm font-medium text-neutral-900 dark:text-white">
+              Request Body
+            </dt>
+            <dd
+              class="mt-1 text-sm text-neutral-700 dark:text-neutral-300 break-words overflow-x-auto"
+            >
+              {{ logResponse.request_body }}
+            </dd>
+          </div>
+          <div>
+            <dt class="text-sm font-medium text-neutral-900 dark:text-white">
+              Response Data
+            </dt>
+            <dd
+              class="mt-1 text-sm text-neutral-700 dark:text-neutral-300 break-words overflow-x-auto"
+            >
+              {{ logResponse.response_data }}
+            </dd>
+          </div>
+        </div>
+        <div v-else class="text-neutral-700 dark:text-neutral-300">
+          no log available.
+        </div>
+      </div>
+
     </div>
     <div class="mt-6 flex justify-end px-4 sm:px-0 space-x-2">
       <button
@@ -79,6 +160,7 @@
 </template>
 
 <script setup lang="ts">
+import type { PromptExecutionApiTraceResponse } from '~/types/response/prompts';
 import type { Prompt } from '~/types/response/prompts';
 
 const props = defineProps<{
@@ -97,7 +179,8 @@ const {
 const promptPreview = ref(props.prompt.prompt)
 const jsonContext = ref({})
 const testResponse = ref<string | null>(null)
-const logResponse = ref<string | null>(null)
+const logResponse = ref<PromptExecutionApiTraceResponse | null>(null)
+const showLog = ref(false)
 
 const templateFields = computed<string[]>(() => {
   if (!props.prompt) return [];
@@ -128,7 +211,7 @@ function templateFieldInput(event: any) {
 async function execute() {
   const res = await executePrompt(props.prompt.id, jsonContext.value)
   testResponse.value = res.content
-  logResponse.value = JSON.stringify(res.trace)
+  logResponse.value = res.log
 }
 
 const { startStream } = useSSE()

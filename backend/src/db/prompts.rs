@@ -1,5 +1,6 @@
 use anyhow::Result;
 use crate::db::types::prompt::PromptRowWithModel;
+
 use super::types::prompt::PromptWithModel;
 
 #[derive(Clone, Debug)]
@@ -29,7 +30,7 @@ impl PromptRepository {
         let mut conn = self.pool.acquire().await?;
         let id = sqlx::query!(
             r#"
-            INSERT INTO llm_prompts (
+            INSERT INTO prompt (
                 key, 
                 prompt, 
                 model_id,
@@ -67,8 +68,8 @@ impl PromptRepository {
                 m.model_name,
                 p.created_at, 
                 p.updated_at
-            FROM llm_prompts p
-            JOIN models m ON p.model_id = m.id
+            FROM prompt p
+            JOIN model m ON p.model_id = m.id
             WHERE p.id = ?
             "#,
             id
@@ -93,8 +94,8 @@ impl PromptRepository {
                 m.model_name,
                 p.created_at, 
                 p.updated_at
-            FROM llm_prompts p
-            JOIN models m ON p.model_id = m.id
+            FROM prompt p
+            JOIN model m ON p.model_id = m.id
             ORDER BY p.created_at
             "#
         )
@@ -115,7 +116,7 @@ impl PromptRepository {
     ) -> Result<bool> {
         let rows_affected = sqlx::query!(
             r#"
-            UPDATE llm_prompts
+            UPDATE prompt
             SET 
                 key = ?, 
                 prompt = ?, 
@@ -144,7 +145,7 @@ impl PromptRepository {
     pub async fn delete_prompt(&self, id: i64) -> Result<bool> {
         let rows_affected = sqlx::query!(
             r#"
-            DELETE FROM llm_prompts
+            DELETE FROM prompt
             WHERE id = ?
             "#,
             id

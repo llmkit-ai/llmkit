@@ -11,8 +11,7 @@ use axum::{
 use anyhow::Result;
 use controllers::{
     logs::{
-        get_api_trace, 
-        list_api_traces
+        get_log, get_logs_count, list_logs
     }, 
     models::list_models, 
     prompts::{
@@ -76,8 +75,9 @@ fn model_routes() -> Router<AppState> {
 
 fn logs_routes() -> Router<AppState> {
     Router::new()
-        .route("/", get(list_api_traces))
-        .route("/{trace_id}", get(get_api_trace))
+        .route("/", get(list_logs))
+        .route("/{trace_id}", get(get_log))
+        .route("/count", get(get_logs_count))
 }
 
 async fn api_version_handler() -> &'static str {

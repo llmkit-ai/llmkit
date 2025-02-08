@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO log (\n                prompt_id,\n                model_id,\n                response_data,\n                status_code,\n                input_tokens,\n                output_tokens,\n                reasoning_tokens,\n                created_at,\n                request_body\n            ) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 8
+    },
+    "nullable": []
+  },
+  "hash": "6a407bd4ed2250c1b7be1c4aebd2b327923c5fc8a34d6ee5f74aa97e861804ed"
+}

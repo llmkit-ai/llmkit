@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            SELECT\n                p.id, \n                p.key, \n                p.prompt, \n                p.model_id,\n                p.max_tokens,\n                p.temperature,\n                p.json_mode,\n                m.model_name,\n                p.created_at, \n                p.updated_at\n            FROM llm_prompts p\n            JOIN models m ON p.model_id = m.id\n            ORDER BY p.created_at\n            ",
+  "query": "\n            SELECT\n                p.id, \n                p.key, \n                p.prompt, \n                p.model_id,\n                p.max_tokens,\n                p.temperature,\n                p.json_mode,\n                m.model_name,\n                p.created_at, \n                p.updated_at\n            FROM prompt p\n            JOIN model m ON p.model_id = m.id\n            ORDER BY p.created_at\n            ",
   "describe": {
     "columns": [
       {
@@ -70,5 +70,5 @@
       false
     ]
   },
-  "hash": "24e7d1f125d615fd1942d128821e30dfc1c22185ae06a91cb548de27f8cc594b"
+  "hash": "662aab1e2194de13e1ff8b8ec09ee415e52ea2874af9551dc829aa2ed8f0b83b"
 }

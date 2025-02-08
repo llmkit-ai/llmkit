@@ -137,7 +137,7 @@ pub async fn execute_prompt(
         }
     };
 
-    let log = state.db.log.get_trace_by_id(res.log_id).await?.ok_or_else(|| AppError::NotFound("Log not found".to_string()))?;
+    let log = state.db.log.get_log_by_id(res.log_id).await?.ok_or_else(|| AppError::NotFound("Log not found".to_string()))?;
 
     Ok(Json(PromptExecutionResponse::from_log_row(res.content, log)))
 }

@@ -106,6 +106,7 @@ impl From<GeminiResponse> for LlmApiResponseProps {
             latency_ms: None,
             input_tokens,
             output_tokens,
+            reasoning_tokens: None,
             error_code,
             error_message,
         }

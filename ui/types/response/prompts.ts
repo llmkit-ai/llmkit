@@ -14,7 +14,7 @@ export interface Prompt {
 // PROMPT EXECUTION RESPONSE
 export interface PromptExecutionResponse {
   content: string;
-  trace: PromptExecutionApiTraceResponse;
+  log: PromptExecutionApiTraceResponse;
 }
 
 
@@ -27,8 +27,6 @@ export interface PromptExecutionApiTraceResponse {
   latency_ms: number | null;
   input_tokens: number | null;
   output_tokens: number | null;
+  reasoning_tokens: number | null;
   request_body: string | null;
-  request_method: string | null;
-  request_url: string | null;
-  request_headers: string | null;
 }
