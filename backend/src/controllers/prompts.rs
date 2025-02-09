@@ -119,7 +119,11 @@ pub async fn execute_prompt(
         }
     };
 
-    let llm_props = LlmProps::new(prompt.clone(), payload).unwrap();
+    let llm_props = LlmProps::new(prompt.clone(), payload).map_err(|e| {
+        tracing::error!("{}", e);
+        AppError::InternalServerError("An error occured processing prompt template".to_string())
+    })?;
+
     let llm = Llm::new(llm_props, state.db.log.clone());
 
     let res = match prompt.json_mode {
@@ -159,7 +163,11 @@ pub async fn execute_prompt_stream(
     };
 
     let (tx, mut rx) = mpsc::channel(100);
-    let llm_props = LlmProps::new(prompt.clone(), payload).unwrap();
+    let llm_props = LlmProps::new(prompt.clone(), payload).map_err(|e| {
+        tracing::error!("{}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
     let llm = Llm::new(llm_props, state.db.log);
 
     tokio::spawn(async move {

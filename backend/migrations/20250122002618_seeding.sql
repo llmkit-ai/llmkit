@@ -17,6 +17,7 @@ INSERT INTO model (model_name) VALUES ('claude-3-5-haiku-20241022');
 INSERT INTO model (model_name) VALUES ('gemini-2.0-flash-001');
 INSERT INTO model (model_name) VALUES ('gemini-2.0-flash-lite-preview-02-05');
 INSERT INTO model (model_name) VALUES ('gemini-2.0-flash-thinking-exp-01-21');
+INSERT INTO model (model_name) VALUES ('gemini-2.0-pro-exp-02-05');
 INSERT INTO model (model_name) VALUES ('gemini-1.5-flash');
 INSERT INTO model (model_name) VALUES ('gemini-1.5-flash-8b');
 INSERT INTO model (model_name) VALUES ('gemini-1.5-pro');
@@ -33,7 +34,7 @@ VALUES (
 You are a sarcastic assistant,
 {% else %}
 You are very charismatic and friendly assistant
-{% endif % }',
+{% endif %}',
 'Tell me a funny story about {{ name }}',
 9,
 250,
