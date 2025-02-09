@@ -7,7 +7,7 @@ use axum::{
 };
 use futures::Stream;
 use hyper::StatusCode;
-use serde_json::Value;
+use serde_json::{json, Value};
 
 use tokio::sync::mpsc;
 
@@ -163,6 +163,9 @@ pub async fn execute_prompt_stream(
     };
 
     let (tx, mut rx) = mpsc::channel(100);
+    // Create oneshot channel for log ID
+    let (stream_res_tx, stream_res_rx) = tokio::sync::oneshot::channel();
+    
     let llm_props = LlmProps::new(prompt.clone(), payload).map_err(|e| {
         tracing::error!("{}", e);
         StatusCode::INTERNAL_SERVER_ERROR
@@ -171,26 +174,40 @@ pub async fn execute_prompt_stream(
     let llm = Llm::new(llm_props, state.db.log);
 
     tokio::spawn(async move {
-        if let Err(e) = llm.stream(tx).await {
-            eprintln!("LLM streaming error: {}", e);
+        let result = llm.stream(tx).await;
+
+        if let Ok(llm_stream_response) = result {
+            let _ = stream_res_tx.send(llm_stream_response.log_id);
         }
     });
 
     let stream = async_stream::stream! {
+        // Process regular stream messages
         while let Some(result) = rx.recv().await {
             match result {
                 Ok(content) => {
                     let event = Event::default().data(content.clone());
-                    if content == "[DONE]" {
+                    if content.contains("[DONE]") || content.contains("Done:") {
                         break;
                     }
-                    
-                    yield Ok(event)
+
+                    println!("{:?}", content);
+                    println!("{:?}", event);
+                    yield Ok(event);
                 }
                 Err(e) => {
                     eprintln!("error in stream: {:?}", e);
                 }
             }
+        }
+
+        // Wait for and send log ID after stream completes
+        match stream_res_rx.await {
+            Ok(log_id) => {
+                let log_event = json!({ "log_id": log_id });
+                yield Ok(Event::default().data(log_event.to_string()));
+            },
+            Err(_) => eprintln!("Failed to receive log ID"),
         }
     };
 

@@ -4,7 +4,7 @@
       <h3 class="text-base/7 font-semibold text-neutral-900 dark:text-white">Test Prompt</h3>
       <p class="mt-1 max-w-2xl text-sm/6 text-neutral-500 dark:text-neutral-400">Execute, test, and evaluate prompt.</p>
     </div>
-    <div class="mt-6">
+    <div class="mt-3">
       <dl class="grid grid-cols-1 sm:grid-cols-2">
         <div class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-2 sm:px-0">
           <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">System Prompt</dt>
@@ -78,7 +78,7 @@
           {{ showJsonContext ? 'Hide' : 'Show' }}
         </button>
       </div>
-      <div v-if="showJsonContext" class="mt-3">
+      <div v-if="showJsonContext" class="mt-3 dark:text-neutral-300 text-sm">
         {{ jsonContext }}
       </div>
     </div>
@@ -92,7 +92,7 @@
           {{ showResponse ? 'Hide' : 'Show' }}
         </button>
       </div>
-      <div v-if="showResponse" class="mt-3">
+      <div v-if="showResponse" class="mt-3 dark:text-neutral-300 text-sm">
         {{ testResponse }}
       </div>
     </div>
@@ -235,6 +235,9 @@ const executeStream = async () => {
     `/api/v1/prompts/execute/${props.prompt.id}/stream`,
     {
       onMessage: (chunk) => {
+        if (chunk.includes("log_id")) {
+          return
+        }
         testResponse.value += chunk
       },
       onError: (err) => {
@@ -246,29 +249,4 @@ const executeStream = async () => {
     }
   )
 }
-
-let eventSource: EventSource | null = null
-const messageIsTransmitting = ref(false)
-
-async function initSSE(prompt_id: number) {
-  eventSource = new EventSource(`/api/v1/prompts/execute/${prompt_id}/stream`)
-
-  eventSource.onmessage = (event) => {
-    console.log(event.data)
-    testResponse.value = event.data
-  }
-
-  eventSource.addEventListener('complete', () => {
-    eventSource?.close()
-    eventSource = null
-    messageIsTransmitting.value = false
-  })
-
-  eventSource.onerror = (e) => {
-    console.error('SSE error:', e)
-    eventSource?.close()
-    eventSource = null
-  }
-}
-
 </script>

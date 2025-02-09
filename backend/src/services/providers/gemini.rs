@@ -80,6 +80,31 @@ struct GeminiSafetyRating {
     probability: String,
 }
 
+#[derive(Debug, serde::Deserialize)]
+struct GeminiResponseStreamChunk {
+    candidates: Vec<GeminiResponseStreamCandidate>,
+    usage_metadata: Option<GeminiResponseStreamUsage>
+}
+#[derive(Debug, serde::Deserialize)]
+struct GeminiResponseStreamCandidate {
+    content: GeminiResponseStreamContent,
+}
+#[derive(Debug, serde::Deserialize)]
+struct GeminiResponseStreamContent {
+    parts: Vec<GeminiResponseStreamPart>,
+}
+#[derive(Debug, serde::Deserialize)]
+struct GeminiResponseStreamPart {
+    text: String,
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct GeminiResponseStreamUsage {
+    prompt_token_count: i32,
+    candidates_token_count: i32,
+    total_token_count: i32,
+}
+
 impl From<GeminiResponse> for LlmApiResponseProps {
     fn from(response: GeminiResponse) -> Self {
         let response_content = response
@@ -103,12 +128,9 @@ impl From<GeminiResponse> for LlmApiResponseProps {
         LlmApiResponseProps {
             response_content,
             raw_response: serde_json::to_string(&response).unwrap_or_default(),
-            latency_ms: None,
             input_tokens,
             output_tokens,
-            reasoning_tokens: None,
-            error_code,
-            error_message,
+            reasoning_tokens: None
         }
     }
 }
@@ -147,42 +169,35 @@ impl<'a> LlmProvider for GeminiProvider<'a> {
 
     }
 
-    fn stream_eventsource(
+    async fn stream_eventsource(
         mut event_source: reqwest_eventsource::EventSource, 
         tx: Sender<Result<String, LlmStreamingError>>
-    ) {
-        #[derive(Debug, serde::Deserialize)]
-        struct GeminiResponseChunk {
-            candidates: Vec<Candidate>,
-        }
-        #[derive(Debug, serde::Deserialize)]
-        struct Candidate {
-            content: Content,
-        }
-        #[derive(Debug, serde::Deserialize)]
-        struct Content {
-            parts: Vec<Part>,
-        }
-        #[derive(Debug, serde::Deserialize)]
-        struct Part {
-            text: String,
-        }
+    ) -> Result<LlmApiResponseProps, Error> {
+        let result = tokio::spawn(async move {
+            let mut stream_content = String::new();
+            let mut output_tokens = 0;
+            let mut input_tokens = 0;
 
-        tokio::spawn(async move {
             while let Some(event_result) = event_source.next().await {
                 match event_result {
                     Ok(event) => {
                         if let Event::Message(message) = event {
-                            match serde_json::from_str::<GeminiResponseChunk>(&message.data) {
+                            match serde_json::from_str::<GeminiResponseStreamChunk>(&message.data) {
                                 Ok(response_chunk) => {
                                     if let Some(text) = response_chunk.candidates
                                         .first()
                                         .and_then(|c| c.content.parts.first())
                                         .map(|p| p.text.clone())
                                     {
+                                        stream_content += &text;
                                         if let Err(_) = tx.send(Ok(text)).await {
-                                            break; // Receiver dropped
+                                            break;
                                         }
+                                    }
+
+                                    if let Some(usage) = response_chunk.usage_metadata {
+                                        input_tokens += usage.prompt_token_count;
+                                        output_tokens += usage.candidates_token_count;
                                     }
                                 }
                                 Err(e) => {
@@ -203,10 +218,19 @@ impl<'a> LlmProvider for GeminiProvider<'a> {
                 }
             }
 
-            // Send completion marker
             let _ = tx.send(Ok("[DONE]".to_string())).await;
-        });
+            event_source.close();
 
+            return LlmApiResponseProps {
+                response_content: stream_content,
+                raw_response: "".to_string(),
+                input_tokens: Some(input_tokens.into()),
+                output_tokens: Some(output_tokens.into()),
+                reasoning_tokens: None
+            };
+        }).await?;
+
+        Ok(result)
     }
 
     fn create_body(&self) -> serde_json::Value {

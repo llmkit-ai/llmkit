@@ -56,6 +56,33 @@ struct AnthropicUsage {
     output_tokens: u32,
 }
 
+
+// STREAMING RESPONE
+#[derive(Debug, serde::Deserialize)]
+struct AnthropicResponseStreamChunk {
+    #[serde(rename = "type")]
+    event_type: String,
+    delta: Option<AnthropicResponseStreamDelta>,
+    content_block: Option<AnthropicResponseStreamContentBlock>,
+    usage: Option<AnthropicResponseStreamUsage>
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct AnthropicResponseStreamDelta {
+    text: Option<String>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct AnthropicResponseStreamContentBlock {
+    text: Option<String>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct AnthropicResponseStreamUsage {
+    input_tokens: Option<i64>,
+    output_tokens: Option<i64>,
+}
+
 impl From<AnthropicResponse> for LlmApiResponseProps {
     fn from(response: AnthropicResponse) -> Self {
         let response_text = response.content
@@ -66,12 +93,9 @@ impl From<AnthropicResponse> for LlmApiResponseProps {
         LlmApiResponseProps {
             response_content: response_text,
             raw_response: serde_json::to_string(&response).unwrap_or_default(),
-            latency_ms: None,
             input_tokens: Some(response.usage.input_tokens as i64),
             output_tokens: Some(response.usage.output_tokens as i64),
-            reasoning_tokens: None,
-            error_code: None,
-            error_message: None,
+            reasoning_tokens: None
         }
     }
 }
@@ -97,39 +121,26 @@ impl<'a> LlmProvider for AnthropicProvider<'a> {
         Ok(response.into())
     }
 
-    fn stream_eventsource(
+    async fn stream_eventsource(
         mut event_source: reqwest_eventsource::EventSource, 
         tx: Sender<Result<String, LlmStreamingError>>
-    ) {
-        #[derive(Debug, serde::Deserialize)]
-        struct AnthropicResponseChunk {
-            #[serde(rename = "type")]
-            event_type: String,
-            delta: Option<Delta>,
-            content_block: Option<ContentBlock>,
-        }
+    ) -> Result<LlmApiResponseProps, Error> {
+        let result = tokio::spawn(async move {
+            let mut stream_content = String::new();
+            let mut output_tokens = 0;
+            let mut input_tokens = 0;
 
-        #[derive(Debug, serde::Deserialize)]
-        struct Delta {
-            text: Option<String>,
-        }
-
-        #[derive(Debug, serde::Deserialize)]
-        struct ContentBlock {
-            text: Option<String>,
-        }
-
-        tokio::spawn(async move {
             while let Some(event_result) = event_source.next().await {
                 match event_result {
                     Ok(event) => {
                         if let Event::Message(message) = event {
-                            match serde_json::from_str::<AnthropicResponseChunk>(&message.data) {
+                            match serde_json::from_str::<AnthropicResponseStreamChunk>(&message.data) {
                                 Ok(chunk) => {
                                     match chunk.event_type.as_str() {
                                         "content_block_start" => {
                                             if let Some(content_block) = chunk.content_block {
                                                 if let Some(text) = content_block.text {
+                                                    stream_content += &text;
                                                     if let Err(_) = tx.send(Ok(text)).await {
                                                         break; // Receiver dropped
                                                     }
@@ -139,9 +150,20 @@ impl<'a> LlmProvider for AnthropicProvider<'a> {
                                         "content_block_delta" => {
                                             if let Some(delta) = chunk.delta {
                                                 if let Some(text) = delta.text {
+                                                    stream_content += &text;
                                                     if let Err(_) = tx.send(Ok(text)).await {
                                                         break;
                                                     }
+                                                }
+                                            }
+                                        }
+                                        "message_delta" | "message_start" => {
+                                            if let Some(usage) = chunk.usage {
+                                                if let Some(input) = usage.input_tokens {
+                                                    input_tokens += input
+                                                }
+                                                if let Some(output) = usage.output_tokens {
+                                                    output_tokens += output
                                                 }
                                             }
                                         }
@@ -167,7 +189,17 @@ impl<'a> LlmProvider for AnthropicProvider<'a> {
             }
             
             event_source.close();
-        });
+            return LlmApiResponseProps {
+                response_content: stream_content,
+                raw_response: "".to_string(),
+                input_tokens: Some(input_tokens),
+                output_tokens: Some(output_tokens),
+                reasoning_tokens: None
+            };
+        }).await?;
+
+
+        Ok(result)
     }
 
     fn create_body(&self) -> serde_json::Value {

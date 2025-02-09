@@ -4,12 +4,9 @@ use hyper::HeaderMap;
 pub struct LlmApiResponseProps {
     pub response_content: String,
     pub raw_response: String,
-    pub latency_ms: Option<i64>,
     pub input_tokens: Option<i64>,
     pub output_tokens: Option<i64>,
-    pub reasoning_tokens: Option<i64>,
-    pub error_code: Option<String>,
-    pub error_message: Option<String>,
+    pub reasoning_tokens: Option<i64>
 }
 
 #[derive(Debug, PartialEq)]

@@ -57,6 +57,30 @@ struct OpenaiUsage {
     total_tokens: i32,
 }
 
+// STREAMING RESPONSE
+#[derive(Deserialize, Serialize, Clone)]
+struct OpenAiResponseStreamChunk {
+    choices: Vec<OpenAiResponseStreamChoice>,
+    usage: Option<OpenAiResponseStreamUsage>
+}
+
+#[derive(Deserialize, Serialize, Clone)]
+struct OpenAiResponseStreamChoice {
+    delta: OpenAiResponseStreamDelta,
+}
+
+#[derive(Deserialize, Serialize, Clone)]
+struct OpenAiResponseStreamDelta {
+    content: Option<String>,
+}
+
+#[derive(Deserialize, Serialize, Clone)]
+struct OpenAiResponseStreamUsage {
+    completion_tokens: i64,
+    prompt_tokens: i64,
+    total_tokens: i64,
+}
+
 impl From<OpenaiResponse> for LlmApiResponseProps {
     fn from(response: OpenaiResponse) -> Self {
         // assuming we want the first choice's content, if it exists
@@ -75,16 +99,32 @@ impl From<OpenaiResponse> for LlmApiResponseProps {
         LlmApiResponseProps {
             response_content,
             raw_response,
-            latency_ms: None,
             input_tokens,
             output_tokens,
-            reasoning_tokens: None,
-            error_code: None,
-            error_message: None,
+            reasoning_tokens: None
         }
     }
 }
 
+impl OpenAiResponseStreamChunk {
+    fn into_llm_api_response_props(
+        &self,
+        stream_content: String
+    ) -> LlmApiResponseProps {
+        let raw_response = serde_json::to_string(&self).unwrap_or_default();
+        let input_tokens = self.usage.as_ref().map(|u| u.prompt_tokens as i64);
+        let output_tokens = self.usage.as_ref().map(|u| u.completion_tokens as i64);
+
+        LlmApiResponseProps {
+            response_content: stream_content,
+            raw_response,
+            input_tokens,
+            output_tokens,
+            reasoning_tokens: None
+        }
+
+    }
+}
 
 impl<'a> LlmProvider for OpenaiProvider<'a> {
     fn build_request(&self) -> Result<(RequestBuilder, String), Error> {
@@ -107,24 +147,14 @@ impl<'a> LlmProvider for OpenaiProvider<'a> {
         Ok(response.into())
     }
 
-    fn stream_eventsource(
+    async fn stream_eventsource(
         mut event_source: reqwest_eventsource::EventSource, 
         tx: Sender<Result<String, LlmStreamingError>>
-    ) {
-        #[derive(Debug, serde::Deserialize)]
-        struct OpenAiResponseChunk {
-            choices: Vec<Choice>,
-        }
-        #[derive(Debug, serde::Deserialize)]
-        struct Choice {
-            delta: Delta,
-        }
-        #[derive(Debug, serde::Deserialize)]
-        struct Delta {
-            content: Option<String>,
-        }
+    ) -> Result<LlmApiResponseProps, Error> {
+        let result = tokio::spawn(async move {
+            let mut stream_content = String::new();
+            let mut response_props: Option<LlmApiResponseProps> = None;
 
-        tokio::spawn(async move {
             while let Some(event_result) = event_source.next().await {
                 match event_result {
                     Ok(event) => {
@@ -134,15 +164,21 @@ impl<'a> LlmProvider for OpenaiProvider<'a> {
                                 break;
                             }
 
-                            match serde_json::from_str::<OpenAiResponseChunk>(&message.data) {
+                            match serde_json::from_str::<OpenAiResponseStreamChunk>(&message.data) {
                                 Ok(chunk) => {
                                     if let Some(content) = chunk.choices
                                         .first()
                                         .and_then(|c| c.delta.content.as_ref())
                                     {
-                                        if let Err(_) = tx.send(Ok(content.clone())).await {
-                                            break; // Receiver dropped
+                                        stream_content += &content.clone();
+                                        if let Err(_) = tx.send(Ok(content.to_string())).await {
+                                            break;
                                         }
+                                    }
+
+                                    if let Some(_) = &chunk.usage {
+                                        println!("this had usage");
+                                        response_props = Some(chunk.into_llm_api_response_props(stream_content.clone()));
                                     }
                                 }
                                 Err(e) => {
@@ -160,7 +196,12 @@ impl<'a> LlmProvider for OpenaiProvider<'a> {
             }
             
             event_source.close();
-        });
+            return response_props;
+        })
+        .await?
+        .ok_or_else(|| Error::MissingUsage)?;
+
+        Ok(result)
     }
 
     fn create_body(&self) -> serde_json::Value {
@@ -185,10 +226,16 @@ impl<'a> LlmProvider for OpenaiProvider<'a> {
         let mut body = json!({
             "model": model,
             "messages": messages,
-            "stream": self.streaming,
             "temperature": self.props.temperature,
             "max_completion_tokens": self.props.max_tokens
         });
+
+        if self.streaming {
+            body["stream"] = serde_json::Value::Bool(true);
+            body["stream_options"] = json!({
+                "include_usage": true
+            });
+        }
 
         if self.props.json_mode {
             body["response_format"] = json!({ "type": "json_object" });

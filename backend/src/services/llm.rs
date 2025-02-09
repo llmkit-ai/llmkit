@@ -3,7 +3,7 @@ use std::{str::Utf8Error, time::Duration};
 use anyhow::Result;
 use reqwest::RequestBuilder;
 use reqwest_eventsource::{CannotCloneRequestError, EventSource, RequestBuilderExt};
-use tokio::sync::mpsc::Sender;
+use tokio::{sync::mpsc::Sender, task::JoinError};
 use tokio_retry::{strategy::{jitter, ExponentialBackoff}, Retry};
 use tracing;
 
@@ -54,8 +54,12 @@ pub enum Error {
     MissingSystemMessage,
     #[error("Missing system message")]
     MissingUserMessage,
+    #[error("Missing Usage from chunk")]
+    MissingUsage,
     #[error("DB Logging Error: {0}")]
     DbLoggingError(String),
+    #[error("JoinError in spawned tokio task: {0}")]
+    TokioTaskJoin(#[from] JoinError),
 }
 
 pub struct ExecutionResponse {
@@ -66,7 +70,7 @@ pub struct ExecutionResponse {
 pub trait LlmProvider {
     fn build_request(&self) -> Result<(RequestBuilder, String), Error>;
     fn parse_response(json_text: &str) -> Result<LlmApiResponseProps, Error>;
-    fn stream_eventsource(event_source: EventSource, tx: Sender<Result<String, LlmStreamingError>>);
+    async fn stream_eventsource(event_source: EventSource, tx: Sender<Result<String, LlmStreamingError>>) -> Result<LlmApiResponseProps, Error>;
     fn create_body(&self) -> serde_json::Value;
 }
 
@@ -108,7 +112,7 @@ impl Llm {
         }).await
     }
 
-    pub async fn stream(&self, tx: Sender<Result<String, LlmStreamingError>>) -> Result<(), Error> {
+    pub async fn stream(&self, tx: Sender<Result<String, LlmStreamingError>>) -> Result<ExecutionResponse, Error> {
         if self.props.json_mode {
             tracing::info!("Json mode not supported in chat mode");
             return Err(Error::UnsupportedMode("Json".to_string(), "Chat".to_string()));
@@ -228,7 +232,7 @@ impl Llm {
     async fn send_request_stream(
         &self,
         tx: Sender<Result<String, LlmStreamingError>>
-    ) -> Result<(), Error> {
+    )  -> Result<ExecutionResponse, Error> {
         let openai_provider = OpenaiProvider::new(&self.props, true);
         let anthropic_provider = AnthropicProvider::new(&self.props, true);
         let gemini_provider = GeminiProvider::new(&self.props, true);
@@ -243,14 +247,28 @@ impl Llm {
 
         let event_source = request.eventsource()?;
 
-        match &self.props.model {
-            LlmModel::OpenAi(_) => OpenaiProvider::stream_eventsource(event_source, tx),
-            LlmModel::Anthropic(_) => AnthropicProvider::stream_eventsource(event_source, tx),
-            LlmModel::Gemini(_) => GeminiProvider::stream_eventsource(event_source, tx),
-            LlmModel::Deepseek(_) => DeepseekProvider::stream_eventsource(event_source, tx)
-        }
+        let response = match &self.props.model {
+            LlmModel::OpenAi(_) => OpenaiProvider::stream_eventsource(event_source, tx).await?,
+            LlmModel::Anthropic(_) => AnthropicProvider::stream_eventsource(event_source, tx).await?,
+            LlmModel::Gemini(_) => GeminiProvider::stream_eventsource(event_source, tx).await?,
+            LlmModel::Deepseek(_) => DeepseekProvider::stream_eventsource(event_source, tx).await?
+        };
 
-        Ok(())
+        let log_id = self.db_log
+            .create_log(
+                self.props.prompt_id,
+                self.props.model_id,
+                Some(&response.raw_response),
+                None,
+                response.input_tokens,
+                response.output_tokens,
+                response.reasoning_tokens,
+                None
+            )
+            .await
+            .map_err(|e| Error::DbLoggingError(e.to_string()))?;
+
+        Ok(ExecutionResponse { content: response.response_content, log_id } )
     }
 }
 

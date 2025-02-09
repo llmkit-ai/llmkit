@@ -39,6 +39,29 @@ struct DeepseekUsage {
     total_tokens: i32,
 }
 
+// STREAM RESPONSE
+#[derive(Deserialize, Serialize, Clone)]
+struct DeepseekResponseStreamChunk {
+    choices: Vec<DeepseekResponseStreamChoice>,
+    usage: Option<DeepseekResponseStreamUsage>
+}
+#[derive(Deserialize, Serialize, Clone)]
+struct DeepseekResponseStreamChoice {
+    delta: DeepseekResponseStreamDelta,
+}
+#[derive(Deserialize, Serialize, Clone)]
+struct DeepseekResponseStreamDelta {
+    content: Option<String>,
+}
+
+#[derive(Deserialize, Serialize, Clone)]
+struct DeepseekResponseStreamUsage {
+    completion_tokens: i64,
+    prompt_tokens: i64,
+    total_tokens: i64,
+}
+
+
 impl From<DeepseekResponse> for LlmApiResponseProps {
     fn from(response: DeepseekResponse) -> Self {
         let response_content = response
@@ -55,15 +78,33 @@ impl From<DeepseekResponse> for LlmApiResponseProps {
         LlmApiResponseProps {
             response_content,
             raw_response,
-            latency_ms: None,
             input_tokens,
             output_tokens,
-            reasoning_tokens: None,
-            error_code: None,
-            error_message: None,
+            reasoning_tokens: None
         }
     }
 }
+
+impl DeepseekResponseStreamChunk {
+    fn into_llm_api_response_props(
+        &self,
+        stream_content: String
+    ) -> LlmApiResponseProps {
+        let raw_response = serde_json::to_string(&self).unwrap_or_default();
+        let input_tokens = self.usage.as_ref().map(|u| u.prompt_tokens as i64);
+        let output_tokens = self.usage.as_ref().map(|u| u.completion_tokens as i64);
+
+        LlmApiResponseProps {
+            response_content: stream_content,
+            raw_response,
+            input_tokens,
+            output_tokens,
+            reasoning_tokens: None
+        }
+
+    }
+}
+
 
 
 impl<'a> DeepseekProvider<'a> {
@@ -96,24 +137,14 @@ impl<'a> LlmProvider for DeepseekProvider<'a> {
         Ok(response.into())
     }
 
-    fn stream_eventsource(
+    async fn stream_eventsource(
         mut event_source: reqwest_eventsource::EventSource, 
         tx: Sender<Result<String, LlmStreamingError>>
-    ) {
-        #[derive(Debug, serde::Deserialize)]
-        struct DeepseekResponseChunk {
-            choices: Vec<Choice>,
-        }
-        #[derive(Debug, serde::Deserialize)]
-        struct Choice {
-            delta: Delta,
-        }
-        #[derive(Debug, serde::Deserialize)]
-        struct Delta {
-            content: Option<String>,
-        }
+    ) -> Result<LlmApiResponseProps, Error> {
+        let mut stream_content = String::new();
+        let mut response_props: Option<LlmApiResponseProps> = None;
 
-        tokio::spawn(async move {
+        let result = tokio::spawn(async move {
             while let Some(event_result) = event_source.next().await {
                 match event_result {
                     Ok(event) => {
@@ -123,14 +154,19 @@ impl<'a> LlmProvider for DeepseekProvider<'a> {
                                 break;
                             }
 
-                            match serde_json::from_str::<DeepseekResponseChunk>(&message.data) {
+                            match serde_json::from_str::<DeepseekResponseStreamChunk>(&message.data) {
                                 Ok(chunk) => {
                                     if let Some(content) = chunk.choices
                                         .first()
                                         .and_then(|c| c.delta.content.as_ref())
                                     {
+                                        stream_content += &content.clone();
                                         if let Err(_) = tx.send(Ok(content.clone())).await {
                                             break; // Receiver dropped
+                                        }
+
+                                        if let Some(_) = &chunk.usage {
+                                            response_props = Some(chunk.into_llm_api_response_props(stream_content.clone()));
                                         }
                                     }
                                 }
@@ -149,7 +185,12 @@ impl<'a> LlmProvider for DeepseekProvider<'a> {
             }
             
             event_source.close();
-        });
+            return response_props;
+        })
+        .await?
+        .ok_or_else(|| Error::MissingUsage)?;
+
+        Ok(result)
     }
 
     fn create_body(&self) -> serde_json::Value {

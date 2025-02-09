@@ -42,8 +42,22 @@ export function useSSE() {
         buffer = events.pop() || ''
 
         for (const event of events) {
-          const data = event.startsWith('data:') ? event.slice(6):''
-          if (data) onMessage(data)
+          const lines = event.split("\n")
+
+          if (lines.length === 1) {
+            const data = lines[0].startsWith('data:') ? event.slice(6):''
+            if (data) onMessage(data)
+
+          } else {
+            lines.forEach(l => {
+              const data = l.replace('data: ', "")
+              if (data === "") {
+                onMessage("\n")
+              } else {
+                onMessage(data)
+              }
+            })
+          }
         }
       }
     } catch (e) {
