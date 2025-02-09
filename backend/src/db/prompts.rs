@@ -21,7 +21,8 @@ impl PromptRepository {
     pub async fn create_prompt(
         &self,
         key: &str,
-        prompt: &str,
+        system_prompt: &str,
+        user_prompt: &str,
         model_id: i64,
         max_tokens: i64,
         temperature: f64,
@@ -32,16 +33,18 @@ impl PromptRepository {
             r#"
             INSERT INTO prompt (
                 key, 
-                prompt, 
+                system, 
+                user, 
                 model_id,
                 max_tokens,
                 temperature,
                 json_mode
             )
-            VALUES (?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             "#,
             key,
-            prompt,
+            system_prompt,
+            user_prompt,
             model_id,
             max_tokens,
             temperature,
@@ -60,7 +63,8 @@ impl PromptRepository {
             SELECT
                 p.id, 
                 p.key, 
-                p.prompt, 
+                p.system, 
+                p.user, 
                 p.model_id,
                 p.max_tokens,
                 p.temperature,
@@ -86,7 +90,8 @@ impl PromptRepository {
             SELECT
                 p.id, 
                 p.key, 
-                p.prompt, 
+                p.system, 
+                p.user, 
                 p.model_id,
                 p.max_tokens,
                 p.temperature,
@@ -108,7 +113,8 @@ impl PromptRepository {
         &self,
         id: i64,
         key: &str,
-        prompt: &str,
+        system_prompt: &str,
+        user_prompt: &str,
         model_id: i64,
         max_tokens: i64,
         temperature: f64,
@@ -119,7 +125,8 @@ impl PromptRepository {
             UPDATE prompt
             SET 
                 key = ?, 
-                prompt = ?, 
+                system = ?, 
+                user = ?, 
                 model_id = ?,
                 max_tokens = ?,
                 temperature = ?,
@@ -128,7 +135,8 @@ impl PromptRepository {
             WHERE id = ?
             "#,
             key,
-            prompt,
+            system_prompt,
+            user_prompt,
             model_id,
             max_tokens,
             temperature,

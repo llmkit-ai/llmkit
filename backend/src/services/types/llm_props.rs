@@ -8,6 +8,14 @@ use crate::{
 
 use super::message::Message;
 
+#[derive(Debug, thiserror::Error)]
+pub enum LlmPropsError {
+    #[error("Tera templating error: {0}")]
+    TeraTemplateError(#[from] tera::Error),
+    #[error("Tera render error: {0}")]
+    TeraRenderError(tera::Error),
+}
+
 
 #[derive(Serialize)]
 pub struct LlmProps {
@@ -21,9 +29,10 @@ pub struct LlmProps {
 }
 
 impl LlmProps {
-    pub fn new(prompt: PromptWithModel, context: serde_json::Value) -> Self {
+    pub fn new(prompt: PromptWithModel, context: serde_json::Value) -> Result<Self, LlmPropsError> {
         let mut tera = Tera::default();
-        tera.add_raw_template("prompt", &prompt.prompt).unwrap();
+        tera.add_raw_template("system_prompt", &prompt.system)?;
+        tera.add_raw_template("user_prompt", &prompt.user)?;
 
         let mut tera_ctx = Context::new();
         if let serde_json::Value::Object(context) = context {
@@ -31,12 +40,16 @@ impl LlmProps {
                 tera_ctx.insert(k, &v);
             }
         }
-        let rendered_prompt = tera.render("prompt", &tera_ctx).unwrap();
-        let messages = parse_prompt(&rendered_prompt);
 
+        let rendered_system_prompt = tera.render("system_prompt", &tera_ctx)
+            .map_err(|e| LlmPropsError::TeraRenderError(e))?;
+        let rendered_user_prompt = tera.render("user_prompt", &tera_ctx)
+            .map_err(|e| LlmPropsError::TeraRenderError(e))?;
+
+        let messages = vec![ Message::System { content: rendered_system_prompt }, Message::User { content: rendered_user_prompt } ];
         let model_name: LlmModel = prompt.model_name.into();
 
-        LlmProps {
+        Ok(LlmProps {
             model: model_name,
             max_tokens: prompt.max_tokens,
             temperature: prompt.temperature,
@@ -44,68 +57,6 @@ impl LlmProps {
             messages,
             prompt_id: prompt.id,
             model_id: prompt.model_id,
-        }
-    }
-}
-
-
-pub fn parse_prompt(input: &str) -> Vec<Message> {
-    let mut messages = Vec::new();
-    let mut current_role: Option<String> = None;
-    let mut current_content = Vec::new();
-
-    for line in input.lines() {
-        if let Some(role) = parse_role_line(line) {
-            // Process previous role's content
-            if let Some(prev_role) = current_role.take() {
-                let content = current_content.join("\n");
-                if !content.is_empty() {
-                    let message = match prev_role.as_str() {
-                        "system" => Message::System { content },
-                        "user" => Message::User { content },
-                        "assistant" => Message::Assistant { content },
-                        _ => unreachable!(),
-                    };
-                    messages.push(message);
-                }
-                current_content.clear();
-            }
-            current_role = Some(role);
-        } else if current_role.is_some() {
-            current_content.push(line);
-        }
-    }
-
-    // Process remaining content after last role
-    if let Some(role) = current_role.take() {
-        let content = current_content.join("\n");
-        if !content.is_empty() {
-            let message = match role.as_str() {
-                "system" => Message::System { content },
-                "user" => Message::User { content },
-                "assistant" => Message::Assistant { content },
-                _ => unreachable!(),
-            };
-            messages.push(message);
-        }
-    }
-
-    messages
-}
-
-fn parse_role_line(line: &str) -> Option<String> {
-    const PREFIX: &str = "<!-- role:";
-    const SUFFIX: &str = "-->";
-
-    if line.starts_with(PREFIX) && line.ends_with(SUFFIX) {
-        let role = line[PREFIX.len()..line.len() - SUFFIX.len()]
-            .trim()
-            .to_string();
-        match role.as_str() {
-            "system" | "user" | "assistant" => Some(role),
-            _ => None,
-        }
-    } else {
-        None
+        })
     }
 }

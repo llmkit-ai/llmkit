@@ -300,10 +300,11 @@ mod tests {
         let prompt_id = prompt_repo.create_prompt(
             "test_key",
             "Test prompt content",
-            1,             // model_id (assuming models are seeded or available)
-            100,           // max_tokens
-            0.5,           // temperature
-            false          // json_mode
+            "Test prompt content",
+            1,
+            100,
+            0.5,
+            false
         ).await.unwrap();
 
         // Create the properties for your LLM request, using the prompt_id from the repository.
@@ -363,10 +364,11 @@ mod tests {
         prompt_repo.create_prompt(
             "test_key",
             "Test prompt content",
-            1,             // model_id (assuming models are seeded or available)
-            100,           // max_tokens
-            0.5,           // temperature
-            false          // json_mode
+            "Test prompt content",
+            1,
+            100,
+            0.5,
+            false
         ).await.unwrap();
 
         let llm = Llm::new(props, log_repo);
@@ -403,10 +405,11 @@ mod tests {
         prompt_repo.create_prompt(
             "test_key",
             "Test prompt content",
-            1,             // model_id (assuming models are seeded or available)
-            100,           // max_tokens
-            0.5,           // temperature
-            false          // json_mode
+            "Test prompt content",
+            1,
+            100,
+            0.5,
+            false
         ).await.unwrap();
 
         let llm = Llm::new(props, log_repo.clone());
@@ -458,10 +461,11 @@ mod tests {
         prompt_repo.create_prompt(
             "test_key",
             "Test prompt content",
-            1,             // model_id (assuming models are seeded or available)
-            100,           // max_tokens
-            0.5,           // temperature
-            false          // json_mode
+            "Test prompt content",
+            1,
+            100,
+            0.5,
+            false
         ).await.unwrap();
 
         let llm = Llm::new(props, log_repo.clone());
@@ -530,10 +534,11 @@ mod tests {
         prompt_repo.create_prompt(
             "test_key",
             "Test prompt content",
-            1,             // model_id (assuming models are seeded or available)
-            100,           // max_tokens
-            0.5,           // temperature
-            false          // json_mode
+            "Test prompt content",
+            1,
+            100,
+            0.5,
+            false
         ).await.unwrap();
 
         let llm = Llm::new(props, log_repo.clone());
@@ -568,10 +573,11 @@ mod tests {
         prompt_repo.create_prompt(
             "test_key",
             "Test prompt content",
-            1,             // model_id (assuming models are seeded or available)
-            100,           // max_tokens
-            0.5,           // temperature
-            false          // json_mode
+            "Test prompt content",
+            1,
+            100,
+            0.5,
+            false
         ).await.unwrap();
 
         let llm = Llm::new(props, log_repo.clone());
@@ -605,10 +611,11 @@ mod tests {
         prompt_repo.create_prompt(
             "test_key",
             "Test prompt content",
-            1,             // model_id (assuming models are seeded or available)
-            100,           // max_tokens
-            0.5,           // temperature
-            false          // json_mode
+            "Test prompt content",
+            1,
+            100,
+            0.5,
+            false
         ).await.unwrap();
 
         let llm = Llm::new(props, log_repo.clone());
@@ -641,10 +648,11 @@ mod tests {
         prompt_repo.create_prompt(
             "test_key",
             "Test prompt content",
-            1,             // model_id (assuming models are seeded or available)
-            100,           // max_tokens
-            0.5,           // temperature
-            false          // json_mode
+            "Test prompt content",
+            1,
+            100,
+            0.5,
+            false
         ).await.unwrap();
 
         let llm = Llm::new(props, log_repo.clone());
@@ -711,10 +719,11 @@ mod tests {
             prompt_repo.create_prompt(
                 "test_key",
                 "Test prompt content",
-                1,             // model_id (assuming models are seeded or available)
-                100,           // max_tokens
-                0.5,           // temperature
-                false          // json_mode
+                "Test prompt content",
+                1,
+                100,
+                0.5,
+                false
             ).await.unwrap();
 
             let llm = Llm::new(props, log_repo.clone());
@@ -747,10 +756,11 @@ mod tests {
             prompt_repo.create_prompt(
                 "test_key",
                 "Test prompt content",
-                1,             // model_id (assuming models are seeded or available)
-                100,           // max_tokens
-                0.5,           // temperature
-                false          // json_mode
+                "Test prompt content",
+                1,
+                100,
+                0.5,
+                false
             ).await.unwrap();
 
             let llm = Llm::new(props, log_repo.clone());

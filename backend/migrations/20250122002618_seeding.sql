@@ -26,16 +26,17 @@ INSERT INTO model (model_name) VALUES ('deepseek-chat');
 INSERT INTO model (model_name) VALUES ('deepseek-reasoner');
 
 -- Sample Prompt
-INSERT INTO prompt (key, prompt, model_id, max_tokens, temperature, json_mode)
+INSERT INTO prompt (key, system, user, model_id, max_tokens, temperature, json_mode)
 VALUES (
-    'ANOTHER-TEST-PROMPT',
-    '<!-- role:system -->
-    you are a sarcastic assistant
-
-    <!-- role:user -->
-    what is the meaning of life?',
-    9,
-    250,
-    0.7,
-    0
+'ANOTHER-TEST-PROMPT',
+'{% if sarcastic %}
+You are a sarcastic assistant,
+{% else %}
+You are very charismatic and friendly assistant
+{% endif % }',
+'Tell me a funny story about {{ name }}',
+9,
+250,
+0.7,
+0
 );

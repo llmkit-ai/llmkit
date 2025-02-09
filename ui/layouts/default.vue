@@ -14,8 +14,21 @@
             <li>
               <ul role="list" class="-mx-2 space-y-4">
                 <li>
-                  <NuxtLink href="/prompts" class="group flex gap-x-3 rounded-none bg-neutral-100 p-2 text-sm/6 font-semibold text-black border-2 border-black dark:border-white dark:bg-neutral-800 dark:text-white">
-                    <svg class="size-6 shrink-0 text-black dark:text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+                  <NuxtLink 
+                    to="/prompts" 
+                    class="group flex gap-x-3 rounded-none p-2 text-sm/6 font-semibold text-black border-2 border-black"
+                    :class="route.name === 'prompts' ? 'dark:text-white dark:border-white bg-neutral-200 dark:bg-neutral-800':'dark:text-neutral-300 dark:border-neutral-300 text-neutral-700'"
+                  >
+                    <svg 
+                      class="size-6 shrink-0" 
+                      :class="route.name === 'prompts' ? 'text-black dark:text-white':'text-neutral-700 group-hover:text-black dark:text-neutral-300 dark:group-hover:text-white'"
+                      viewBox="0 0 24 24" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      stroke-linecap="round" 
+                      stroke-linejoin="round" 
+                      stroke-width="2"
+                    >
                       <path d="M5 7l5 5l-5 5"></path>
                       <path d="M13 17l6 0"></path>
                     </svg>
@@ -23,8 +36,21 @@
                   </NuxtLink>
                 </li>
                 <li>
-                  <NuxtLink href="/traces" class="group flex gap-x-3 rounded-none p-2 text-sm/6 font-semibold text-neutral-700 hover:bg-neutral-100 hover:text-black border-2 border-black dark:border-white dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white">
-                    <svg class="size-6 shrink-0 text-neutral-700 group-hover:text-black dark:text-neutral-300 dark:group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+                  <NuxtLink 
+                    to="/traces" 
+                    class="group flex gap-x-3 rounded-none p-2 text-sm/6 font-semibold text-black border-2 border-black"
+                    :class="route.name === 'traces' ? 'dark:text-white dark:border-white bg-neutral-200 dark:bg-neutral-800':'dark:text-neutral-300 dark:border-neutral-300 text-neutral-700'"
+                  >
+                    <svg 
+                      class="size-6 shrink-0"
+                      :class="route.name === 'traces' ? 'text-black dark:text-white':'text-neutral-700 group-hover:text-black dark:text-neutral-300 dark:group-hover:text-white'"
+                      fill="none" 
+                      viewBox="0 0 24 24" 
+                      stroke-width="1.5" 
+                      stroke="currentColor" 
+                      aria-hidden="true" 
+                      data-slot="icon"
+                    >
                       <path d="M4 6c0 1.657 3.582 3 8 3s8 -1.343 8 -3s-3.582 -3 -8 -3s-8 1.343 -8 3"></path>
                       <path d="M4 6v6c0 1.657 3.582 3 8 3m8 -3.5v-5.5"></path>
                       <path d="M4 12v6c0 1.657 3.582 3 8 3"></path>
@@ -100,6 +126,8 @@
 
 <script setup lang="ts">
 const showSettingsMenu = ref(false);
+
+const route = useRoute()
 
 const { $colorMode } = useNuxtApp();
 

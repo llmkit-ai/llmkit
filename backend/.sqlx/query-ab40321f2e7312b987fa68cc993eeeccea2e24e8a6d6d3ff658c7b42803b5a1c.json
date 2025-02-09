@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            SELECT \n                id,\n                prompt_id,\n                model_id,\n                response_data,\n                status_code,\n                input_tokens,\n                output_tokens,\n                reasoning_tokens,\n                created_at,\n                request_body\n            FROM log\n            WHERE id = ?\n            ",
+  "query": "\n            SELECT \n                l.id,\n                l.prompt_id,\n                l.model_id,\n                m.model_name,\n                l.response_data,\n                l.status_code,\n                l.input_tokens,\n                l.output_tokens,\n                l.reasoning_tokens,\n                l.created_at,\n                l.request_body\n            FROM log l\n            INNER JOIN model m on m.id = l.model_id\n            WHERE l.id = ?\n            ",
   "describe": {
     "columns": [
       {
@@ -19,38 +19,43 @@
         "type_info": "Integer"
       },
       {
-        "name": "response_data",
+        "name": "model_name",
         "ordinal": 3,
         "type_info": "Text"
       },
       {
-        "name": "status_code",
+        "name": "response_data",
         "ordinal": 4,
-        "type_info": "Integer"
+        "type_info": "Text"
       },
       {
-        "name": "input_tokens",
+        "name": "status_code",
         "ordinal": 5,
         "type_info": "Integer"
       },
       {
-        "name": "output_tokens",
+        "name": "input_tokens",
         "ordinal": 6,
         "type_info": "Integer"
       },
       {
-        "name": "reasoning_tokens",
+        "name": "output_tokens",
         "ordinal": 7,
         "type_info": "Integer"
       },
       {
-        "name": "created_at",
+        "name": "reasoning_tokens",
         "ordinal": 8,
+        "type_info": "Integer"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 9,
         "type_info": "Datetime"
       },
       {
         "name": "request_body",
-        "ordinal": 9,
+        "ordinal": 10,
         "type_info": "Text"
       }
     ],
@@ -61,6 +66,7 @@
       false,
       true,
       false,
+      false,
       true,
       true,
       true,
@@ -70,5 +76,5 @@
       true
     ]
   },
-  "hash": "3dbedcac916fcbae44b805c85075deb4fe925425a97a08a4883ff5c26a0274de"
+  "hash": "ab40321f2e7312b987fa68cc993eeeccea2e24e8a6d6d3ff658c7b42803b5a1c"
 }

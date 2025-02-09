@@ -10,7 +10,8 @@ CREATE TABLE model (
 CREATE TABLE prompt (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     key TEXT NOT NULL UNIQUE,
-    prompt TEXT NOT NULL,       
+    system TEXT NOT NULL,       
+    user TEXT NOT NULL,       
     model_id INTEGER NOT NULL,
     max_tokens INTEGER NOT NULL DEFAULT 256,
     temperature REAL NOT NULL DEFAULT 0.7,

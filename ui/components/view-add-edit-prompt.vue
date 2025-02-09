@@ -2,7 +2,7 @@
   <div class="font-mono">
     <!-- Form Section -->
     <div>
-      <form v-if="mode === 'edit' || mode === 'new'" @submit.prevent="handleSubmit">
+      <form v-if="mode === 'edit' || mode === 'new'" >
         <div class="space-y-12">
           <div>
             <h2 class="text-base/7 font-semibold text-neutral-900 dark:text-white">
@@ -137,13 +137,25 @@
 
               <!-- Prompt Content -->
               <div class="col-span-full">
-                <label for="prompt" class="block text-sm/6 font-medium text-neutral-900 dark:text-white">Prompt</label>
+                <label for="system-prompt" class="block text-sm/6 font-medium text-neutral-900 dark:text-white">System Prompt</label>
                 <div class="mt-2">
                   <textarea
-                    v-model="prompt"
-                    name="prompt"
-                    id="prompt"
-                    rows="15"
+                    v-model="systemPrompt"
+                    name="system-prompt"
+                    id="system-prompt"
+                    rows="5"
+                    class="block w-full border-2 border-black dark:border-white bg-white dark:bg-neutral-800 p-2 text-base text-neutral-900 dark:text-white focus:outline-none sm:text-sm/6"
+                  />
+                </div>
+              </div>
+              <div class="col-span-full">
+                <label for="user-prompt" class="block text-sm/6 font-medium text-neutral-900 dark:text-white">User Prompt</label>
+                <div class="mt-2">
+                  <textarea
+                    v-model="userPrompt"
+                    name="user-prompt"
+                    id="user- prompt"
+                    rows="1"
                     class="block w-full border-2 border-black dark:border-white bg-white dark:bg-neutral-800 p-2 text-base text-neutral-900 dark:text-white focus:outline-none sm:text-sm/6"
                   />
                 </div>
@@ -153,21 +165,21 @@
         </div>
 
         <!-- Form Actions -->
-        <div class="mt-6 flex items-center justify-end gap-x-6">
-          <button
-            type="button"
-            @click="handleCancel"
-            class="text-sm/6 text-neutral-900 dark:text-neutral-300 hover:text-black dark:hover:text-white"
+        <div class="mt-6 flex items-center justify-end gap-x-3">
+          <PrimaryButton
+            type="secondary"
+            size="sm"
+            @click="handleCancel()"
           >
             Cancel
-          </button>
-          <button
-            :disabled="!formIsValid || isLoading"
-            type="submit"
-            class="text-sm/6 p-2 border-2 border-black dark:border-white disabled:opacity-50 bg-white dark:bg-neutral-800 text-black dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-700"
+          </PrimaryButton>
+          <PrimaryButton
+            type="primary"
+            size="sm"
+            @click="handleSubmit()"
           >
-            {{ isLoading ? 'Saving...' : mode === 'edit' ? 'Update' : 'Save' }}
-          </button>
+            Update
+          </PrimaryButton>
         </div>
       </form>
 
@@ -182,7 +194,7 @@
           <p class="mt-1 max-w-2xl text-sm/6 text-neutral-500 dark:text-neutral-400">Configuration and content for this prompt.</p>
         </div>
         <div class="mt-6">
-          <dl class="grid grid-cols-1 sm:grid-cols-2">
+          <dl class="grid grid-cols-1 sm:grid-cols-3">
             <div class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-1 sm:px-0">
               <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">Prompt Key</dt>
               <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 sm:mt-2">{{ promptKey }}</dd>
@@ -203,27 +215,33 @@
               <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">JSON Mode</dt>
               <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 sm:mt-2">{{ jsonMode ? 'Enabled' : 'Disabled' }}</dd>
             </div>
-            <div class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-2 sm:px-0">
-              <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">Prompt Content</dt>
-              <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 sm:mt-2 whitespace-pre-wrap bg-neutral-100 dark:bg-neutral-800 p-2">{{ prompt }}</dd>
+            <div class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-3 sm:px-0">
+              <div class="px-4 sm:px-0">
+                <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">System Prompt</dt>
+                <dd class="text-sm/6 text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap bg-neutral-100 dark:bg-neutral-800 p-2">{{ systemPrompt }}</dd>
+              </div>
+              <div class="px-4 sm:px-0 mt-2">
+                <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">User Prompt</dt>
+                <dd class="text-sm/6 text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap bg-neutral-100 dark:bg-neutral-800 p-2">{{ userPrompt }}</dd>
+              </div>
             </div>
           </dl>
         </div>
-        <div class="mt-6 flex justify-end px-4 sm:px-0 space-x-2">
-          <button
-            type="button"
-            @click="handleEdit"
-            class="text-sm/6 p-2 border-2 border-black dark:border-white text-black dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800"
+        <div class="mt-6 flex justify-end px-4 sm:px-0 space-x-3">
+          <PrimaryButton
+            type="secondary"
+            size="sm"
+            @click="handleEdit()"
           >
             Edit
-          </button>
-          <button
-            type="button"
-            @click="handleTest"
-            class="text-sm/6 p-2 border-2 border-black dark:border-white bg-black dark:bg-white text-white dark:text-black hover:bg-neutral-800 dark:hover:bg-neutral-200"
+          </PrimaryButton>
+          <PrimaryButton
+            type="primary"
+            size="sm"
+            @click="handleTest()"
           >
             Test
-          </button>
+          </PrimaryButton>
         </div>
       </div>
     </div>
@@ -254,7 +272,8 @@ const handleTest = inject('handleTest', () => {});
 
 // Form state
 const promptKey = ref(props.prompt?.key || '');
-const prompt = ref(props.prompt?.prompt || '');
+const systemPrompt = ref(props.prompt?.system || '');
+const userPrompt = ref(props.prompt?.user || '');
 const selectedModelId = ref<number | null>(props.prompt?.model_id || null);
 const maxTokens = ref(props.prompt?.max_tokens || 256);
 const temperatureValue = ref(props.prompt?.temperature || 0.7);
@@ -273,7 +292,7 @@ const selectedModel = computed(() =>
 
 const formIsValid = computed(() =>
   promptKey.value.trim() !== '' &&
-  prompt.value.trim() !== '' &&
+  systemPrompt.value.trim() !== '' &&
   selectedModelId.value !== null &&
   maxTokens.value > 0 &&
   temperatureValue.value >= 0 &&
@@ -284,7 +303,8 @@ const formIsValid = computed(() =>
 watch(() => props.prompt, (newPrompt) => {
   if (newPrompt) {
     promptKey.value = newPrompt.key;
-    prompt.value = newPrompt.prompt;
+    systemPrompt.value = newPrompt.system;
+    userPrompt.value = newPrompt.user;
     selectedModelId.value = newPrompt.model_id;
     maxTokens.value = newPrompt.max_tokens;
     temperatureValue.value = newPrompt.temperature;
@@ -309,7 +329,8 @@ function selectModel(model: Model) {
 
 function resetForm() {
   promptKey.value = '';
-  prompt.value = '';
+  systemPrompt.value = '';
+  userPrompt.value = '';
   selectedModelId.value = null;
   maxTokens.value = 256;
   temperatureValue.value = 0.7;
@@ -323,7 +344,8 @@ async function handleSubmit() {
   try {
     const payload = {
       key: promptKey.value,
-      prompt: prompt.value,
+      system: systemPrompt.value,
+      user: userPrompt.value,
       model_id: selectedModelId.value!,
       max_tokens: maxTokens.value,
       temperature: temperatureValue.value,

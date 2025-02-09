@@ -7,34 +7,92 @@
     <div class="mt-6">
       <dl class="grid grid-cols-1 sm:grid-cols-2">
         <div class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-2 sm:px-0">
-          <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">Prompt preview</dt>
-          <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 sm:mt-2 whitespace-pre-wrap">{{ promptPreview }}</dd>
+          <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">System Prompt</dt>
+          <dd class="text-sm/6 text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap bg-neutral-100 dark:bg-neutral-800 p-2">{{ systemPrompt }}</dd>
+        </div>
+      </dl>
+      <dl class="grid grid-cols-1 sm:grid-cols-2">
+        <div class="dark:border-neutral-700 px-4 sm:col-span-2 sm:px-0">
+          <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">User Prompt</dt>
+          <dd class="text-sm/6 text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap bg-neutral-100 dark:bg-neutral-800 p-2">{{ userPrompt }}</dd>
         </div>
       </dl>
     </div>
-    <div class="grid grid-cols-4 gap-x-2">
-      <div v-for="f in templateFields">
-        <label :for="f" class="block text-sm/6 font-medium text-neutral-900 dark:text-white">{{ f }}</label>
-        <div class="mt-0.5">
-          <input 
-            v-on:input="templateFieldInput" 
-            type="text" 
-            :name="f" 
-            :id="f" 
-            class="block w-full bg-white dark:bg-neutral-800 px-3 py-1.5 text-base text-neutral-900 dark:text-white outline outline-1 -outline-offset-1 outline-neutral-300 dark:outline-neutral-600 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-black dark:focus:outline-white sm:text-sm/6"
-          >
+    <div class="mt-6">
+      <div class="px-4 sm:px-0">
+        <h3 class="text-base/7 font-semibold text-neutral-700 dark:text-white">Dynamic fields</h3>
+        <p class="max-w-2xl text-sm/6 text-neutral-500 dark:text-neutral-400">The below fields are extracted based on handlebar syntax from your prompts. Populating them will dynamically swap the values into your prompt at runtime.</p>
+      </div>
+      <div class="mt-4 grid grid-cols-4 gap-x-2">
+        <div v-for="f in templateFields">
+          <label :for="f" class="block text-sm/6 font-medium text-neutral-900 dark:text-white">{{ f }}</label>
+          <div class="mt-0.5">
+            <input 
+              v-on:input="templateFieldInput" 
+              type="text" 
+              :name="f" 
+              :id="f" 
+              class="block w-full bg-white dark:bg-neutral-800 px-3 py-1.5 text-base text-neutral-900 dark:text-white outline outline-1 -outline-offset-1 outline-neutral-300 dark:outline-neutral-600 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-black dark:focus:outline-white sm:text-sm/6"
+            >
+          </div>
         </div>
       </div>
     </div>
+    <div class="mt-6 flex justify-end px-4 sm:px-0 space-x-2">
+      <PrimaryButton
+        type="secondary"
+        size="sm"
+        @click="handleCancel()"
+      >
+        Cancel
+      </PrimaryButton>
+      <PrimaryButton
+        type="secondary"
+        size="sm"
+        @click="handleEdit()"
+      >
+        Edit
+      </PrimaryButton>
+      <PrimaryButton
+        type="primary"
+        size="sm"
+        @click="executeStream()"
+      >
+        Stream
+      </PrimaryButton>
+      <PrimaryButton
+        type="primary"
+        size="sm"
+        @click="execute()"
+      >
+        Execute
+      </PrimaryButton>
+    </div>
     <div v-if="Object.keys(jsonContext).length > 0" class="mt-5 bg-neutral-100 dark:bg-neutral-800 p-4">
-      <p class="text-xs text-neutral-900 dark:text-neutral-300">Json context</p>
-      <div class="mt-4 text-neutral-700 dark:text-neutral-300">
+      <div class="flex items-center justify-between">
+        <p class="text-xs text-neutral-900 dark:text-neutral-300">Json context</p>
+        <button
+          @click="showJsonContext = !showJsonContext"
+          class="text-xs text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-300"
+        >
+          {{ showJsonContext ? 'Hide' : 'Show' }}
+        </button>
+      </div>
+      <div v-if="showJsonContext" class="mt-3">
         {{ jsonContext }}
       </div>
     </div>
     <div v-if="testResponse" class="mt-5 bg-neutral-100 dark:bg-neutral-800 p-4">
-      <p class="text-xs text-neutral-900 dark:text-neutral-300">Response</p>
-      <div class="mt-4 text-neutral-700 dark:text-neutral-300">
+      <div class="flex items-center justify-between">
+        <p class="text-xs text-neutral-900 dark:text-neutral-300">Response</p>
+        <button
+          @click="showResponse = !showResponse"
+          class="text-xs text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-300"
+        >
+          {{ showResponse ? 'Hide' : 'Show' }}
+        </button>
+      </div>
+      <div v-if="showResponse" class="mt-3">
         {{ testResponse }}
       </div>
     </div>
@@ -48,113 +106,33 @@
           {{ showLog ? 'Hide' : 'Show' }}
         </button>
       </div>
-      <div v-if="showLog" class="mt-4">
-        <div v-if="logResponse" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <dt class="text-sm font-medium text-neutral-900 dark:text-white">
-              Prompt ID
-            </dt>
-            <dd class="mt-1 text-sm text-neutral-700 dark:text-neutral-300">
-              {{ logResponse.prompt_id }}
-            </dd>
+      <div v-if="showLog" class="mt-3 ml-6">
+        <div class="grid gap-2 text-sm">
+          <div class="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-2">
+            <span class="text-neutral-500 dark:text-neutral-400">prompt:</span>
+            <span class="text-neutral-900 dark:text-neutral-300">{{
+              logResponse.prompt_id || 'n/a'
+            }}</span>
+
+            <span class="text-neutral-500 dark:text-neutral-400">tokens:</span>
+            <span class="text-neutral-900 dark:text-neutral-300">
+              [in:{{ logResponse.input_tokens }} out:{{
+                logResponse.output_tokens
+              }} rt:{{ logResponse.reasoning_tokens }}]
+            </span>
+
+            <span class="text-neutral-500 dark:text-neutral-400">request:</span>
+            <pre
+              class="p-2 bg-neutral-200 dark:bg-neutral-800 rounded text-neutral-900 dark:text-neutral-300 overflow-x-auto"
+            >{{ JSON.parse(logResponse.request_body!) }}</pre>
+
+            <span class="text-neutral-500 dark:text-neutral-400">response:</span>
+            <pre
+              class="p-2 bg-neutral-200 dark:bg-neutral-800 rounded text-neutral-900 dark:text-neutral-300 overflow-x-auto"
+            >{{ JSON.parse(logResponse.response_data!) }}</pre>
           </div>
-          <div>
-            <dt class="text-sm font-medium text-neutral-900 dark:text-white">
-              Model ID
-            </dt>
-            <dd class="mt-1 text-sm text-neutral-700 dark:text-neutral-300">
-              {{ logResponse.model_id }}
-            </dd>
-          </div>
-          <div>
-            <dt class="text-sm font-medium text-neutral-900 dark:text-white">
-              Status Code
-            </dt>
-            <dd class="mt-1 text-sm text-neutral-700 dark:text-neutral-300">
-              {{ logResponse.status_code }}
-            </dd>
-          </div>
-          <div>
-            <dt class="text-sm font-medium text-neutral-900 dark:text-white">
-              Input Tokens
-            </dt>
-            <dd class="mt-1 text-sm text-neutral-700 dark:text-neutral-300">
-              {{ logResponse.input_tokens }}
-            </dd>
-          </div>
-          <div>
-            <dt class="text-sm font-medium text-neutral-900 dark:text-white">
-              Output Tokens
-            </dt>
-            <dd class="mt-1 text-sm text-neutral-700 dark:text-neutral-300">
-              {{ logResponse.output_tokens }}
-            </dd>
-          </div>
-          <div>
-            <dt class="text-sm font-medium text-neutral-900 dark:text-white">
-              Reasoning Tokens
-            </dt>
-            <dd class="mt-1 text-sm text-neutral-700 dark:text-neutral-300">
-              {{ logResponse.reasoning_tokens }}
-            </dd>
-          </div>
-          <div>
-            <dt class="text-sm font-medium text-neutral-900 dark:text-white">
-              Request Body
-            </dt>
-            <dd
-              class="mt-1 text-sm text-neutral-700 dark:text-neutral-300 break-words overflow-x-auto"
-            >
-              {{ logResponse.request_body }}
-            </dd>
-          </div>
-          <div>
-            <dt class="text-sm font-medium text-neutral-900 dark:text-white">
-              Response Data
-            </dt>
-            <dd
-              class="mt-1 text-sm text-neutral-700 dark:text-neutral-300 break-words overflow-x-auto"
-            >
-              {{ logResponse.response_data }}
-            </dd>
-          </div>
-        </div>
-        <div v-else class="text-neutral-700 dark:text-neutral-300">
-          no log available.
         </div>
       </div>
-
-    </div>
-    <div class="mt-6 flex justify-end px-4 sm:px-0 space-x-2">
-      <button
-        type="button"
-        @click="handleCancel"
-        class="text-sm/6 p-2 text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-neutral-200"
-      >
-        Cancel
-      </button>
-      <button
-        type="button"
-        @click="handleEdit"
-        class="text-sm/6 p-2 border-2 border-black dark:border-white text-black dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800"
-      >
-        Edit
-      </button>
-      <button
-        v-if="!prompt.json_mode"
-        type="button"
-        @click="executeStream()"
-        class="text-sm/6 p-2 border-2 border-neutral-700 dark:border-neutral-300 bg-neutral-700 dark:bg-neutral-300 text-white dark:text-black hover:bg-neutral-800 dark:hover:bg-neutral-400"
-      >
-        Stream
-      </button>
-      <button
-        type="button"
-        @click="execute()"
-        class="text-sm/6 p-2 border-2 border-black dark:border-white bg-black dark:bg-white text-white dark:text-black hover:bg-neutral-800 dark:hover:bg-neutral-200"
-      >
-        Execute
-      </button>
     </div>
   </div>
 </template>
@@ -176,25 +154,56 @@ const {
 } = usePrompts();
 
 
-const promptPreview = ref(props.prompt.prompt)
+const systemPrompt = ref(props.prompt.system)
+const userPrompt = ref(props.prompt.user)
 const jsonContext = ref({})
 const testResponse = ref<string | null>(null)
 const logResponse = ref<PromptExecutionApiTraceResponse | null>(null)
 const showLog = ref(false)
+const showJsonContext = ref(false)
+const showResponse = ref(true)
+
 
 const templateFields = computed<string[]>(() => {
-  if (!props.prompt) return [];
-  
-  const HANDLEBARS_REGEX = /\{\{\s*(\w+)\s*\}\}/g;
-  const matches = Array.from(props.prompt.prompt.matchAll(HANDLEBARS_REGEX));
+  if (!props.prompt || !props.prompt.system || !props.prompt.user) return [];
+
+  const template = `${props.prompt.system}\n${props.prompt.user}`;
   const uniqueFields = new Set<string>();
-  
-  for (const match of matches) {
+
+  // Regex to find variables in {{ ... }} (Handlebars style)
+  const handlebarsRegex = /\{\{\s*(\w+)\s*\}\}/g;
+  let match;
+  while ((match = handlebarsRegex.exec(template)) !== null) {
     if (match[1]) {
       uniqueFields.add(match[1]);
     }
   }
-  
+
+  // Regex to find variables in {% if variable ... %} conditions
+  const ifConditionRegex = /\{\%\s*if\s*(\w+)(?:\s+.*?)\s*\%\}/g; // Added non-capturing group for stuff after variable
+  while ((match = ifConditionRegex.exec(template)) !== null) {
+    if (match[1]) {
+      uniqueFields.add(match[1]);
+    }
+  }
+
+  // Regex for {% elif variable ... %}
+  const elifConditionRegex = /\{\%\s*elif\s*(\w+)(?:\s+.*?)\s*\%\}/g;
+  while ((match = elifConditionRegex.exec(template)) !== null) {
+    if (match[1]) {
+      uniqueFields.add(match[1]);
+    }
+  }
+
+  // Regex for {% for variable in ... %} (extracting the iterable variable)
+  const forLoopRegex = /\{\%\s*for\s+\w+\s+in\s+(\w+)\s*\%\}/g; // Extracts the iterable (e.g., 'items' in 'for item in items')
+  while ((match = forLoopRegex.exec(template)) !== null) {
+    if (match[1]) {
+      uniqueFields.add(match[1]);
+    }
+  }
+
+
   return Array.from(uniqueFields);
 });
 
@@ -205,7 +214,7 @@ function templateFieldInput(event: any) {
   // @ts-ignore
   jsonContext.value[key] = value
 
-  promptPreview.value.replace(`{{ name }}`, value)
+  systemPrompt.value.replace(`{{ name }}`, value)
 }
 
 async function execute() {

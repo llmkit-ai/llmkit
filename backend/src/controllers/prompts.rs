@@ -22,7 +22,8 @@ pub async fn create_prompt(
 ) -> Result<Json<PromptResponse>, AppError> {
     let id = state.db.prompt.create_prompt(
         &payload.key, 
-        &payload.prompt, 
+        &payload.system, 
+        &payload.user, 
         payload.model_id,
         payload.max_tokens,
         payload.temperature,
@@ -68,7 +69,8 @@ pub async fn update_prompt(
     let updated = state.db.prompt.update_prompt(
         id, 
         &payload.key, 
-        &payload.prompt, 
+        &payload.system, 
+        &payload.user, 
         payload.model_id,
         payload.max_tokens,
         payload.temperature,
@@ -117,7 +119,7 @@ pub async fn execute_prompt(
         }
     };
 
-    let llm_props = LlmProps::new(prompt.clone(), payload);
+    let llm_props = LlmProps::new(prompt.clone(), payload).unwrap();
     let llm = Llm::new(llm_props, state.db.log.clone());
 
     let res = match prompt.json_mode {
@@ -157,7 +159,7 @@ pub async fn execute_prompt_stream(
     };
 
     let (tx, mut rx) = mpsc::channel(100);
-    let llm_props = LlmProps::new(prompt.clone(), payload);
+    let llm_props = LlmProps::new(prompt.clone(), payload).unwrap();
     let llm = Llm::new(llm_props, state.db.log);
 
     tokio::spawn(async move {

@@ -8,7 +8,8 @@ use crate::db::types::{log::LogRowModel, prompt::PromptWithModel};
 pub struct PromptResponse {
     pub id: i64,
     pub key: String,
-    pub prompt: String,
+    pub system: String,
+    pub user: String,
     pub model: String,
     pub model_id: i64,
     pub provider: String,
@@ -23,7 +24,8 @@ impl From<PromptWithModel> for PromptResponse {
         PromptResponse {
             id: prompt.id,
             key: prompt.key,
-            prompt: prompt.prompt,
+            system: prompt.system,
+            user: prompt.user,
             model: prompt.model_name.into(),
             model_id: prompt.model_id,
             provider: prompt.provider,

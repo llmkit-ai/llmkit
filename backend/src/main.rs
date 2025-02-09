@@ -81,7 +81,7 @@ fn logs_routes() -> Router<AppState> {
 }
 
 async fn api_version_handler() -> &'static str {
-    "LLM API v1.0"
+    "llmkit api v0.1"
 }
 
 // APP STATE

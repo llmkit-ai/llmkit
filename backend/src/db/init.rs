@@ -6,7 +6,7 @@ use std::str::FromStr;
 use super::{
     logs::LogRepository, 
     prompts::PromptRepository,
-    llm_models::ModelRepository
+    models::ModelRepository
 };
 
 

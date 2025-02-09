@@ -19,7 +19,8 @@ export const usePrompts = () => {
 
   const createPrompt = async (promptData: { 
     key: string
-    prompt: string
+    system: string
+    user: string
     model_id: number 
     max_tokens: number
     temperature: number
@@ -30,7 +31,8 @@ export const usePrompts = () => {
         method: 'POST',
         body: {
           key: promptData.key,
-          prompt: promptData.prompt,
+          system: promptData.system,
+          user: promptData.user,
           model_id: promptData.model_id,
           max_tokens: promptData.max_tokens,
           temperature: promptData.temperature,
@@ -47,7 +49,8 @@ export const usePrompts = () => {
 
   const updatePrompt = async (id: number, updates: { 
     key?: string
-    prompt?: string
+    system?: string
+    user?: string
     model_id?: number 
     max_tokens: number
     temperature: number
@@ -58,7 +61,8 @@ export const usePrompts = () => {
         method: 'PUT',
         body: {
           key: updates.key,
-          prompt: updates.prompt,
+          system: updates.system,
+          user: updates.user,
           model_id: updates.model_id,
           max_tokens: updates.max_tokens,
           temperature: updates.temperature,

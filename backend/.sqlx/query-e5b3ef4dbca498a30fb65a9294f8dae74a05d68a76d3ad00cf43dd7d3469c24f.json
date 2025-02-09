@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            SELECT \n                id,\n                prompt_id,\n                model_id,\n                response_data,\n                status_code,\n                input_tokens,\n                output_tokens,\n                reasoning_tokens,\n                created_at,\n                request_body\n            FROM log\n            ORDER BY created_at DESC\n            ",
+  "query": "\n            SELECT \n                l.id,\n                l.prompt_id,\n                l.model_id,\n                m.model_name,\n                l.response_data,\n                l.status_code,\n                l.input_tokens,\n                l.output_tokens,\n                l.reasoning_tokens,\n                l.created_at,\n                l.request_body\n            FROM log l\n            INNER JOIN model m on m.id = l.model_id\n            ORDER BY created_at DESC\n            LIMIT ? OFFSET ?\n            ",
   "describe": {
     "columns": [
       {
@@ -19,47 +19,53 @@
         "type_info": "Integer"
       },
       {
-        "name": "response_data",
+        "name": "model_name",
         "ordinal": 3,
         "type_info": "Text"
       },
       {
-        "name": "status_code",
+        "name": "response_data",
         "ordinal": 4,
-        "type_info": "Integer"
+        "type_info": "Text"
       },
       {
-        "name": "input_tokens",
+        "name": "status_code",
         "ordinal": 5,
         "type_info": "Integer"
       },
       {
-        "name": "output_tokens",
+        "name": "input_tokens",
         "ordinal": 6,
         "type_info": "Integer"
       },
       {
-        "name": "reasoning_tokens",
+        "name": "output_tokens",
         "ordinal": 7,
         "type_info": "Integer"
       },
       {
-        "name": "created_at",
+        "name": "reasoning_tokens",
         "ordinal": 8,
+        "type_info": "Integer"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 9,
         "type_info": "Datetime"
       },
       {
         "name": "request_body",
-        "ordinal": 9,
+        "ordinal": 10,
         "type_info": "Text"
       }
     ],
     "parameters": {
-      "Right": 0
+      "Right": 2
     },
     "nullable": [
       false,
       true,
+      false,
       false,
       true,
       true,
@@ -70,5 +76,5 @@
       true
     ]
   },
-  "hash": "284b211fcd09b559c76ea1e3fc0c3ce65e47955300b4eaa298ad7577fed6a001"
+  "hash": "e5b3ef4dbca498a30fb65a9294f8dae74a05d68a76d3ad00cf43dd7d3469c24f"
 }

@@ -1,6 +1,7 @@
 export interface Prompt {
   id: number
-  prompt: string
+  system: string
+  user: string
   key: string
   model: string
   model_id: number

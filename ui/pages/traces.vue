@@ -1,200 +1,89 @@
 <template>
-  <div>
+  <div class="font-mono">
     <div
       v-if="logsLoading"
-      class="text-center text-neutral-500 dark:text-neutral-400"
+      class="text-center text-neutral-500 dark:text-neutral-400 animate-pulse"
     >
-      loading logs...
+      $ loading logs...
     </div>
-    <div v-else-if="logsError" class="text-red-500">
-      error loading logs: {{ logsError }}
+    <div v-else-if="logsError" class="text-red-500 dark:text-red-400">
+      error: {{ logsError }}
     </div>
-    <ul v-else class="divide-y divide-neutral-200 dark:divide-neutral-700">
-      <li v-for="log in logs" :key="log.id" class="py-4">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center space-x-4">
-            <div
-              class="text-sm font-medium text-neutral-900 dark:text-white"
-            >
-              {{ log.id }}
+    <div v-else class="terminal-container">
+      <ul class="divide-y divide-neutral-200 dark:divide-neutral-800">
+        <li 
+          v-for="log in logs" 
+          :key="log.id" 
+          class="py-3 px-4 hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors"
+        >
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+              <span class="text-emerald-600 dark:text-emerald-400">$</span>
+              <div class="text-neutral-900 dark:text-neutral-300">
+                <span class="text-neutral-500 dark:text-neutral-400">[{{ formatDate(log.created_at) }}]</span>
+                <span :class="getStatusBadgeClass(log.status_code)" class="ml-2">{{ log.status_code }}</span>
+              </div>
+              <div class="text-neutral-500 dark:text-neutral-400">
+                {{ log.model_name }}
+              </div>
             </div>
-            <div
-              class="text-sm text-neutral-500 dark:text-neutral-400"
+            <button
+              @click="toggleLog(log.id)"
+              class="text-neutral-700 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-neutral-100"
             >
-              Status:
-              <span :class="getStatusBadgeClass(log.status_code)">
-                {{ log.status_code }}
-              </span>
-            </div>
-            <div
-              class="text-sm text-neutral-500 dark:text-neutral-400"
-            >
-              Created: {{ formatDate(log.created_at) }}
-            </div>
-            <div
-              class="text-sm text-neutral-500 dark:text-neutral-400"
-            >
-              Model: {{ log.model_name }}
-            </div>
+              {{ expandedLogId === log.id ? '◄ collapse' : '► expand' }}
+            </button>
           </div>
-          <button
-            @click="toggleLog(log.id)"
-            class="text-sm font-medium text-neutral-700 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-neutral-100"
-          >
-            {{ expandedLogId === log.id ? 'Hide details' : 'View details' }}
-          </button>
-        </div>
 
-        <div v-if="expandedLogId === log.id" class="mt-4">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <dt
-                class="text-sm font-medium text-neutral-900 dark:text-white"
-              >
-                Prompt id
-              </dt>
-              <dd
-                class="mt-1 text-sm text-neutral-700 dark:text-neutral-300"
-              >
-                {{ log.prompt_id }}
-              </dd>
-            </div>
-            <div>
-              <dt
-                class="text-sm font-medium text-neutral-900 dark:text-white"
-              >
-                Model id
-              </dt>
-              <dd
-                class="mt-1 text-sm text-neutral-700 dark:text-neutral-300"
-              >
-                {{ log.model_id }}
-              </dd>
-            </div>
-            <div>
-              <dt
-                class="text-sm font-medium text-neutral-900 dark:text-white"
-              >
-                Status code
-              </dt>
-              <dd
-                class="mt-1 text-sm text-neutral-700 dark:text-neutral-300"
-              >
-                {{ log.status_code }}
-              </dd>
-            </div>
-            <div>
-              <dt
-                class="text-sm font-medium text-neutral-900 dark:text-white"
-              >
-                Input tokens
-              </dt>
-              <dd
-                class="mt-1 text-sm text-neutral-700 dark:text-neutral-300"
-              >
-                {{ log.input_tokens }}
-              </dd>
-            </div>
-            <div>
-              <dt
-                class="text-sm font-medium text-neutral-900 dark:text-white"
-              >
-                Output tokens
-              </dt>
-              <dd
-                class="mt-1 text-sm text-neutral-700 dark:text-neutral-300"
-              >
-                {{ log.output_tokens }}
-              </dd>
-            </div>
-            <div>
-              <dt
-                class="text-sm font-medium text-neutral-900 dark:text-white"
-              >
-                Reasoning tokens
-              </dt>
-              <dd
-                class="mt-1 text-sm text-neutral-700 dark:text-neutral-300"
-              >
-                {{ log.reasoning_tokens }}
-              </dd>
-            </div>
-            <div>
-              <dt
-                class="text-sm font-medium text-neutral-900 dark:text-white"
-              >
-                Request body
-              </dt>
-              <dd
-                class="mt-1 text-sm text-neutral-700 dark:text-neutral-300 break-words overflow-x-auto"
-              >
-                {{ log.request_body }}
-              </dd>
-            </div>
-            <div>
-              <dt
-                class="text-sm font-medium text-neutral-900 dark:text-white"
-              >
-                Response data
-              </dt>
-              <dd
-                class="mt-1 text-sm text-neutral-700 dark:text-neutral-300 break-words overflow-x-auto"
-              >
-                {{ log.response_data }}
-              </dd>
+          <div v-if="expandedLogId === log.id" class="mt-3 ml-6">
+            <div class="grid gap-2 text-sm">
+              <div class="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-2">
+                <span class="text-neutral-500 dark:text-neutral-400">prompt:</span>
+                <span class="text-neutral-900 dark:text-neutral-300">{{ log.prompt_id || 'n/a' }}</span>
+                
+                <span class="text-neutral-500 dark:text-neutral-400">tokens:</span>
+                <span class="text-neutral-900 dark:text-neutral-300">
+                  [in:{{ log.input_tokens }} out:{{ log.output_tokens }} rt:{{ log.reasoning_tokens }}]
+                </span>
+                
+                <span class="text-neutral-500 dark:text-neutral-400">request:</span>
+                <pre class="p-2 bg-neutral-200 dark:bg-neutral-800 rounded text-neutral-900 dark:text-neutral-300 overflow-x-auto">{{ JSON.parse(log.request_body!) }}</pre>
+                
+                <span class="text-neutral-500 dark:text-neutral-400">response:</span>
+                <pre class="p-2 bg-neutral-200 dark:bg-neutral-800 rounded text-neutral-900 dark:text-neutral-300 overflow-x-auto">{{ JSON.parse(log.response_data!) }}</pre>
+              </div>
             </div>
           </div>
-        </div>
-      </li>
-    </ul>
+        </li>
+      </ul>
+      <div class="terminal-header bg-neutral-100 border-t border-neutral-400 dark:bg-neutral-900 p-2 text-sm">
+        <span class="text-neutral-500 dark:text-neutral-400">// logs {{ (currentPage - 1) * pageSize + 1 }}-{{ Math.min(currentPage * pageSize, totalLogs) }} of {{ totalLogs }}</span>
+      </div>
+    </div>
 
     <nav
-      class="flex items-center justify-between border-t border-neutral-200 bg-white py-5 dark:bg-transparent dark:border-neutral-700"
-      aria-label="Pagination"
+      class="mt-4 flex items-center justify-between py-5 dark:border-neutral-800"
       v-if="!logsLoading && !logsError"
     >
-      <div class="hidden sm:block">
-        <p class="text-sm text-neutral-700 dark:text-neutral-300">
-          showing
-          <span class="font-medium">{{
-            (currentPage - 1) * pageSize + 1
-          }}</span>
-          to
-          <span class="font-medium">{{
-            Math.min(currentPage * pageSize, totalLogs)
-          }}</span>
-          of
-          <span class="font-medium">{{ totalLogs }}</span>
-          results
-        </p>
-      </div>
-      <div class="flex flex-1 justify-between sm:justify-end">
-        <button
-          type="button"
-          @click="goToPage(currentPage - 1)"
+      <div class="flex-1 flex justify-between sm:justify-end space-x-2">
+        <PrimaryButton
+          type="primary"
+          size="sm"
           :disabled="currentPage === 1"
-          :class="[
-            'text-sm/6 p-2 border-2',
-            currentPage === 1
-              ? 'border-neutral-300 text-neutral-500 cursor-not-allowed dark:border-neutral-600 dark:text-neutral-400'
-              : 'border-black dark:border-white bg-black dark:bg-white text-white dark:text-black hover:bg-neutral-800 dark:hover:bg-neutral-200',
-          ]"
+          @click="goToPage(currentPage - 1)"
         >
-          Previous
-        </button>
-        <button
-          type="button"
-          @click="goToPage(currentPage + 1)"
+          ← prev
+        </PrimaryButton>
+
+        <PrimaryButton
+          type="primary"
+          size="sm"
           :disabled="logs.length < pageSize"
-          :class="[
-            'ml-3 text-sm/6 p-2 border-2',
-            logs.length < pageSize
-              ? 'border-neutral-300 text-neutral-500 cursor-not-allowed dark:border-neutral-600 dark:text-neutral-400'
-              : 'border-black dark:border-white bg-black dark:bg-white text-white dark:text-black hover:bg-neutral-800 dark:hover:bg-neutral-200',
-          ]"
+          @click="goToPage(currentPage + 1)"
+          class="ml-2"
         >
-          Next
-        </button>
+          next →
+        </PrimaryButton>
       </div>
     </nav>
   </div>
@@ -231,11 +120,19 @@ const formatDate = (dateString: string | undefined) => {
   }
 }
 
+// const getStatusBadgeClass = (statusCode: number | null) => {
+//   if (statusCode === 200) {
+//     return 'px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100'
+//   } else {
+//     return 'px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100'
+//   }
+// }
+
 const getStatusBadgeClass = (statusCode: number | null) => {
   if (statusCode === 200) {
-    return 'px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100'
+    return 'text-green-600 dark:text-green-400'
   } else {
-    return 'px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100'
+    return 'text-red-600 dark:text-red-400'
   }
 }
 
@@ -249,3 +146,20 @@ onMounted(async () => {
   await fetchLogsCount()
 })
 </script>
+
+<style>
+.terminal-container {
+  @apply border border-neutral-200 dark:border-neutral-800 rounded;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+
+.terminal-header {
+  @apply border-b border-neutral-200 dark:border-neutral-800;
+}
+
+pre {
+  @apply font-mono text-xs p-3;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+</style>

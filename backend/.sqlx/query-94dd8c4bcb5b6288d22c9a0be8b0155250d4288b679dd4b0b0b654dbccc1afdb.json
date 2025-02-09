@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            SELECT\n                p.id, \n                p.key, \n                p.prompt, \n                p.model_id,\n                p.max_tokens,\n                p.temperature,\n                p.json_mode,\n                m.model_name,\n                p.created_at, \n                p.updated_at\n            FROM prompt p\n            JOIN model m ON p.model_id = m.id\n            WHERE p.id = ?\n            ",
+  "query": "\n            SELECT\n                p.id, \n                p.key, \n                p.system, \n                p.user, \n                p.model_id,\n                p.max_tokens,\n                p.temperature,\n                p.json_mode,\n                m.model_name,\n                p.created_at, \n                p.updated_at\n            FROM prompt p\n            JOIN model m ON p.model_id = m.id\n            ORDER BY p.created_at\n            ",
   "describe": {
     "columns": [
       {
@@ -14,50 +14,56 @@
         "type_info": "Text"
       },
       {
-        "name": "prompt",
+        "name": "system",
         "ordinal": 2,
         "type_info": "Text"
       },
       {
-        "name": "model_id",
+        "name": "user",
         "ordinal": 3,
-        "type_info": "Integer"
+        "type_info": "Text"
       },
       {
-        "name": "max_tokens",
+        "name": "model_id",
         "ordinal": 4,
         "type_info": "Integer"
       },
       {
-        "name": "temperature",
+        "name": "max_tokens",
         "ordinal": 5,
+        "type_info": "Integer"
+      },
+      {
+        "name": "temperature",
+        "ordinal": 6,
         "type_info": "Float"
       },
       {
         "name": "json_mode",
-        "ordinal": 6,
+        "ordinal": 7,
         "type_info": "Bool"
       },
       {
         "name": "model_name",
-        "ordinal": 7,
+        "ordinal": 8,
         "type_info": "Text"
       },
       {
         "name": "created_at",
-        "ordinal": 8,
+        "ordinal": 9,
         "type_info": "Datetime"
       },
       {
         "name": "updated_at",
-        "ordinal": 9,
+        "ordinal": 10,
         "type_info": "Datetime"
       }
     ],
     "parameters": {
-      "Right": 1
+      "Right": 0
     },
     "nullable": [
+      false,
       false,
       false,
       false,
@@ -70,5 +76,5 @@
       false
     ]
   },
-  "hash": "dd28713f81585c44416c8ec7ec749fab6e50396e3e9efdc5542aa1f809e55eaa"
+  "hash": "94dd8c4bcb5b6288d22c9a0be8b0155250d4288b679dd4b0b0b654dbccc1afdb"
 }

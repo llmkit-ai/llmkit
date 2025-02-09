@@ -5,7 +5,8 @@ use crate::common::types::models::LlmModel;
 pub struct PromptRow {
     pub id: i64,
     pub key: String,
-    pub prompt: String,
+    pub system: String,
+    pub user: String,
     pub model_id: i64,
     pub max_tokens: i64,
     pub temperature: f64,
@@ -18,7 +19,8 @@ pub struct PromptRow {
 pub struct PromptRowWithModel {
     pub id: i64,
     pub key: String,
-    pub prompt: String,
+    pub system: String,
+    pub user: String,
     pub model_id: i64,
     pub max_tokens: i64,
     pub temperature: f64,
@@ -32,7 +34,8 @@ pub struct PromptRowWithModel {
 pub struct PromptWithModel {
     pub id: i64,
     pub key: String,
-    pub prompt: String,
+    pub system: String,
+    pub user: String,
     pub model_id: i64,
     pub max_tokens: i64,
     pub temperature: f64,
@@ -49,7 +52,8 @@ impl Into<PromptWithModel> for PromptRowWithModel {
         PromptWithModel {
             id: self.id,
             key: self.key,
-            prompt: self.prompt,
+            system: self.system,
+            user: self.user,
             model_id: self.model_id,
             max_tokens: self.max_tokens,
             temperature: self.temperature,
