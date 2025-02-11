@@ -1,3 +1,5 @@
+import type { ApiLogReponse } from "./logs"
+
 export interface Prompt {
   id: number
   system: string
@@ -15,19 +17,5 @@ export interface Prompt {
 // PROMPT EXECUTION RESPONSE
 export interface PromptExecutionResponse {
   content: string;
-  log: PromptExecutionApiTraceResponse;
-}
-
-
-export interface PromptExecutionApiTraceResponse {
-  id: number;
-  prompt_id: number | null;
-  model_id: number;
-  response_data: string | null;
-  status_code: number | null;
-  latency_ms: number | null;
-  input_tokens: number | null;
-  output_tokens: number | null;
-  reasoning_tokens: number | null;
-  request_body: string | null;
+  log: ApiLogReponse;
 }

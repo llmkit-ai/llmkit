@@ -58,7 +58,7 @@ struct AnthropicUsage {
 
 
 // STREAMING RESPONE
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct AnthropicResponseStreamChunk {
     #[serde(rename = "type")]
     event_type: String,
@@ -67,17 +67,17 @@ struct AnthropicResponseStreamChunk {
     usage: Option<AnthropicResponseStreamUsage>
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct AnthropicResponseStreamDelta {
     text: Option<String>,
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct AnthropicResponseStreamContentBlock {
     text: Option<String>,
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct AnthropicResponseStreamUsage {
     input_tokens: Option<i64>,
     output_tokens: Option<i64>,
@@ -129,6 +129,7 @@ impl<'a> LlmProvider for AnthropicProvider<'a> {
             let mut stream_content = String::new();
             let mut output_tokens = 0;
             let mut input_tokens = 0;
+            let mut last_chunk = None;
 
             while let Some(event_result) = event_source.next().await {
                 match event_result {
@@ -169,6 +170,7 @@ impl<'a> LlmProvider for AnthropicProvider<'a> {
                                         }
                                         "message_stop" => {
                                             let _ = tx.send(Ok("[DONE]".to_string())).await;
+                                            last_chunk = Some(chunk);
                                             break;
                                         }
                                         _ => {} // Ignore other event types
@@ -189,9 +191,13 @@ impl<'a> LlmProvider for AnthropicProvider<'a> {
             }
             
             event_source.close();
+
+            let raw_response = serde_json::to_string(&last_chunk)
+                .expect("Failed to serialize chunk to string");
+
             return LlmApiResponseProps {
                 response_content: stream_content,
-                raw_response: "".to_string(),
+                raw_response,
                 input_tokens: Some(input_tokens),
                 output_tokens: Some(output_tokens),
                 reasoning_tokens: None

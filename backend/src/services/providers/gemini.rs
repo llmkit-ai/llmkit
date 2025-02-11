@@ -80,25 +80,29 @@ struct GeminiSafetyRating {
     probability: String,
 }
 
-#[derive(Debug, serde::Deserialize)]
+// STREAMING
+#[derive(Serialize, Deserialize, Debug, Clone)]
 struct GeminiResponseStreamChunk {
     candidates: Vec<GeminiResponseStreamCandidate>,
     usage_metadata: Option<GeminiResponseStreamUsage>
 }
-#[derive(Debug, serde::Deserialize)]
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 struct GeminiResponseStreamCandidate {
     content: GeminiResponseStreamContent,
 }
-#[derive(Debug, serde::Deserialize)]
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 struct GeminiResponseStreamContent {
     parts: Vec<GeminiResponseStreamPart>,
 }
-#[derive(Debug, serde::Deserialize)]
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 struct GeminiResponseStreamPart {
     text: String,
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 struct GeminiResponseStreamUsage {
     prompt_token_count: i32,
     candidates_token_count: i32,
@@ -177,14 +181,15 @@ impl<'a> LlmProvider for GeminiProvider<'a> {
             let mut stream_content = String::new();
             let mut output_tokens = 0;
             let mut input_tokens = 0;
+            let mut last_chunk = None;
 
             while let Some(event_result) = event_source.next().await {
                 match event_result {
                     Ok(event) => {
                         if let Event::Message(message) = event {
                             match serde_json::from_str::<GeminiResponseStreamChunk>(&message.data) {
-                                Ok(response_chunk) => {
-                                    if let Some(text) = response_chunk.candidates
+                                Ok(chunk) => {
+                                    if let Some(text) = chunk.candidates
                                         .first()
                                         .and_then(|c| c.content.parts.first())
                                         .map(|p| p.text.clone())
@@ -195,10 +200,12 @@ impl<'a> LlmProvider for GeminiProvider<'a> {
                                         }
                                     }
 
-                                    if let Some(usage) = response_chunk.usage_metadata {
+                                    if let Some(usage) = &chunk.usage_metadata {
                                         input_tokens += usage.prompt_token_count;
                                         output_tokens += usage.candidates_token_count;
                                     }
+
+                                    last_chunk = Some(chunk);
                                 }
                                 Err(e) => {
                                     let _ = tx.send(Err(LlmStreamingError::ParseError(e.to_string()))).await;
@@ -221,9 +228,12 @@ impl<'a> LlmProvider for GeminiProvider<'a> {
             let _ = tx.send(Ok("[DONE]".to_string())).await;
             event_source.close();
 
+            let raw_response = serde_json::to_string(&last_chunk)
+                .expect("Failed to serialize chunk to string");
+
             return LlmApiResponseProps {
                 response_content: stream_content,
-                raw_response: "".to_string(),
+                raw_response,
                 input_tokens: Some(input_tokens.into()),
                 output_tokens: Some(output_tokens.into()),
                 reasoning_tokens: None

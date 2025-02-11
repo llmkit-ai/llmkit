@@ -50,12 +50,13 @@ pub struct ApiLogResponse {
     pub id: i64,
     pub prompt_id: Option<i64>,
     pub model_id: i64,
+    pub model_name: String,
+    pub response_data: Option<String>,
     pub status_code: Option<i64>,
     pub input_tokens: Option<i64>,
     pub output_tokens: Option<i64>,
-    pub reasoning_tokens: Option<i64>,
     pub request_body: Option<String>,
-    pub response_data: Option<String>
+    pub created_at: Option<String>
 }
 
 impl From<LogRowModel> for ApiLogResponse {
@@ -64,12 +65,13 @@ impl From<LogRowModel> for ApiLogResponse {
             id: log.id,
             prompt_id: log.prompt_id,
             model_id: log.model_id,
+            model_name: log.model_name,
             status_code: log.status_code,
             input_tokens: log.input_tokens,
             output_tokens: log.output_tokens,
-            reasoning_tokens: log.reasoning_tokens,
             request_body: log.request_body,
-            response_data: log.response_data
+            response_data: log.response_data,
+            created_at: log.created_at.map(|c| c.to_string())
         }
     }
 }

@@ -123,11 +123,13 @@
 
             <span class="text-neutral-500 dark:text-neutral-400">request:</span>
             <pre
+              v-if="logResponse.request_body"
               class="p-2 bg-neutral-200 dark:bg-neutral-800 rounded text-neutral-900 dark:text-neutral-300 overflow-x-auto"
             >{{ JSON.parse(logResponse.request_body!) }}</pre>
 
             <span class="text-neutral-500 dark:text-neutral-400">response:</span>
             <pre
+              v-if="logResponse.response_data"
               class="p-2 bg-neutral-200 dark:bg-neutral-800 rounded text-neutral-900 dark:text-neutral-300 overflow-x-auto"
             >{{ JSON.parse(logResponse.response_data!) }}</pre>
           </div>
@@ -138,7 +140,7 @@
 </template>
 
 <script setup lang="ts">
-import type { PromptExecutionApiTraceResponse } from '~/types/response/prompts';
+import type { ApiLogReponse } from '~/types/response/logs';
 import type { Prompt } from '~/types/response/prompts';
 
 const props = defineProps<{
@@ -153,12 +155,17 @@ const {
   executePromptStream
 } = usePrompts();
 
+const { 
+  log,
+  fetchLogById
+} = useLogs();
+
 
 const systemPrompt = ref(props.prompt.system)
 const userPrompt = ref(props.prompt.user)
 const jsonContext = ref({})
 const testResponse = ref<string | null>(null)
-const logResponse = ref<PromptExecutionApiTraceResponse | null>(null)
+const logResponse = ref<ApiLogReponse | null>(null)
 const showLog = ref(false)
 const showJsonContext = ref(false)
 const showResponse = ref(true)
@@ -234,8 +241,11 @@ const executeStream = async () => {
     jsonContext.value,
     `/api/v1/prompts/execute/${props.prompt.id}/stream`,
     {
-      onMessage: (chunk) => {
+      onMessage: async (chunk) => {
         if (chunk.includes("log_id")) {
+          const logChunk = JSON.parse(chunk)
+          const logId = logChunk["log_id"]
+          await getLogRecord(logId)
           return
         }
         testResponse.value += chunk
@@ -248,5 +258,10 @@ const executeStream = async () => {
       }
     }
   )
+}
+
+async function getLogRecord(log_id: number) {
+  await fetchLogById(log_id)
+  logResponse.value = log.value
 }
 </script>

@@ -196,39 +196,6 @@ impl Llm {
         Ok(ExecutionResponse { content: response.response_content, log_id } )
     }
 
-    // async fn send_request(&self) -> Result<String, Error> {
-    //     let openai_provider = OpenaiProvider::new(&self.props, false);
-    //     let anthropic_provider = AnthropicProvider::new(&self.props, false);
-    //     let gemini_provider = GeminiProvider::new(&self.props, false);
-    //     let deepseek_provider = DeepseekProvider::new(&self.props, false);
-    //
-    //     let (request_builder, body) = match &self.props.model {
-    //         LlmModel::OpenAi(_) => openai_provider.build_request(),
-    //         LlmModel::Anthropic(_) => anthropic_provider.build_request(),
-    //         LlmModel::Gemini(_) => gemini_provider.build_request(),
-    //         LlmModel::Deepseek(_) => deepseek_provider.build_request(),
-    //     }?;
-    //
-    //     // Convert RequestBuilder to Request to capture details
-    //     let response = request_builder.send().await?;
-    //     let status = response.status();
-    //     let text = response.text().await?;
-    //
-    //     if !status.is_success() {
-    //         return Err(Error::Http(status));
-    //     }
-    //
-    //     let response = match &self.props.model {
-    //         LlmModel::OpenAi(_) => OpenaiProvider::parse_response(&text)?,
-    //         LlmModel::Anthropic(_) => AnthropicProvider::parse_response(&text)?,
-    //         LlmModel::Gemini(_) => GeminiProvider::parse_response(&text)?,
-    //         LlmModel::Deepseek(_) => DeepseekProvider::parse_response(&text)?
-    //     };
-    //
-    //     println!("{}", response.response_content);
-    //     Ok(response.response_content)
-    // }
-
     async fn send_request_stream(
         &self,
         tx: Sender<Result<String, LlmStreamingError>>
@@ -238,7 +205,7 @@ impl Llm {
         let gemini_provider = GeminiProvider::new(&self.props, true);
         let deepseek_provider = DeepseekProvider::new(&self.props, true);
 
-        let (request, _body) = match &self.props.model {
+        let (request, body) = match &self.props.model {
             LlmModel::OpenAi(_) => openai_provider.build_request(),
             LlmModel::Anthropic(_) => anthropic_provider.build_request(),
             LlmModel::Gemini(_) => gemini_provider.build_request(),
@@ -263,7 +230,7 @@ impl Llm {
                 response.input_tokens,
                 response.output_tokens,
                 response.reasoning_tokens,
-                None
+                Some(&body)
             )
             .await
             .map_err(|e| Error::DbLoggingError(e.to_string()))?;
