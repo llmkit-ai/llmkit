@@ -191,8 +191,6 @@ pub async fn execute_prompt_stream(
                         break;
                     }
 
-                    println!("{:?}", content);
-                    println!("{:?}", event);
                     yield Ok(event);
                 }
                 Err(e) => {

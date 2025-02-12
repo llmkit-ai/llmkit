@@ -92,7 +92,7 @@
           {{ showResponse ? 'Hide' : 'Show' }}
         </button>
       </div>
-      <div v-if="showResponse" class="mt-3 dark:text-neutral-300 text-sm">
+      <div v-if="showResponse" class="response-content mt-3 dark:text-neutral-300 text-sm">
         {{ testResponse }}
       </div>
     </div>
@@ -253,9 +253,6 @@ const executeStream = async () => {
       onError: (err) => {
         error.value = err
       },
-      onComplete: () => {
-        console.log('Stream completed')
-      }
     }
   )
 }
@@ -265,3 +262,9 @@ async function getLogRecord(log_id: number) {
   logResponse.value = log.value
 }
 </script>
+
+<style scoped>
+.response-content {
+  white-space: pre-line;
+}
+</style>
