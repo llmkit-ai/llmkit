@@ -12,7 +12,7 @@ impl Message {
     pub fn defaults() -> Vec<Self> {
         vec![
             Message::System { 
-                content: String::from("You are a helpful assistant.") 
+                content: String::from("You are a helpful assistant that always says Hello") 
             },
             Message::User { 
                 content: String::from("Hello, how are you?") 

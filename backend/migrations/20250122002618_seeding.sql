@@ -26,6 +26,10 @@ INSERT INTO model (model_name) VALUES ('gemini-1.5-pro');
 INSERT INTO model (model_name) VALUES ('deepseek-chat');
 INSERT INTO model (model_name) VALUES ('deepseek-reasoner');
 
+-- Azure model
+INSERT INTO model (model_name) VALUES ('DeepSeek-R1');
+INSERT INTO model (model_name) VALUES ('gpt-4o-mini');
+
 -- Sample Prompt
 INSERT INTO prompt (key, system, user, model_id, max_tokens, temperature, json_mode)
 VALUES (

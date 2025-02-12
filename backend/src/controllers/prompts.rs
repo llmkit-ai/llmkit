@@ -194,7 +194,7 @@ pub async fn execute_prompt_stream(
                     yield Ok(event);
                 }
                 Err(e) => {
-                    eprintln!("error in stream: {:?}", e);
+                    tracing::error!("error in stream: {:?}", e);
                 }
             }
         }
@@ -205,7 +205,7 @@ pub async fn execute_prompt_stream(
                 let log_event = json!({ "log_id": log_id });
                 yield Ok(Event::default().data(log_event.to_string()));
             },
-            Err(_) => eprintln!("Failed to receive log ID"),
+            Err(_) => tracing::error!("Failed to receive log ID"),
         }
     };
 

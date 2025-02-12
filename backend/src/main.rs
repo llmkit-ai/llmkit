@@ -8,6 +8,8 @@ use axum::{
     Router
 };
 
+use tracing_subscriber;
+
 use anyhow::Result;
 use controllers::{
     logs::{
@@ -32,6 +34,12 @@ async fn main() -> Result<()> {
     dotenv::dotenv().ok();
 
     let database_url = std::env::var("DATABASE_URL")?;
+    let log_level = std::env::var("RUST_LOG").unwrap_or("info".to_string());
+
+    tracing_subscriber::fmt()
+        .with_env_filter(log_level)
+        .init();
+
     let data = DbData::new(&database_url).await?;
     let app_state = AppState::new(data).await;
 

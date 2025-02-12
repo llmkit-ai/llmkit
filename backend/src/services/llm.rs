@@ -11,10 +11,7 @@ use tracing;
 use crate::{common::types::models::LlmModel, db::logs::LogRepository, services::types::parse_response::LlmApiRequestProps};
 use super::{
     providers::{
-        anthropic::AnthropicProvider, 
-        deepseek::DeepseekProvider, 
-        gemini::GeminiProvider, 
-        openai::OpenaiProvider
+        anthropic::AnthropicProvider, azure::AzureProvider, deepseek::DeepseekProvider, gemini::GeminiProvider, openai::OpenaiProvider
     }, 
     types::{
         llm_props::LlmProps, parse_response::LlmApiResponseProps, stream::LlmStreamingError
@@ -126,12 +123,14 @@ impl Llm {
         let anthropic_provider = AnthropicProvider::new(&self.props, false);
         let gemini_provider = GeminiProvider::new(&self.props, false);
         let deepseek_provider = DeepseekProvider::new(&self.props, false);
+        let azure_provider = AzureProvider::new(&self.props, false);
 
         let (request_builder, body) = match &self.props.model {
             LlmModel::OpenAi(_) => openai_provider.build_request(),
             LlmModel::Anthropic(_) => anthropic_provider.build_request(),
             LlmModel::Gemini(_) => gemini_provider.build_request(),
             LlmModel::Deepseek(_) => deepseek_provider.build_request(),
+            LlmModel::Azure(_) => azure_provider.build_request()
         }?;
 
         // Convert RequestBuilder to Request to capture details
@@ -155,45 +154,36 @@ impl Llm {
         );
 
         if !status.is_success() {
-            self.db_log
-                .create_log(
-                    self.props.prompt_id,
-                    self.props.model_id,
-                    None,
-                    None,
-                    None,
-                    None,
-                    None,
-                    Some(&request.body),
-                )
-                .await
-                .map_err(|e| Error::DbLoggingError(e.to_string()))?;
+            self.log_request(
+                None,
+                None,
+                None,
+                None,
+                None,
+                &request.body,
+            ).await?;
 
             return Err(Error::Http(status));
         }
 
-        let response = match &self.props.model {
+        let parsed_response = match &self.props.model {
             LlmModel::OpenAi(_) => OpenaiProvider::parse_response(&text)?,
             LlmModel::Anthropic(_) => AnthropicProvider::parse_response(&text)?,
             LlmModel::Gemini(_) => GeminiProvider::parse_response(&text)?,
-            LlmModel::Deepseek(_) => DeepseekProvider::parse_response(&text)?
+            LlmModel::Deepseek(_) => DeepseekProvider::parse_response(&text)?,
+            LlmModel::Azure(_) => AzureProvider::parse_response(&text)?
         };
 
-        let log_id = self.db_log
-            .create_log(
-                self.props.prompt_id,
-                self.props.model_id,
-                Some(&response.raw_response),
-                Some(request.status as i64),
-                response.input_tokens,
-                response.output_tokens,
-                response.reasoning_tokens,
-                Some(&request.body)
-            )
-            .await
-            .map_err(|e| Error::DbLoggingError(e.to_string()))?;
+        let log_id = self.log_request(
+            Some(&parsed_response.raw_response),
+            Some(request.status as i64),
+            parsed_response.input_tokens,
+            parsed_response.output_tokens,
+            parsed_response.reasoning_tokens,
+            &request.body
+        ).await?;
 
-        Ok(ExecutionResponse { content: response.response_content, log_id } )
+        Ok(ExecutionResponse { content: parsed_response.response_content, log_id } )
     }
 
     async fn send_request_stream(
@@ -204,12 +194,14 @@ impl Llm {
         let anthropic_provider = AnthropicProvider::new(&self.props, true);
         let gemini_provider = GeminiProvider::new(&self.props, true);
         let deepseek_provider = DeepseekProvider::new(&self.props, true);
+        let azure_provider = AzureProvider::new(&self.props, true);
 
         let (request, body) = match &self.props.model {
             LlmModel::OpenAi(_) => openai_provider.build_request(),
             LlmModel::Anthropic(_) => anthropic_provider.build_request(),
             LlmModel::Gemini(_) => gemini_provider.build_request(),
-            LlmModel::Deepseek(_) => deepseek_provider.build_request()
+            LlmModel::Deepseek(_) => deepseek_provider.build_request(),
+            LlmModel::Azure(_) => azure_provider.build_request(),
         }?;
 
         let event_source = request.eventsource()?;
@@ -218,24 +210,46 @@ impl Llm {
             LlmModel::OpenAi(_) => OpenaiProvider::stream_eventsource(event_source, tx).await?,
             LlmModel::Anthropic(_) => AnthropicProvider::stream_eventsource(event_source, tx).await?,
             LlmModel::Gemini(_) => GeminiProvider::stream_eventsource(event_source, tx).await?,
-            LlmModel::Deepseek(_) => DeepseekProvider::stream_eventsource(event_source, tx).await?
+            LlmModel::Deepseek(_) => DeepseekProvider::stream_eventsource(event_source, tx).await?,
+            LlmModel::Azure(_) => AzureProvider::stream_eventsource(event_source, tx).await?,
         };
 
-        let log_id = self.db_log
+        let log_id = self.log_request(
+            Some(&response.raw_response),
+            None,
+            response.input_tokens,
+            response.output_tokens,
+            response.reasoning_tokens,
+            &body
+        ).await?;
+
+
+        Ok(ExecutionResponse { content: response.response_content, log_id } )
+    }
+
+    /// Logs the request and returns a log ID.
+    async fn log_request(
+        &self,
+        raw_response: Option<&str>,
+        status: Option<i64>,
+        input_tokens: Option<i64>,
+        output_tokens: Option<i64>,
+        reasoning_tokens: Option<i64>,
+        request_body: &str,
+    ) -> Result<i64, Error> {
+        self.db_log
             .create_log(
                 self.props.prompt_id,
                 self.props.model_id,
-                Some(&response.raw_response),
-                None,
-                response.input_tokens,
-                response.output_tokens,
-                response.reasoning_tokens,
-                Some(&body)
+                raw_response,
+                status,
+                input_tokens,
+                output_tokens,
+                reasoning_tokens,
+                Some(request_body),
             )
             .await
-            .map_err(|e| Error::DbLoggingError(e.to_string()))?;
-
-        Ok(ExecutionResponse { content: response.response_content, log_id } )
+            .map_err(|e| Error::DbLoggingError(e.to_string()))
     }
 }
 
@@ -244,7 +258,7 @@ impl Llm {
 mod tests {
     use super::*;
     use crate::{common::types::models::{
-        AnthropicModel, DeepseekModel, GeminiModel, LlmModel, OpenAiModel,
+        AnthropicModel, AzureModel, DeepseekModel, GeminiModel, LlmModel, OpenAiModel
     }, db::prompts::PromptRepository, services::types::message::Message};
     use dotenv::dotenv;
     use tokio::sync::mpsc;
@@ -487,6 +501,63 @@ mod tests {
         assert_eq!(json.message, "Hello in JSON");
     }
 
+    #[tokio::test]
+    #[ignore]
+    async fn test_azure_integration() {
+        dotenv().ok();
+
+        // Test text response
+        let props = create_test_props(LlmModel::Azure(AzureModel::Gpt4oMini)).await;
+
+        let pool = create_shared_in_memory_pool().await.unwrap();
+        let prompt_repo = PromptRepository::in_memory(pool.clone()).await.unwrap();
+        let log_repo = LogRepository::in_memory(pool.clone()).await.unwrap();
+
+        // Seed your prompt.
+        prompt_repo.create_prompt(
+            "test_key",
+            "Test prompt content",
+            "Test prompt content",
+            1,
+            100,
+            0.5,
+            false
+        ).await.unwrap();
+
+        let llm = Llm::new(props, log_repo.clone());
+        let res = llm.text().await.unwrap();
+        assert!(res.content.contains("Hello"));
+
+        // Test JSON response
+        #[derive(serde::Deserialize)]
+        struct TestResponse {
+            #[serde(rename = "content")]
+            message: String,
+        }
+
+        let props = LlmProps {
+            model: LlmModel::Azure(AzureModel::Gpt4oMini),
+            temperature: 0.5,
+            max_tokens: 100,
+            json_mode: true,
+            messages: vec![
+                Message::System { 
+                    content: "Respond with JSON containing a 'content' field".to_string() 
+                },
+                Message::User { 
+                    content: "Return JSON with format: {\"content\": \"Hello in JSON\"}".to_string() 
+                },
+            ],
+            prompt_id: 1,
+            model_id: 1,
+        };
+
+        let llm = Llm::new(props, log_repo);
+        let res = llm.json().await.unwrap();
+        let json: TestResponse = serde_json::from_str(&res.content).unwrap();
+        assert_eq!(json.message, "Hello in JSON");
+    }
+
     async fn create_stream_test_props(model: LlmModel) -> LlmProps {
         LlmProps {
             model,
@@ -625,6 +696,42 @@ mod tests {
         dotenv().ok();
         let props =
             create_stream_test_props(LlmModel::Deepseek(DeepseekModel::DeepseekChat)).await;
+        let pool = create_shared_in_memory_pool().await.unwrap();
+        let prompt_repo = PromptRepository::in_memory(pool.clone()).await.unwrap();
+        let log_repo = LogRepository::in_memory(pool.clone()).await.unwrap();
+
+        // Seed your prompt.
+        prompt_repo.create_prompt(
+            "test_key",
+            "Test prompt content",
+            "Test prompt content",
+            1,
+            100,
+            0.5,
+            false
+        ).await.unwrap();
+
+        let llm = Llm::new(props, log_repo.clone());
+        let (tx, mut rx) = mpsc::channel(10);
+
+        llm.stream(tx).await.expect("Streaming failed");
+
+        let mut received_chunks = Vec::new();
+        while let Some(result) = rx.recv().await {
+            let chunk = result.expect("Failed to receive chunk");
+            received_chunks.push(chunk);
+        }
+
+        assert!(!received_chunks.is_empty());
+        let combined = received_chunks.join("");
+        assert!(combined.contains("Hello"));
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_azure_stream() {
+        dotenv().ok();
+        let props = create_stream_test_props(LlmModel::Azure(AzureModel::Gpt4oMini)).await;
         let pool = create_shared_in_memory_pool().await.unwrap();
         let prompt_repo = PromptRepository::in_memory(pool.clone()).await.unwrap();
         let log_repo = LogRepository::in_memory(pool.clone()).await.unwrap();
