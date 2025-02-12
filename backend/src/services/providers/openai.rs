@@ -106,26 +106,6 @@ impl From<OpenaiResponse> for LlmApiResponseProps {
     }
 }
 
-impl OpenAiResponseStreamChunk {
-    fn into_llm_api_response_props(
-        &self,
-        stream_content: String
-    ) -> LlmApiResponseProps {
-        let raw_response = serde_json::to_string(&self).unwrap_or_default();
-        let input_tokens = self.usage.as_ref().map(|u| u.prompt_tokens as i64);
-        let output_tokens = self.usage.as_ref().map(|u| u.completion_tokens as i64);
-
-        LlmApiResponseProps {
-            response_content: stream_content,
-            raw_response,
-            input_tokens,
-            output_tokens,
-            reasoning_tokens: None
-        }
-
-    }
-}
-
 impl<'a> LlmProvider for OpenaiProvider<'a> {
     fn build_request(&self) -> Result<(RequestBuilder, String), Error> {
         let client = reqwest::Client::new();
@@ -153,7 +133,9 @@ impl<'a> LlmProvider for OpenaiProvider<'a> {
     ) -> Result<LlmApiResponseProps, Error> {
         let result = tokio::spawn(async move {
             let mut stream_content = String::new();
-            let mut response_props: Option<LlmApiResponseProps> = None;
+            let mut output_tokens = 0;
+            let mut input_tokens = 0;
+            let mut chunks = vec![];
 
             while let Some(event_result) = event_source.next().await {
                 match event_result {
@@ -176,9 +158,10 @@ impl<'a> LlmProvider for OpenaiProvider<'a> {
                                         }
                                     }
 
-                                    if let Some(_) = &chunk.usage {
-                                        println!("this had usage");
-                                        response_props = Some(chunk.into_llm_api_response_props(stream_content.clone()));
+                                    if let Some(usage) = &chunk.usage {
+                                        output_tokens = usage.completion_tokens;
+                                        input_tokens = usage.prompt_tokens;
+                                        chunks.push(chunk); // only push last chunk
                                     }
                                 }
                                 Err(e) => {
@@ -196,10 +179,18 @@ impl<'a> LlmProvider for OpenaiProvider<'a> {
             }
             
             event_source.close();
-            return response_props;
-        })
-        .await?
-        .ok_or_else(|| Error::MissingUsage)?;
+
+            let raw_response = serde_json::to_string(&chunks)
+                .expect("Failed to serialize chunk to string");
+
+            return LlmApiResponseProps {
+                response_content: stream_content,
+                raw_response,
+                input_tokens: Some(input_tokens),
+                output_tokens: Some(output_tokens),
+                reasoning_tokens: None
+            };
+        }).await?;
 
         Ok(result)
     }

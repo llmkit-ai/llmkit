@@ -1,3 +1,5 @@
+use std::vec;
+
 use crate::services::{
     llm::{Error, LlmProvider}, 
     types::{llm_props::LlmProps, message::Message, parse_response::LlmApiResponseProps, stream::LlmStreamingError}
@@ -84,6 +86,7 @@ struct GeminiSafetyRating {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct GeminiResponseStreamChunk {
     candidates: Vec<GeminiResponseStreamCandidate>,
+    #[serde(rename = "usageMetadata")]
     usage_metadata: Option<GeminiResponseStreamUsage>
 }
 
@@ -104,8 +107,11 @@ struct GeminiResponseStreamPart {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct GeminiResponseStreamUsage {
+    #[serde(rename = "promptTokenCount")]
     prompt_token_count: i32,
-    candidates_token_count: i32,
+    #[serde(rename = "candidatesTokenCount")]
+    candidates_token_count: Option<i32>,
+    #[serde(rename = "totalTokenCount")]
     total_token_count: i32,
 }
 
@@ -181,7 +187,7 @@ impl<'a> LlmProvider for GeminiProvider<'a> {
             let mut stream_content = String::new();
             let mut output_tokens = 0;
             let mut input_tokens = 0;
-            let mut last_chunk = None;
+            let mut chunks = vec![];
 
             while let Some(event_result) = event_source.next().await {
                 match event_result {
@@ -201,11 +207,15 @@ impl<'a> LlmProvider for GeminiProvider<'a> {
                                     }
 
                                     if let Some(usage) = &chunk.usage_metadata {
-                                        input_tokens += usage.prompt_token_count;
-                                        output_tokens += usage.candidates_token_count;
+                                        // we only get the candidates_token_count on the last
+                                        // message. Otherwise it just returns a running total,
+                                        // so it's only worth capturing it at the end
+                                        if let Some(c_toks) = usage.candidates_token_count {
+                                            input_tokens += usage.prompt_token_count;
+                                            output_tokens += c_toks;
+                                            chunks.push(chunk); // only capturing the last chunk
+                                        }
                                     }
-
-                                    last_chunk = Some(chunk);
                                 }
                                 Err(e) => {
                                     let _ = tx.send(Err(LlmStreamingError::ParseError(e.to_string()))).await;
@@ -228,7 +238,7 @@ impl<'a> LlmProvider for GeminiProvider<'a> {
             let _ = tx.send(Ok("[DONE]".to_string())).await;
             event_source.close();
 
-            let raw_response = serde_json::to_string(&last_chunk)
+            let raw_response = serde_json::to_string(&chunks)
                 .expect("Failed to serialize chunk to string");
 
             return LlmApiResponseProps {

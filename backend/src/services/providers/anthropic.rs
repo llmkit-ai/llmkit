@@ -64,7 +64,14 @@ struct AnthropicResponseStreamChunk {
     event_type: String,
     delta: Option<AnthropicResponseStreamDelta>,
     content_block: Option<AnthropicResponseStreamContentBlock>,
-    usage: Option<AnthropicResponseStreamUsage>
+    usage: Option<AnthropicResponseStreamUsage>,
+    message: Option<AnthropicResponseStreamMessage>
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct AnthropicResponseStreamMessage {
+    id: String,
+    usage: AnthropicResponseStreamUsage
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -129,7 +136,7 @@ impl<'a> LlmProvider for AnthropicProvider<'a> {
             let mut stream_content = String::new();
             let mut output_tokens = 0;
             let mut input_tokens = 0;
-            let mut last_chunk = None;
+            let mut chunks = vec![];
 
             while let Some(event_result) = event_source.next().await {
                 match event_result {
@@ -139,42 +146,48 @@ impl<'a> LlmProvider for AnthropicProvider<'a> {
                                 Ok(chunk) => {
                                     match chunk.event_type.as_str() {
                                         "content_block_start" => {
-                                            if let Some(content_block) = chunk.content_block {
-                                                if let Some(text) = content_block.text {
+                                            if let Some(content_block) = &chunk.content_block {
+                                                if let Some(text) = &content_block.text {
                                                     stream_content += &text;
-                                                    if let Err(_) = tx.send(Ok(text)).await {
+                                                    if let Err(_) = tx.send(Ok(text.clone())).await {
                                                         break; // Receiver dropped
                                                     }
                                                 }
                                             }
                                         }
                                         "content_block_delta" => {
-                                            if let Some(delta) = chunk.delta {
-                                                if let Some(text) = delta.text {
+                                            if let Some(delta) = &chunk.delta {
+                                                if let Some(text) = &delta.text {
                                                     stream_content += &text;
-                                                    if let Err(_) = tx.send(Ok(text)).await {
+                                                    if let Err(_) = tx.send(Ok(text.clone())).await {
                                                         break;
                                                     }
                                                 }
                                             }
                                         }
-                                        "message_delta" | "message_start" => {
-                                            if let Some(usage) = chunk.usage {
-                                                if let Some(input) = usage.input_tokens {
-                                                    input_tokens += input
+                                        "message_start" => {
+                                            if let Some(message) = &chunk.message {
+                                                if let Some(input) = message.usage.input_tokens {
+                                                    input_tokens += input;
                                                 }
+                                            }
+                                            chunks.push(chunk); // captures start chunk
+                                        }
+                                        "message_delta" => {
+                                            if let Some(usage) = &chunk.usage {
                                                 if let Some(output) = usage.output_tokens {
                                                     output_tokens += output
                                                 }
                                             }
+                                            chunks.push(chunk); // captures end chunk
                                         }
                                         "message_stop" => {
                                             let _ = tx.send(Ok("[DONE]".to_string())).await;
-                                            last_chunk = Some(chunk);
                                             break;
                                         }
                                         _ => {} // Ignore other event types
                                     }
+
                                 }
                                 Err(e) => {
                                     let _ = tx.send(Err(LlmStreamingError::ParseError(e.to_string()))).await;
@@ -192,7 +205,7 @@ impl<'a> LlmProvider for AnthropicProvider<'a> {
             
             event_source.close();
 
-            let raw_response = serde_json::to_string(&last_chunk)
+            let raw_response = serde_json::to_string(&chunks)
                 .expect("Failed to serialize chunk to string");
 
             return LlmApiResponseProps {
