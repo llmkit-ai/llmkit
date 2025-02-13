@@ -239,7 +239,7 @@ impl Llm {
     ) -> Result<i64, Error> {
         self.db_log
             .create_log(
-                self.props.prompt_id,
+                Some(self.props.prompt_id),
                 self.props.model_id,
                 raw_response,
                 status,

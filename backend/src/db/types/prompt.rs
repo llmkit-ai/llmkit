@@ -26,6 +26,7 @@ pub struct PromptRowWithModel {
     pub temperature: f64,
     pub json_mode: bool,
     pub model_name: String,
+    pub provider_name: String,
     pub created_at: chrono::NaiveDateTime,
     pub updated_at: chrono::NaiveDateTime,
 }

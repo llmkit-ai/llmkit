@@ -1,24 +1,28 @@
 use serde::Serialize;
 
-use crate::{common::types::models::LlmModel, db::types::models::ModelRow};
-
+use crate::db::types::models::ModelProviderRow;
 
 #[derive(Debug, Serialize)]
 pub struct ModelResponse {
     pub id: i64,
-    pub model: String,
-    pub provider: String,
+    pub provider_id: i64,
+    pub name: String,
+    pub provider_name: String,
+    pub provider_base_url: String,
+    pub supports_json: bool,
+    pub supports_tools: bool,
 }
 
-
-impl From<ModelRow> for ModelResponse {
-    fn from(model: ModelRow) -> Self {
-        let model_name: LlmModel = model.model_name.into();
-
-        ModelResponse {
-            id: model.id,
-            model: model_name.clone().into(),
-            provider: model_name.provider()
+impl From<ModelProviderRow> for ModelResponse {
+    fn from(row: ModelProviderRow) -> Self {
+        Self {
+            id: row.id,
+            provider_id: row.provider_id,
+            name: row.model_name,
+            provider_name: row.provider_name,
+            provider_base_url: row.provider_base_url,
+            supports_json: row.supports_json,
+            supports_tools: row.supports_tools,
         }
     }
 }

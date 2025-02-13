@@ -1,24 +1,35 @@
--- Create models table
 PRAGMA foreign_keys = ON;
+
+CREATE TABLE provider (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    base_url TEXT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 
 CREATE TABLE model (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    model_name TEXT NOT NULL,        -- Model identifier (e.g., 'gpt-4', 'claude-2')
-    UNIQUE(model_name)     -- Prevent duplicate model entries
+    provider_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    supports_json BOOLEAN NOT NULL DEFAULT 0,
+    supports_tools BOOLEAN NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(provider_id) REFERENCES provider(id),
+    UNIQUE(provider_id, name)
 );
+
 
 CREATE TABLE prompt (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     key TEXT NOT NULL UNIQUE,
-    system TEXT NOT NULL,       
-    user TEXT NOT NULL,       
+    system TEXT NOT NULL,
+    user TEXT NOT NULL,
     model_id INTEGER NOT NULL,
     max_tokens INTEGER NOT NULL DEFAULT 256,
     temperature REAL NOT NULL DEFAULT 0.7,
     json_mode BOOLEAN NOT NULL DEFAULT FALSE,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
     FOREIGN KEY (model_id) REFERENCES model(id)
 );
 
@@ -37,9 +48,7 @@ CREATE TABLE log (
     FOREIGN KEY(model_id) REFERENCES model(id)
 );
 
-
--- Indexes remain similar but reference new FKs
 CREATE INDEX idx_traces_prompt ON log(prompt_id);
-CREATE INDEX idx_traces_model ON log(model_id);  -- New index for model queries
+CREATE INDEX idx_traces_model ON log(model_id);
 CREATE INDEX idx_traces_created ON log(created_at);
 CREATE INDEX idx_traces_status ON log(status_code);

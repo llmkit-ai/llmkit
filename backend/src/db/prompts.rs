@@ -69,11 +69,13 @@ impl PromptRepository {
                 p.max_tokens,
                 p.temperature,
                 p.json_mode,
-                m.model_name,
+                m.name as model_name,
+                pr.name as provider_name,
                 p.created_at, 
                 p.updated_at
             FROM prompt p
             JOIN model m ON p.model_id = m.id
+            JOIN provider pr ON m.provider_id = pr.id
             WHERE p.id = ?
             "#,
             id
@@ -96,12 +98,14 @@ impl PromptRepository {
                 p.max_tokens,
                 p.temperature,
                 p.json_mode,
-                m.model_name,
+                m.name as model_name,
+                pr.name as provider_name,
                 p.created_at, 
                 p.updated_at
             FROM prompt p
             JOIN model m ON p.model_id = m.id
-            ORDER BY p.created_at
+            JOIN provider pr ON m.provider_id = pr.id
+            ORDER BY p.created_at DESC
             "#
         )
         .fetch_all(&self.pool)
@@ -164,3 +168,4 @@ impl PromptRepository {
         Ok(rows_affected > 0)
     }
 }
+

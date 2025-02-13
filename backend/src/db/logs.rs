@@ -1,5 +1,4 @@
 use anyhow::Result;
-
 use crate::db::types::log::{LogRow, LogRowModel};
 
 #[derive(Clone, Debug)]
@@ -19,7 +18,7 @@ impl LogRepository {
 
     pub async fn create_log(
         &self,
-        prompt_id: i64,
+        prompt_id: Option<i64>,
         model_id: i64,
         response_data: Option<&str>,
         status_code: Option<i64>,
@@ -39,9 +38,9 @@ impl LogRepository {
                 input_tokens,
                 output_tokens,
                 reasoning_tokens,
-                created_at,
-                request_body
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
+                request_body,
+                created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             "#,
             prompt_id,
             model_id,
@@ -58,8 +57,6 @@ impl LogRepository {
         Ok(id)
     }
 
-
-    // Update trace with response data
     pub async fn update_log_response(
         &self,
         id: i64,
@@ -90,16 +87,16 @@ impl LogRepository {
         Ok(rows_affected > 0)
     }
 
-    // Get a single trace by ID
     pub async fn get_log_by_id(&self, id: i64) -> Result<Option<LogRowModel>> {
-        let trace = sqlx::query_as!(
+        let log = sqlx::query_as!(
             LogRowModel,
             r#"
             SELECT 
                 l.id,
                 l.prompt_id,
                 l.model_id,
-                m.model_name,
+                m.name as model_name,
+                p.name as provider_name,
                 l.response_data,
                 l.status_code,
                 l.input_tokens,
@@ -108,51 +105,53 @@ impl LogRepository {
                 l.created_at,
                 l.request_body
             FROM log l
-            INNER JOIN model m on m.id = l.model_id
+            JOIN model m ON m.id = l.model_id
+            JOIN provider p ON m.provider_id = p.id
             WHERE l.id = ?
             "#,
             id
         )
         .fetch_optional(&self.pool)
         .await?;
-        Ok(trace)
+        Ok(log)
     }
 
-    // List all traces ordered by creation time
     pub async fn list_logs(&self, page: i64, page_size: i64) -> Result<Vec<LogRowModel>> {
         let offset = (page - 1) * page_size;
 
-        let traces = sqlx::query_as!(
+        let logs = sqlx::query_as!(
             LogRowModel,
             r#"
-            SELECT 
-                l.id,
-                l.prompt_id,
-                l.model_id,
-                m.model_name,
-                l.response_data,
-                l.status_code,
-                l.input_tokens,
-                l.output_tokens,
-                l.reasoning_tokens,
-                l.created_at,
-                l.request_body
-            FROM log l
-            INNER JOIN model m on m.id = l.model_id
-            ORDER BY created_at DESC
-            LIMIT ? OFFSET ?
+                SELECT 
+                    l.id,
+                    l.prompt_id,
+                    l.model_id,
+                    m.name as model_name,
+                    p.name as provider_name,
+                    l.response_data,
+                    l.status_code,
+                    l.input_tokens,
+                    l.output_tokens,
+                    l.reasoning_tokens,
+                    l.created_at,
+                    l.request_body
+                FROM log l
+                INNER JOIN model m ON m.id = l.model_id
+                INNER JOIN provider p ON m.provider_id = p.id
+                ORDER BY l.created_at DESC
+                LIMIT ? OFFSET ?
             "#,
             page_size,
             offset
         )
         .fetch_all(&self.pool)
         .await?;
-        Ok(traces)
+
+        Ok(logs)
     }
 
-    // List traces by prompt ID
     pub async fn list_logs_by_prompt(&self, prompt_id: i64) -> Result<Vec<LogRow>> {
-        let traces = sqlx::query_as!(
+        let logs = sqlx::query_as!(
             LogRow,
             r#"
             SELECT 
@@ -174,7 +173,7 @@ impl LogRepository {
         )
         .fetch_all(&self.pool)
         .await?;
-        Ok(traces)
+        Ok(logs)
     }
 
     pub async fn get_logs_count(&self) -> Result<i64> {

@@ -1,6 +1,5 @@
 use sqlx::prelude::FromRow;
 
-
 #[derive(Debug, Clone, FromRow)]
 pub struct LogRow {
     pub id: i64,
@@ -21,6 +20,7 @@ pub struct LogRowModel {
     pub prompt_id: Option<i64>,
     pub model_id: i64,
     pub model_name: String,
+    pub provider_name: String,
     pub status_code: Option<i64>,
     pub input_tokens: Option<i64>,
     pub output_tokens: Option<i64>,
@@ -29,4 +29,3 @@ pub struct LogRowModel {
     pub request_body: Option<String>,
     pub created_at: Option<chrono::NaiveDateTime>,
 }
-
