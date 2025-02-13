@@ -8,7 +8,7 @@ use tokio_retry::{strategy::{jitter, ExponentialBackoff}, Retry};
 use tracing;
 
 
-use crate::{common::types::models::LlmModel, db::logs::LogRepository, services::types::parse_response::LlmApiRequestProps};
+use crate::{common::types::models::LlmApiProvider, db::logs::LogRepository, services::types::parse_response::LlmApiRequestProps};
 use super::{
     providers::{
         anthropic::AnthropicProvider, azure::AzureProvider, deepseek::DeepseekProvider, gemini::GeminiProvider, openai::OpenaiProvider
@@ -125,12 +125,12 @@ impl Llm {
         let deepseek_provider = DeepseekProvider::new(&self.props, false);
         let azure_provider = AzureProvider::new(&self.props, false);
 
-        let (request_builder, body) = match &self.props.model {
-            LlmModel::OpenAi(_) => openai_provider.build_request(),
-            LlmModel::Anthropic(_) => anthropic_provider.build_request(),
-            LlmModel::Gemini(_) => gemini_provider.build_request(),
-            LlmModel::Deepseek(_) => deepseek_provider.build_request(),
-            LlmModel::Azure(_) => azure_provider.build_request()
+        let (request_builder, body) = match &self.props.provider {
+            LlmApiProvider::OpenAi => openai_provider.build_request(),
+            LlmApiProvider::Anthropic => anthropic_provider.build_request(),
+            LlmApiProvider::Gemini => gemini_provider.build_request(),
+            LlmApiProvider::Deepseek => deepseek_provider.build_request(),
+            LlmApiProvider::Azure => azure_provider.build_request()
         }?;
 
         // Convert RequestBuilder to Request to capture details
@@ -166,12 +166,12 @@ impl Llm {
             return Err(Error::Http(status));
         }
 
-        let parsed_response = match &self.props.model {
-            LlmModel::OpenAi(_) => OpenaiProvider::parse_response(&text)?,
-            LlmModel::Anthropic(_) => AnthropicProvider::parse_response(&text)?,
-            LlmModel::Gemini(_) => GeminiProvider::parse_response(&text)?,
-            LlmModel::Deepseek(_) => DeepseekProvider::parse_response(&text)?,
-            LlmModel::Azure(_) => AzureProvider::parse_response(&text)?
+        let parsed_response = match &self.props.provider {
+            LlmApiProvider::OpenAi => OpenaiProvider::parse_response(&text)?,
+            LlmApiProvider::Anthropic => AnthropicProvider::parse_response(&text)?,
+            LlmApiProvider::Gemini => GeminiProvider::parse_response(&text)?,
+            LlmApiProvider::Deepseek => DeepseekProvider::parse_response(&text)?,
+            LlmApiProvider::Azure => AzureProvider::parse_response(&text)?
         };
 
         let log_id = self.log_request(
@@ -196,22 +196,22 @@ impl Llm {
         let deepseek_provider = DeepseekProvider::new(&self.props, true);
         let azure_provider = AzureProvider::new(&self.props, true);
 
-        let (request, body) = match &self.props.model {
-            LlmModel::OpenAi(_) => openai_provider.build_request(),
-            LlmModel::Anthropic(_) => anthropic_provider.build_request(),
-            LlmModel::Gemini(_) => gemini_provider.build_request(),
-            LlmModel::Deepseek(_) => deepseek_provider.build_request(),
-            LlmModel::Azure(_) => azure_provider.build_request(),
+        let (request, body) = match &self.props.provider {
+            LlmApiProvider::OpenAi => openai_provider.build_request(),
+            LlmApiProvider::Anthropic => anthropic_provider.build_request(),
+            LlmApiProvider::Gemini => gemini_provider.build_request(),
+            LlmApiProvider::Deepseek => deepseek_provider.build_request(),
+            LlmApiProvider::Azure => azure_provider.build_request(),
         }?;
 
         let event_source = request.eventsource()?;
 
-        let response = match &self.props.model {
-            LlmModel::OpenAi(_) => OpenaiProvider::stream_eventsource(event_source, tx).await?,
-            LlmModel::Anthropic(_) => AnthropicProvider::stream_eventsource(event_source, tx).await?,
-            LlmModel::Gemini(_) => GeminiProvider::stream_eventsource(event_source, tx).await?,
-            LlmModel::Deepseek(_) => DeepseekProvider::stream_eventsource(event_source, tx).await?,
-            LlmModel::Azure(_) => AzureProvider::stream_eventsource(event_source, tx).await?,
+        let response = match &self.props.provider {
+            LlmApiProvider::OpenAi => OpenaiProvider::stream_eventsource(event_source, tx).await?,
+            LlmApiProvider::Anthropic => AnthropicProvider::stream_eventsource(event_source, tx).await?,
+            LlmApiProvider::Gemini => GeminiProvider::stream_eventsource(event_source, tx).await?,
+            LlmApiProvider::Deepseek => DeepseekProvider::stream_eventsource(event_source, tx).await?,
+            LlmApiProvider::Azure => AzureProvider::stream_eventsource(event_source, tx).await?,
         };
 
         let log_id = self.log_request(
@@ -257,15 +257,18 @@ impl Llm {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{common::types::models::{
-        AnthropicModel, AzureModel, DeepseekModel, GeminiModel, LlmModel, OpenAiModel
-    }, db::prompts::PromptRepository, services::types::message::Message};
+    use crate::{
+        common::types::models::LlmApiProvider,
+        db::prompts::PromptRepository,
+        services::types::message::Message,
+    };
     use dotenv::dotenv;
     use tokio::sync::mpsc;
 
-    async fn create_test_props(model: LlmModel) -> LlmProps {
+    async fn create_test_props(provider: LlmApiProvider, model_name: String) -> LlmProps {
         LlmProps {
-            model,
+            provider,
+            model_name,
             temperature: 0.5,
             max_tokens: 100,
             json_mode: false,
@@ -296,27 +299,36 @@ mod tests {
         let log_repo = LogRepository::in_memory(pool.clone()).await.unwrap();
 
         // Seed your prompt.
-        let prompt_id = prompt_repo.create_prompt(
-            "test_key",
-            "Test prompt content",
-            "Test prompt content",
-            1,
-            100,
-            0.5,
-            false
-        ).await.unwrap();
+        let prompt_id = prompt_repo
+            .create_prompt(
+                "test_key",
+                "Test prompt content",
+                "Test prompt content",
+                1,
+                100,
+                0.5,
+                false,
+            )
+            .await
+            .unwrap();
 
         // Create the properties for your LLM request, using the prompt_id from the repository.
         let props = LlmProps {
-            model: LlmModel::OpenAi(OpenAiModel::Gpt4oMini202407),
+            provider: LlmApiProvider::OpenAi,
+            model_name: "gpt-4o-mini-2024-07-18".to_string(),
             temperature: 0.5,
             max_tokens: 100,
             json_mode: true,
             messages: vec![
-                Message::System { content: "You must respond with valid JSON only".to_string() },
-                Message::User { content: "Return a JSON object with a 'message' field containing 'Hello in JSON'".to_string() },
+                Message::System {
+                    content: "You must respond with valid JSON only".to_string(),
+                },
+                Message::User {
+                    content: "Return a JSON object with a 'message' field containing 'Hello in JSON'"
+                        .to_string(),
+                },
             ],
-            prompt_id,  // Use the seeded prompt_id here.
+            prompt_id, // Use the seeded prompt_id here.
             model_id: 1,
         };
 
@@ -331,25 +343,29 @@ mod tests {
         struct TestResponse {
             message: String,
         }
-        
+
         let response = llm.json().await.unwrap();
         let json: TestResponse = serde_json::from_str(&response.content).unwrap();
         assert_eq!(json.message, "Hello in JSON");
     }
-
 
     #[tokio::test]
     #[ignore]
     async fn test_anthropic_integration() {
         dotenv().ok();
         let props = LlmProps {
-            model: LlmModel::Anthropic(AnthropicModel::Claude35Haiku20241022),
+            provider: LlmApiProvider::Anthropic,
+            model_name: "claude-3.5-haiku-20241022".to_string(),
             temperature: 0.5,
             max_tokens: 100,
             json_mode: false,
             messages: vec![
-                Message::System { content: "You are a friendly assistance".to_string() },
-                Message::User { content: "You return a message saying 'Hello'".to_string() },
+                Message::System {
+                    content: "You are a friendly assistance".to_string(),
+                },
+                Message::User {
+                    content: "You return a message saying 'Hello'".to_string(),
+                },
             ],
             prompt_id: 1,
             model_id: 1,
@@ -360,15 +376,18 @@ mod tests {
         let log_repo = LogRepository::in_memory(pool.clone()).await.unwrap();
 
         // Seed your prompt.
-        prompt_repo.create_prompt(
-            "test_key",
-            "Test prompt content",
-            "Test prompt content",
-            1,
-            100,
-            0.5,
-            false
-        ).await.unwrap();
+        prompt_repo
+            .create_prompt(
+                "test_key",
+                "Test prompt content",
+                "Test prompt content",
+                1,
+                100,
+                0.5,
+                false,
+            )
+            .await
+            .unwrap();
 
         let llm = Llm::new(props, log_repo);
 
@@ -384,13 +403,18 @@ mod tests {
 
         // Test text response
         let props = LlmProps {
-            model: LlmModel::Anthropic(AnthropicModel::Claude35Haiku20241022),
+            provider: LlmApiProvider::Gemini,
+            model_name: "gemini-1.5-flash".to_string(),
             temperature: 0.5,
             max_tokens: 100,
             json_mode: false,
             messages: vec![
-                Message::System { content: "You are a friendly assistance".to_string() },
-                Message::User { content: "You return a message saying 'Hello'".to_string() },
+                Message::System {
+                    content: "You are a friendly assistance".to_string(),
+                },
+                Message::User {
+                    content: "You return a message saying 'Hello'".to_string(),
+                },
             ],
             prompt_id: 1,
             model_id: 1,
@@ -401,15 +425,18 @@ mod tests {
         let log_repo = LogRepository::in_memory(pool.clone()).await.unwrap();
 
         // Seed your prompt.
-        prompt_repo.create_prompt(
-            "test_key",
-            "Test prompt content",
-            "Test prompt content",
-            1,
-            100,
-            0.5,
-            false
-        ).await.unwrap();
+        prompt_repo
+            .create_prompt(
+                "test_key",
+                "Test prompt content",
+                "Test prompt content",
+                1,
+                100,
+                0.5,
+                false,
+            )
+            .await
+            .unwrap();
 
         let llm = Llm::new(props, log_repo.clone());
         let res = llm.text().await.unwrap();
@@ -422,16 +449,18 @@ mod tests {
         }
 
         let props = LlmProps {
-            model: LlmModel::Gemini(GeminiModel::Gemini15Flash),
+            provider: LlmApiProvider::Gemini,
+            model_name: "gemini-1.5-flash".to_string(),
             temperature: 0.5,
             max_tokens: 100,
             json_mode: true,
             messages: vec![
-                Message::System { 
-                    content: "You must respond with valid JSON only".to_string() 
+                Message::System {
+                    content: "You must respond with valid JSON only".to_string(),
                 },
-                Message::User { 
-                    content: "Return a JSON object with a 'message' field containing 'Hello in JSON'".to_string() 
+                Message::User {
+                    content: "Return a JSON object with a 'message' field containing 'Hello in JSON'"
+                        .to_string(),
                 },
             ],
             prompt_id: 1,
@@ -450,22 +479,29 @@ mod tests {
         dotenv().ok();
 
         // Test text response
-        let props = create_test_props(LlmModel::Deepseek(DeepseekModel::DeepseekChat)).await;
+        let props = create_test_props(
+            LlmApiProvider::Deepseek,
+            "deepseek-chat".to_string(),
+        )
+        .await;
 
         let pool = create_shared_in_memory_pool().await.unwrap();
         let prompt_repo = PromptRepository::in_memory(pool.clone()).await.unwrap();
         let log_repo = LogRepository::in_memory(pool.clone()).await.unwrap();
 
         // Seed your prompt.
-        prompt_repo.create_prompt(
-            "test_key",
-            "Test prompt content",
-            "Test prompt content",
-            1,
-            100,
-            0.5,
-            false
-        ).await.unwrap();
+        prompt_repo
+            .create_prompt(
+                "test_key",
+                "Test prompt content",
+                "Test prompt content",
+                1,
+                100,
+                0.5,
+                false,
+            )
+            .await
+            .unwrap();
 
         let llm = Llm::new(props, log_repo.clone());
         let res = llm.text().await.unwrap();
@@ -479,16 +515,17 @@ mod tests {
         }
 
         let props = LlmProps {
-            model: LlmModel::Deepseek(DeepseekModel::DeepseekChat),
+            provider: LlmApiProvider::Deepseek,
+            model_name: "deepseek-chat".to_string(),
             temperature: 0.5,
             max_tokens: 100,
             json_mode: true,
             messages: vec![
-                Message::System { 
-                    content: "Respond with JSON containing a 'content' field".to_string() 
+                Message::System {
+                    content: "Respond with JSON containing a 'content' field".to_string(),
                 },
-                Message::User { 
-                    content: "Return JSON with format: {\"content\": \"Hello in JSON\"}".to_string() 
+                Message::User {
+                    content: "Return JSON with format: {\"content\": \"Hello in JSON\"}".to_string(),
                 },
             ],
             prompt_id: 1,
@@ -507,22 +544,29 @@ mod tests {
         dotenv().ok();
 
         // Test text response
-        let props = create_test_props(LlmModel::Azure(AzureModel::Gpt4oMini)).await;
+        let props = create_test_props(
+            LlmApiProvider::Azure,
+            "gpt-4o-mini".to_string(),
+        )
+        .await;
 
         let pool = create_shared_in_memory_pool().await.unwrap();
         let prompt_repo = PromptRepository::in_memory(pool.clone()).await.unwrap();
         let log_repo = LogRepository::in_memory(pool.clone()).await.unwrap();
 
         // Seed your prompt.
-        prompt_repo.create_prompt(
-            "test_key",
-            "Test prompt content",
-            "Test prompt content",
-            1,
-            100,
-            0.5,
-            false
-        ).await.unwrap();
+        prompt_repo
+            .create_prompt(
+                "test_key",
+                "Test prompt content",
+                "Test prompt content",
+                1,
+                100,
+                0.5,
+                false,
+            )
+            .await
+            .unwrap();
 
         let llm = Llm::new(props, log_repo.clone());
         let res = llm.text().await.unwrap();
@@ -536,16 +580,17 @@ mod tests {
         }
 
         let props = LlmProps {
-            model: LlmModel::Azure(AzureModel::Gpt4oMini),
+            provider: LlmApiProvider::Azure,
+            model_name: "gpt-4o-mini".to_string(),
             temperature: 0.5,
             max_tokens: 100,
             json_mode: true,
             messages: vec![
-                Message::System { 
-                    content: "Respond with JSON containing a 'content' field".to_string() 
+                Message::System {
+                    content: "Respond with JSON containing a 'content' field".to_string(),
                 },
-                Message::User { 
-                    content: "Return JSON with format: {\"content\": \"Hello in JSON\"}".to_string() 
+                Message::User {
+                    content: "Return JSON with format: {\"content\": \"Hello in JSON\"}".to_string(),
                 },
             ],
             prompt_id: 1,
@@ -558,9 +603,10 @@ mod tests {
         assert_eq!(json.message, "Hello in JSON");
     }
 
-    async fn create_stream_test_props(model: LlmModel) -> LlmProps {
+    async fn create_stream_test_props(provider: LlmApiProvider, model_name: String) -> LlmProps {
         LlmProps {
-            model,
+            provider,
+            model_name,
             temperature: 0.5,
             max_tokens: 100,
             json_mode: false,
@@ -581,21 +627,17 @@ mod tests {
     #[ignore]
     async fn test_openai_stream() {
         dotenv().ok();
-        let props = create_stream_test_props(LlmModel::OpenAi(OpenAiModel::Gpt4oMini202407)).await;
+        let props = create_stream_test_props(
+            LlmApiProvider::OpenAi,
+            "gpt-4o-mini-2024-07".to_string(),
+        ).await;
+
         let pool = create_shared_in_memory_pool().await.unwrap();
         let prompt_repo = PromptRepository::in_memory(pool.clone()).await.unwrap();
         let log_repo = LogRepository::in_memory(pool.clone()).await.unwrap();
 
         // Seed your prompt.
-        prompt_repo.create_prompt(
-            "test_key",
-            "Test prompt content",
-            "Test prompt content",
-            1,
-            100,
-            0.5,
-            false
-        ).await.unwrap();
+        prompt_repo.create_prompt("", "", "", 1, 100, 0.5, false ).await.unwrap();
 
         let llm = Llm::new(props, log_repo.clone());
         let (tx, mut rx) = mpsc::channel(10);
@@ -617,24 +659,29 @@ mod tests {
     #[ignore]
     async fn test_anthropic_stream() {
         dotenv().ok();
-        let props =
-            create_stream_test_props(LlmModel::Anthropic(AnthropicModel::Claude35Haiku20241022))
-                .await;
+        let props = create_stream_test_props(
+            LlmApiProvider::Anthropic,
+            "claude-3.5-haiku-latest".to_string(),
+        )
+        .await;
 
         let pool = create_shared_in_memory_pool().await.unwrap();
         let prompt_repo = PromptRepository::in_memory(pool.clone()).await.unwrap();
         let log_repo = LogRepository::in_memory(pool.clone()).await.unwrap();
 
         // Seed your prompt.
-        prompt_repo.create_prompt(
-            "test_key",
-            "Test prompt content",
-            "Test prompt content",
-            1,
-            100,
-            0.5,
-            false
-        ).await.unwrap();
+        prompt_repo
+            .create_prompt(
+                "test_key",
+                "Test prompt content",
+                "Test prompt content",
+                1,
+                100,
+                0.5,
+                false,
+            )
+            .await
+            .unwrap();
 
         let llm = Llm::new(props, log_repo.clone());
         let (tx, mut rx) = mpsc::channel(10);
@@ -656,23 +703,29 @@ mod tests {
     #[ignore]
     async fn test_gemini_stream() {
         dotenv().ok();
-        let props =
-            create_stream_test_props(LlmModel::Gemini(GeminiModel::Gemini15Flash)).await;
+        let props = create_stream_test_props(
+            LlmApiProvider::Gemini,
+            "gemini-1.5-flash".to_string(),
+        )
+        .await;
 
         let pool = create_shared_in_memory_pool().await.unwrap();
         let prompt_repo = PromptRepository::in_memory(pool.clone()).await.unwrap();
         let log_repo = LogRepository::in_memory(pool.clone()).await.unwrap();
 
         // Seed your prompt.
-        prompt_repo.create_prompt(
-            "test_key",
-            "Test prompt content",
-            "Test prompt content",
-            1,
-            100,
-            0.5,
-            false
-        ).await.unwrap();
+        prompt_repo
+            .create_prompt(
+                "test_key",
+                "Test prompt content",
+                "Test prompt content",
+                1,
+                100,
+                0.5,
+                false,
+            )
+            .await
+            .unwrap();
 
         let llm = Llm::new(props, log_repo.clone());
 
@@ -694,22 +747,28 @@ mod tests {
     #[ignore]
     async fn test_deepseek_stream() {
         dotenv().ok();
-        let props =
-            create_stream_test_props(LlmModel::Deepseek(DeepseekModel::DeepseekChat)).await;
+        let props = create_stream_test_props(
+            LlmApiProvider::Deepseek,
+            "deepseek-chat".to_string(),
+        )
+        .await;
         let pool = create_shared_in_memory_pool().await.unwrap();
         let prompt_repo = PromptRepository::in_memory(pool.clone()).await.unwrap();
         let log_repo = LogRepository::in_memory(pool.clone()).await.unwrap();
 
         // Seed your prompt.
-        prompt_repo.create_prompt(
-            "test_key",
-            "Test prompt content",
-            "Test prompt content",
-            1,
-            100,
-            0.5,
-            false
-        ).await.unwrap();
+        prompt_repo
+            .create_prompt(
+                "test_key",
+                "Test prompt content",
+                "Test prompt content",
+                1,
+                100,
+                0.5,
+                false,
+            )
+            .await
+            .unwrap();
 
         let llm = Llm::new(props, log_repo.clone());
         let (tx, mut rx) = mpsc::channel(10);
@@ -731,21 +790,28 @@ mod tests {
     #[ignore]
     async fn test_azure_stream() {
         dotenv().ok();
-        let props = create_stream_test_props(LlmModel::Azure(AzureModel::Gpt4oMini)).await;
+        let props = create_stream_test_props(
+            LlmApiProvider::Azure,
+            "gpt-4o-mini".to_string(),
+        )
+        .await;
         let pool = create_shared_in_memory_pool().await.unwrap();
         let prompt_repo = PromptRepository::in_memory(pool.clone()).await.unwrap();
         let log_repo = LogRepository::in_memory(pool.clone()).await.unwrap();
 
         // Seed your prompt.
-        prompt_repo.create_prompt(
-            "test_key",
-            "Test prompt content",
-            "Test prompt content",
-            1,
-            100,
-            0.5,
-            false
-        ).await.unwrap();
+        prompt_repo
+            .create_prompt(
+                "test_key",
+                "Test prompt content",
+                "Test prompt content",
+                1,
+                100,
+                0.5,
+                false,
+            )
+            .await
+            .unwrap();
 
         let llm = Llm::new(props, log_repo.clone());
         let (tx, mut rx) = mpsc::channel(10);
@@ -763,9 +829,10 @@ mod tests {
         assert!(combined.contains("Hello"));
     }
 
-    async fn create_multi_turn_test_props(model: LlmModel) -> LlmProps {
+    async fn create_multi_turn_test_props(model: LlmApiProvider, model_name: String) -> LlmProps {
         LlmProps {
-            model,
+            provider: model,
+            model_name,
             temperature: 0.5,
             max_tokens: 100,
             json_mode: false,
@@ -792,37 +859,56 @@ mod tests {
     #[ignore]
     async fn test_multi_turn_conversation() {
         dotenv().ok();
-        
+
         // Test each model implementation
         let models = vec![
-            LlmModel::OpenAi(OpenAiModel::Gpt4oMini202407),
-            LlmModel::Anthropic(AnthropicModel::Claude35Haiku20241022),
-            LlmModel::Gemini(GeminiModel::Gemini15Flash),
-            LlmModel::Deepseek(DeepseekModel::DeepseekChat),
+            (
+                LlmApiProvider::OpenAi,
+                "gpt-4o-mini-2024-07".to_string(),
+            ),
+            (
+                LlmApiProvider::Anthropic,
+                "claude-3.5-haiku-20241022".to_string(),
+            ),
+            (
+                LlmApiProvider::Gemini,
+                "gemini-1.5-flash".to_string(),
+            ),
+            (
+                LlmApiProvider::Deepseek,
+                "deepseek-chat".to_string(),
+            ),
         ];
 
-        for model in models {
-            let props = create_multi_turn_test_props(model.clone()).await;
+        for (model, model_name) in models {
+            let props = create_multi_turn_test_props(model.clone(), model_name).await;
             let pool = create_shared_in_memory_pool().await.unwrap();
             let prompt_repo = PromptRepository::in_memory(pool.clone()).await.unwrap();
             let log_repo = LogRepository::in_memory(pool.clone()).await.unwrap();
 
             // Seed your prompt.
-            prompt_repo.create_prompt(
-                "test_key",
-                "Test prompt content",
-                "Test prompt content",
-                1,
-                100,
-                0.5,
-                false
-            ).await.unwrap();
+            prompt_repo
+                .create_prompt(
+                    "test_key",
+                    "Test prompt content",
+                    "Test prompt content",
+                    1,
+                    100,
+                    0.5,
+                    false,
+                )
+                .await
+                .unwrap();
 
             let llm = Llm::new(props, log_repo.clone());
 
             // The response should continue the conversation naturally
             let response = llm.text().await.unwrap();
-            assert!(response.content.contains("7"), "Response should solve x + 5 = 7 for model {:?}", model);
+            assert!(
+                response.content.contains("7"),
+                "Response should solve x + 5 = 7 for model {:?}",
+                model
+            );
         }
     }
 
@@ -830,30 +916,45 @@ mod tests {
     #[ignore]
     async fn test_multi_turn_stream() {
         dotenv().ok();
-        
+
         let models = vec![
-            LlmModel::OpenAi(OpenAiModel::Gpt4oMini202407),
-            LlmModel::Anthropic(AnthropicModel::Claude35Haiku20241022),
-            LlmModel::Gemini(GeminiModel::Gemini15Flash),
-            LlmModel::Deepseek(DeepseekModel::DeepseekChat),
+            (
+                LlmApiProvider::OpenAi,
+                "gpt-4o-mini-2024-07".to_string(),
+            ),
+            (
+                LlmApiProvider::Anthropic,
+                "claude-3.5-haiku-20241022".to_string(),
+            ),
+            (
+                LlmApiProvider::Gemini,
+                "gemini-1.5-flash".to_string(),
+            ),
+            (
+                LlmApiProvider::Deepseek,
+                "deepseek-chat".to_string(),
+            ),
         ];
 
-        for model in models {
-            let props = create_multi_turn_test_props(model.clone()).await;
+        for (model, model_name) in models {
+            let props = create_multi_turn_test_props(model.clone(), model_name).await;
             let pool = create_shared_in_memory_pool().await.unwrap();
             let prompt_repo = PromptRepository::in_memory(pool.clone()).await.unwrap();
             let log_repo = LogRepository::in_memory(pool.clone()).await.unwrap();
 
             // Seed your prompt.
-            prompt_repo.create_prompt(
-                "test_key",
-                "Test prompt content",
-                "Test prompt content",
-                1,
-                100,
-                0.5,
-                false
-            ).await.unwrap();
+            prompt_repo
+                .create_prompt(
+                    "test_key",
+                    "Test prompt content",
+                    "Test prompt content",
+                    1,
+                    100,
+                    0.5,
+                    false,
+                )
+                .await
+                .unwrap();
 
             let llm = Llm::new(props, log_repo.clone());
             let (tx, mut rx) = mpsc::channel(10);
@@ -866,11 +967,18 @@ mod tests {
                 received_chunks.push(chunk);
             }
 
-            assert!(!received_chunks.is_empty(), "Should receive chunks for model {:?}", model);
+            assert!(
+                !received_chunks.is_empty(),
+                "Should receive chunks for model {:?}",
+                model
+            );
             let combined = received_chunks.join("");
-            assert!(combined.contains("7"), 
-                "Streamed response should solve x + 5 = 7 for model {:?}", model);
+            assert!(
+                combined.contains("7"),
+                "Streamed response should solve x + 5 = 7 for model {:?}",
+                model
+            );
         }
     }
-
 }
+

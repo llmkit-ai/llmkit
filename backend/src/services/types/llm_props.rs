@@ -2,7 +2,7 @@ use serde::Serialize;
 use tera::{Context, Tera};
 
 use crate::{
-    common::types::models::LlmModel, 
+    common::types::models::LlmApiProvider, 
     db::types::prompt::PromptWithModel
 };
 
@@ -19,7 +19,8 @@ pub enum LlmPropsError {
 
 #[derive(Serialize)]
 pub struct LlmProps {
-    pub model: LlmModel,
+    pub provider: LlmApiProvider,
+    pub model_name: String,
     pub max_tokens: i64,
     pub temperature: f64,
     pub json_mode: bool,
@@ -47,10 +48,10 @@ impl LlmProps {
             .map_err(|e| LlmPropsError::TeraRenderError(e))?;
 
         let messages = vec![ Message::System { content: rendered_system_prompt }, Message::User { content: rendered_user_prompt } ];
-        let model_name: LlmModel = prompt.model_name.into();
 
         Ok(LlmProps {
-            model: model_name,
+            provider: prompt.provider,
+            model_name: prompt.model_name,
             max_tokens: prompt.max_tokens,
             temperature: prompt.temperature,
             json_mode: prompt.json_mode,

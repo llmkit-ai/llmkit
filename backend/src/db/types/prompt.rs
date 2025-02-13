@@ -1,5 +1,5 @@
 use sqlx::FromRow;
-use crate::common::types::models::LlmModel;
+use crate::common::types::models::LlmApiProvider;
 
 #[derive(Debug, Clone, FromRow)]
 pub struct PromptRow {
@@ -43,13 +43,12 @@ pub struct PromptWithModel {
     pub json_mode: bool,
     pub created_at: chrono::NaiveDateTime,
     pub updated_at: chrono::NaiveDateTime,
-    pub provider: String,
+    pub provider: LlmApiProvider,
     pub model_name: String,
 }
 
 impl Into<PromptWithModel> for PromptRowWithModel {
     fn into(self) -> PromptWithModel {
-        let model: LlmModel = self.model_name.into();
         PromptWithModel {
             id: self.id,
             key: self.key,
@@ -61,8 +60,8 @@ impl Into<PromptWithModel> for PromptRowWithModel {
             json_mode: self.json_mode,            
             created_at: self.created_at,
             updated_at: self.updated_at,
-            provider: model.provider(),
-            model_name: model.into()
+            provider: self.provider_name.into(),
+            model_name: self.model_name
         }
     }
 }

@@ -28,7 +28,7 @@ impl From<PromptWithModel> for PromptResponse {
             user: prompt.user,
             model: prompt.model_name.into(),
             model_id: prompt.model_id,
-            provider: prompt.provider,
+            provider: prompt.provider.into(),
             max_tokens: prompt.max_tokens,
             temperature: prompt.temperature,
             json_mode: prompt.json_mode,

@@ -19,7 +19,7 @@ impl From<ModelProviderRow> for ModelResponse {
             id: row.id,
             provider_id: row.provider_id,
             name: row.model_name,
-            provider_name: row.provider_name,
+            provider_name: row.provider_name.into(),
             provider_base_url: row.provider_base_url,
             supports_json: row.supports_json,
             supports_tools: row.supports_tools,

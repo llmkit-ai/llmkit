@@ -154,10 +154,9 @@ impl<'a> LlmProvider for GeminiProvider<'a> {
         let body = self.create_body();
         let body_string = body.to_string();
 
-        let model: String = self.props.model.clone().into();
         let url = format!(
             "https://generativelanguage.googleapis.com/v1beta/models/{}:{}",
-            model,
+            self.props.model_name,
             if self.streaming { "streamGenerateContent" } else { "generateContent" }
         );
 

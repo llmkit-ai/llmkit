@@ -183,7 +183,6 @@ impl<'a> LlmProvider for DeepseekProvider<'a> {
     }
 
     fn create_body(&self) -> serde_json::Value {
-        let model: String = self.props.model.clone().into();
         let messages = self.props.messages.iter()
             .map(|msg| match msg {
                 Message::System { content } => json!({
@@ -202,7 +201,7 @@ impl<'a> LlmProvider for DeepseekProvider<'a> {
             .collect::<Vec<_>>();
 
         let mut body = json!({
-            "model": model,
+            "model": self.props.model_name,
             "messages": messages,
             "stream": self.streaming,
             "temperature": self.props.temperature,

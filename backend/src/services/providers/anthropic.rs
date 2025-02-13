@@ -251,7 +251,7 @@ impl<'a> LlmProvider for AnthropicProvider<'a> {
             body["system"] = json!(content);
         }
 
-        let model: String = self.props.model.clone().into();
+        let model: String = self.props.provider.clone().into();
 
         body["model"] = json!(model);
         body["stream"] = json!(self.streaming);

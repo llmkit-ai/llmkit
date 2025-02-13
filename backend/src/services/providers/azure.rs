@@ -237,7 +237,6 @@ impl<'a> LlmProvider for AzureProvider<'a> {
     /// Note: For Azure, the deployment (and therefore the model) is specified in the URL,
     /// so the "model" parameter is omitted here. Adjust this as needed.
     fn create_body(&self) -> serde_json::Value {
-        let model: String = self.props.model.clone().into();
         let messages = self.props.messages.iter()
             .map(|msg| match msg {
                 Message::System { content } => json!({
@@ -260,7 +259,7 @@ impl<'a> LlmProvider for AzureProvider<'a> {
             "messages": messages,
             "temperature": self.props.temperature,
             "max_tokens": self.props.max_tokens,
-            "model": model,
+            "model": self.props.model_name,
         });
 
         if self.streaming {
