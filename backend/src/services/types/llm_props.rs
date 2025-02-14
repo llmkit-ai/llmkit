@@ -2,8 +2,7 @@ use serde::Serialize;
 use tera::{Context, Tera};
 
 use crate::{
-    common::types::models::LlmApiProvider, 
-    db::types::prompt::PromptWithModel
+    common::types::models::LlmApiProvider, db::types::prompt::PromptRowWithModel
 };
 
 use super::message::Message;
@@ -30,7 +29,7 @@ pub struct LlmProps {
 }
 
 impl LlmProps {
-    pub fn new(prompt: PromptWithModel, context: serde_json::Value) -> Result<Self, LlmPropsError> {
+    pub fn new(prompt: PromptRowWithModel, context: serde_json::Value) -> Result<Self, LlmPropsError> {
         let mut tera = Tera::default();
         tera.add_raw_template("system_prompt", &prompt.system)?;
         tera.add_raw_template("user_prompt", &prompt.user)?;
@@ -50,7 +49,7 @@ impl LlmProps {
         let messages = vec![ Message::System { content: rendered_system_prompt }, Message::User { content: rendered_user_prompt } ];
 
         Ok(LlmProps {
-            provider: prompt.provider,
+            provider: prompt.provider_name.into(),
             model_name: prompt.model_name,
             max_tokens: prompt.max_tokens,
             temperature: prompt.temperature,

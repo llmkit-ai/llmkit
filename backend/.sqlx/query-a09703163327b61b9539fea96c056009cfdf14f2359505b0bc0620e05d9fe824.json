@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO prompt_version (\n                version_number,\n                system_diff,\n                user_diff,\n                system,\n                user,\n                model_id,\n                max_tokens,\n                temperature,\n                json_mode\n            )\n            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 9
+    },
+    "nullable": []
+  },
+  "hash": "a09703163327b61b9539fea96c056009cfdf14f2359505b0bc0620e05d9fe824"
+}

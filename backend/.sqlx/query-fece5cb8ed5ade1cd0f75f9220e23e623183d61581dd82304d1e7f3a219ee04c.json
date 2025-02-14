@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO model (\n                provider_id,\n                name,\n                supports_json,\n                supports_tools\n            ) VALUES (?, ?, ?, ?)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "fece5cb8ed5ade1cd0f75f9220e23e623183d61581dd82304d1e7f3a219ee04c"
+}

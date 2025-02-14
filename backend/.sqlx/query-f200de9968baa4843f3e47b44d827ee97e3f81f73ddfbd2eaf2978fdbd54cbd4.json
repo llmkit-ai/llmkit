@@ -1,0 +1,62 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT \n                m.id,\n                m.provider_id,\n                m.name as model_name,\n                p.name as provider_name,\n                m.supports_json,\n                m.supports_tools,\n                p.base_url as provider_base_url,\n                m.created_at\n            FROM model m\n            JOIN provider p ON m.provider_id = p.id\n            ORDER BY m.created_at DESC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "provider_id",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "model_name",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "provider_name",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "supports_json",
+        "ordinal": 4,
+        "type_info": "Bool"
+      },
+      {
+        "name": "supports_tools",
+        "ordinal": 5,
+        "type_info": "Bool"
+      },
+      {
+        "name": "provider_base_url",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 7,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "f200de9968baa4843f3e47b44d827ee97e3f81f73ddfbd2eaf2978fdbd54cbd4"
+}

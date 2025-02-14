@@ -1,0 +1,104 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT\n                p.id,\n                p.key,\n                pv.system,\n                pv.user,\n                pv.model_id,\n                pv.max_tokens,\n                pv.temperature,\n                pv.json_mode,\n                m.name as model_name,\n                pr.name as provider_name,\n                pv.system_diff,\n                pv.user_diff,\n                pv.version_number,\n                pv.created_at,\n                pv.updated_at\n            FROM prompt p\n            JOIN prompt_version pv ON p.prompt_version_id = pv.id\n            JOIN model m ON pv.model_id = m.id\n            JOIN provider pr ON m.provider_id = pr.id\n            WHERE p.id = ?\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "key",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "system",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "user",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "model_id",
+        "ordinal": 4,
+        "type_info": "Integer"
+      },
+      {
+        "name": "max_tokens",
+        "ordinal": 5,
+        "type_info": "Integer"
+      },
+      {
+        "name": "temperature",
+        "ordinal": 6,
+        "type_info": "Float"
+      },
+      {
+        "name": "json_mode",
+        "ordinal": 7,
+        "type_info": "Bool"
+      },
+      {
+        "name": "model_name",
+        "ordinal": 8,
+        "type_info": "Text"
+      },
+      {
+        "name": "provider_name",
+        "ordinal": 9,
+        "type_info": "Text"
+      },
+      {
+        "name": "system_diff",
+        "ordinal": 10,
+        "type_info": "Text"
+      },
+      {
+        "name": "user_diff",
+        "ordinal": 11,
+        "type_info": "Text"
+      },
+      {
+        "name": "version_number",
+        "ordinal": 12,
+        "type_info": "Integer"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 13,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "updated_at",
+        "ordinal": 14,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "13592fe1ef75b0c937bcc5dc39b92599ee01e175b6d2f5c5c2f9bcf45f24a30e"
+}

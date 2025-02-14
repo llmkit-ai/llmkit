@@ -114,6 +114,8 @@ impl<'a> LlmProvider for OpenaiProvider<'a> {
         let body = self.create_body();
         let body_string = body.to_string();
 
+        println!("body: {}", body);
+
         let request = client
             .post("https://api.openai.com/v1/chat/completions")
             .header("Authorization", format!("Bearer {}", api_key))
@@ -131,6 +133,8 @@ impl<'a> LlmProvider for OpenaiProvider<'a> {
         mut event_source: reqwest_eventsource::EventSource, 
         tx: Sender<Result<String, LlmStreamingError>>
     ) -> Result<LlmApiResponseProps, Error> {
+        println!("stream_eventsourece invoked");
+
         let result = tokio::spawn(async move {
             let mut stream_content = String::new();
             let mut output_tokens = 0;

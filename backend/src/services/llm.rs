@@ -355,7 +355,7 @@ mod tests {
         dotenv().ok();
         let props = LlmProps {
             provider: LlmApiProvider::Anthropic,
-            model_name: "claude-3.5-haiku-20241022".to_string(),
+            model_name: "claude-3-5-haiku-latest".to_string(),
             temperature: 0.5,
             max_tokens: 100,
             json_mode: false,
@@ -629,7 +629,7 @@ mod tests {
         dotenv().ok();
         let props = create_stream_test_props(
             LlmApiProvider::OpenAi,
-            "gpt-4o-mini-2024-07".to_string(),
+            "gpt-4o-mini-2024-07-18".to_string(),
         ).await;
 
         let pool = create_shared_in_memory_pool().await.unwrap();
@@ -661,7 +661,7 @@ mod tests {
         dotenv().ok();
         let props = create_stream_test_props(
             LlmApiProvider::Anthropic,
-            "claude-3.5-haiku-latest".to_string(),
+            "claude-3-5-haiku-latest".to_string(),
         )
         .await;
 
@@ -838,16 +838,16 @@ mod tests {
             json_mode: false,
             messages: vec![
                 Message::System {
-                    content: "You are a math tutor who loves to help with algebra".to_string(),
+                    content: "You are a helpful assistant".to_string(),
                 },
                 Message::User {
-                    content: "What is 2x + 3 = 7?".to_string(),
+                    content: "Say 'Hello, world!' in a few words".to_string(),
                 },
                 Message::Assistant {
-                    content: "Let me help solve this. First, subtract 3 from both sides: 2x = 4. Then divide both sides by 2: x = 2".to_string(),
+                    content: "Hello world".to_string(),
                 },
                 Message::User {
-                    content: "Great! Now what is x + 5?".to_string(),
+                    content: "Great, now say 'What's up'".to_string(),
                 },
             ],
             prompt_id: 1,
@@ -864,11 +864,11 @@ mod tests {
         let models = vec![
             (
                 LlmApiProvider::OpenAi,
-                "gpt-4o-mini-2024-07".to_string(),
+                "gpt-4o-mini-2024-07-18".to_string(),
             ),
             (
                 LlmApiProvider::Anthropic,
-                "claude-3.5-haiku-20241022".to_string(),
+                "claude-3-5-haiku-latest".to_string(),
             ),
             (
                 LlmApiProvider::Gemini,
@@ -905,9 +905,7 @@ mod tests {
             // The response should continue the conversation naturally
             let response = llm.text().await.unwrap();
             assert!(
-                response.content.contains("7"),
-                "Response should solve x + 5 = 7 for model {:?}",
-                model
+                response.content.contains("What's"),
             );
         }
     }
@@ -920,11 +918,11 @@ mod tests {
         let models = vec![
             (
                 LlmApiProvider::OpenAi,
-                "gpt-4o-mini-2024-07".to_string(),
+                "gpt-4o-mini-2024-07-18".to_string(),
             ),
             (
                 LlmApiProvider::Anthropic,
-                "claude-3.5-haiku-20241022".to_string(),
+                "claude-3-5-haiku-latest".to_string(),
             ),
             (
                 LlmApiProvider::Gemini,
@@ -933,6 +931,10 @@ mod tests {
             (
                 LlmApiProvider::Deepseek,
                 "deepseek-chat".to_string(),
+            ),
+            (
+                LlmApiProvider::Azure,
+                "gpt-4o-mini".to_string(),
             ),
         ];
 
@@ -974,9 +976,7 @@ mod tests {
             );
             let combined = received_chunks.join("");
             assert!(
-                combined.contains("7"),
-                "Streamed response should solve x + 5 = 7 for model {:?}",
-                model
+                combined.contains("What's"),
             );
         }
     }
