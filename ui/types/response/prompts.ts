@@ -11,6 +11,10 @@ export interface Prompt {
   max_tokens: number
   temperature: number
   json_mode: boolean
+  version_number: number
+  system_version_diff: string | null
+  user_version_diff: string | null
+  updated_at: string
 }
 
 

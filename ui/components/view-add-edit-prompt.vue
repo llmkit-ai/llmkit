@@ -39,8 +39,8 @@
                     @click="toggleDropdown"
                   >
                     <span class="col-start-1 row-start-1 flex w-full gap-2 pr-6">
-                      <span class="truncate">{{ selectedModel ? selectedModel.model : 'Select a model' }}</span>
-                      <span v-if="selectedModel" class="truncate text-neutral-500 dark:text-neutral-400">{{ selectedModel.provider }}</span>
+                      <span class="truncate">{{ selectedModel ? selectedModel.name : 'Select a model' }}</span>
+                      <span v-if="selectedModel" class="truncate text-neutral-500 dark:text-neutral-400">{{ selectedModel.provider_name }}</span>
                     </span>
                     <svg
                       class="col-start-1 row-start-1 size-5 self-center justify-self-end text-neutral-500 dark:text-neutral-400 sm:size-4"
@@ -72,8 +72,8 @@
                       @click="selectModel(model)"
                     >
                       <div class="flex">
-                        <span class="truncate">{{ model.model }}</span>
-                        <span class="ml-2 truncate text-neutral-500 dark:text-neutral-400">{{ model.provider }}</span>
+                        <span class="truncate">{{ model.name }}</span>
+                        <span class="ml-2 truncate text-neutral-500 dark:text-neutral-400">{{ model.provider_name }}</span>
                       </div>
                       <span
                         v-if="model.id === selectedModel?.id"
@@ -193,15 +193,40 @@
           <h3 class="text-base/7 font-semibold text-neutral-900 dark:text-white">Prompt Details</h3>
           <p class="mt-1 max-w-2xl text-sm/6 text-neutral-500 dark:text-neutral-400">Configuration and content for this prompt.</p>
         </div>
-        <div class="mt-6">
+        <div v-if="props.prompt" class="mt-6">
           <dl class="grid grid-cols-1 sm:grid-cols-3">
             <div class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-1 sm:px-0">
               <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">Prompt Key</dt>
               <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 sm:mt-2">{{ promptKey }}</dd>
             </div>
             <div class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-1 sm:px-0">
+              <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">Prompt Version</dt>
+              <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 sm:mt-2"><b>{{ props.prompt.version_number }}</b> - <i>{{ formatDate(props.prompt.updated_at) }}</i></dd>
+            </div>
+            <div v-if="props.prompt.system_version_diff || props.prompt.user_version_diff" class="col-span-3 bg-neutral-100 dark:bg-neutral-800 p-4">
+              <div class="flex items-center justify-between">
+                <p class="text-xs text-neutral-900 dark:text-neutral-300">Prompt version diff</p>
+                <button
+                  @click="showVersionDiff = !showVersionDiff"
+                  class="text-xs text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-300"
+                >
+                  {{ showVersionDiff ? 'Hide' : 'Show' }}
+                </button>
+              </div>
+              <div v-if="showVersionDiff" class="whitespace-pre-line mt-3 dark:text-neutral-300 text-sm">
+                <div v-if="props.prompt.system_version_diff" class="dark:bg-neutral-700 bg-neutral-200 p-1">
+                  <p class="font-bold text-xs text-neutral-900 dark:text-neutral-300">System prompt diff</p>
+                  <p class="mt-1 text-xs text-neutral-900 dark:text-neutral-300">{{ props.prompt.system_version_diff }}</p>
+                </div>
+                <div v-if="props.prompt.user_version_diff" class="mt-5 dark:bg-neutral-700 bg-neutral-200 p-1">
+                  <p class="font-bold text-xs text-neutral-900 dark:text-neutral-300">User prompt diff</p>
+                  <p class="mt-1 text-xs text-neutral-900 dark:text-neutral-300">{{ props.prompt.user_version_diff }}</p>
+                </div>
+              </div>
+            </div>
+            <div class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-1 sm:px-0">
               <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">Model</dt>
-              <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 sm:mt-2">{{ selectedModel?.model }} ({{ selectedModel?.provider }})</dd>
+              <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 sm:mt-2">{{ selectedModel?.name }} ({{ selectedModel?.provider_name }})</dd>
             </div>
             <div class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-1 sm:px-0">
               <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">Max Tokens</dt>
@@ -254,6 +279,8 @@
 </template>
 
 <script setup lang="ts">
+import { format, parseISO } from 'date-fns';
+
 import type { Prompt } from '~/types/response/prompts';
 import type { Model } from '~/types/response/models';
 
@@ -280,6 +307,7 @@ const temperatureValue = ref(props.prompt?.temperature || 0.7);
 const jsonMode = ref(props.prompt?.json_mode || false);
 const isLoading = ref(false);
 const isOpen = ref(false);
+const showVersionDiff = ref(false)
 
 // Dependencies
 const { createPrompt, updatePrompt } = usePrompts();
@@ -361,4 +389,10 @@ async function handleSubmit() {
     isLoading.value = false;
   }
 }
+
+function formatDate(dateString: string): string {
+  const date = parseISO(dateString);
+  return format(date, 'MM-dd-yyyy');
+}
+
 </script>
