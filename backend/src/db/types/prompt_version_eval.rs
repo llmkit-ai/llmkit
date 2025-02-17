@@ -4,6 +4,7 @@ pub struct PromptVersionEval {
     pub prompt_version_id: i64,
     pub evaluation_type: String,
     pub score: Option<i64>,
+    pub output: String,
     pub created_at: chrono::NaiveDateTime,
     pub updated_at: chrono::NaiveDateTime,
 }

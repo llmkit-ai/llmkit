@@ -47,6 +47,7 @@ CREATE TABLE prompt_version_eval (
     prompt_version_id INTEGER NOT NULL,
     evaluation_type TEXT NOT NULL CHECK(evaluation_type IN ('human', 'automated')) DEFAULT 'human',
     score INTEGER CHECK (score BETWEEN 1 AND 5),
+    output TEXT NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (prompt_version_id) REFERENCES prompt_version(id)
@@ -55,7 +56,7 @@ CREATE TABLE prompt_version_eval (
 CREATE TABLE prompt_sample (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     prompt_id INTEGER NOT NULL,
-    name TEXT NOT NULL,  -- Human-readable identifier
+    name TEXT NOT NULL,
     input_data TEXT NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

@@ -1,0 +1,56 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT * \n            FROM prompt_version_eval \n            WHERE prompt_version_id = ?\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "prompt_version_id",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "evaluation_type",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "score",
+        "ordinal": 3,
+        "type_info": "Integer"
+      },
+      {
+        "name": "output",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 5,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "updated_at",
+        "ordinal": 6,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "106483fdc645f46d7139f3fbeda032a342401bc33679f0bf763e4cc64c0e5f1f"
+}

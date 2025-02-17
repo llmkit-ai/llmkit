@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            DELETE FROM prompt_sample\n            WHERE id = ?\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "5ae52c0fbdc75e17c6b12764df3bbe314c5deb1e8e1a36df7030b522c0478b6f"
+}

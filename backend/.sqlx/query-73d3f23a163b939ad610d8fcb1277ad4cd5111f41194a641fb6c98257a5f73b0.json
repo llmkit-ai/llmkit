@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            UPDATE prompt_sample\n            SET \n                input_data = ?,\n                name = ?,\n                updated_at = CURRENT_TIMESTAMP\n            WHERE id = ?\n            RETURNING *\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "prompt_id",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "name",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "input_data",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 4,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "updated_at",
+        "ordinal": 5,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "73d3f23a163b939ad610d8fcb1277ad4cd5111f41194a641fb6c98257a5f73b0"
+}
