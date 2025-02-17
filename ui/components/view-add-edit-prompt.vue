@@ -178,7 +178,7 @@
             size="sm"
             @click="handleSubmit()"
           >
-            Update
+            {{ mode === 'edit' ? 'Update':'Create'  }}
           </PrimaryButton>
         </div>
       </form>
