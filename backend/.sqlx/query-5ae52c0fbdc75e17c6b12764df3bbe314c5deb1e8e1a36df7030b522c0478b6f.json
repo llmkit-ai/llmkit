@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            DELETE FROM prompt_sample\n            WHERE id = ?\n            ",
+  "query": "\n            DELETE FROM prompt_eval\n            WHERE id = ?\n            ",
   "describe": {
     "columns": [],
     "parameters": {

@@ -1,4 +1,4 @@
-export interface PromptSampleResponse {
+export interface PromptEvalResponse {
   id: number
   prompt_id: number
   input_data: string

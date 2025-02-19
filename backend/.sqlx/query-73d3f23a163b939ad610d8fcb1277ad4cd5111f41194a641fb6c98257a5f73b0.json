@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            UPDATE prompt_sample\n            SET \n                input_data = ?,\n                name = ?,\n                updated_at = CURRENT_TIMESTAMP\n            WHERE id = ?\n            RETURNING *\n            ",
+  "query": "\n            UPDATE prompt_eval\n            SET \n                input_data = ?,\n                name = ?,\n                updated_at = CURRENT_TIMESTAMP\n            WHERE id = ?\n            RETURNING *\n            ",
   "describe": {
     "columns": [
       {

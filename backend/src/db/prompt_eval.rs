@@ -1,24 +1,24 @@
-use crate::db::types::prompt_sample::PromptSample;
-
 use anyhow::Result;
 use serde_json::Value;
 
+use super::types::prompt_eval::PromptEvalTest;
+
 #[derive(Clone, Debug)]
-pub struct PromptSampleRepository {
+pub struct PromptEvalTestRepository {
     pool: sqlx::SqlitePool,
 }
 
-impl PromptSampleRepository {
+impl PromptEvalTestRepository {
     pub async fn new(pool: sqlx::SqlitePool) -> Result<Self> {
-        Ok(PromptSampleRepository { pool })
+        Ok(PromptEvalTestRepository { pool })
     }
 
-    pub async fn get_by_id(&self, id: i64) -> Result<PromptSample> {
+    pub async fn get_by_id(&self, id: i64) -> Result<PromptEvalTest> {
         sqlx::query_as!(
-            PromptSample,
+            PromptEvalTest,
             r#"
             SELECT * 
-            FROM prompt_sample 
+            FROM prompt_eval 
             WHERE id = ?
             "#,
             id
@@ -28,12 +28,12 @@ impl PromptSampleRepository {
         .map_err(Into::into)
     }
 
-    pub async fn get_by_prompt(&self, prompt_id: i64) -> Result<Vec<PromptSample>> {
+    pub async fn get_by_prompt(&self, prompt_id: i64) -> Result<Vec<PromptEvalTest>> {
         sqlx::query_as!(
-            PromptSample,
+            PromptEvalTest,
             r#"
             SELECT * 
-            FROM prompt_sample 
+            FROM prompt_eval 
             WHERE prompt_id = ?
             "#,
             prompt_id
@@ -47,29 +47,31 @@ impl PromptSampleRepository {
         &self,
         prompt_id: i64,
         input_data: sqlx::types::Json<Value>,
+        evaluation_type: &str,
         name: Option<String>,
-    ) -> Result<PromptSample> {
+    ) -> Result<PromptEvalTest> {
         sqlx::query_as!(
-            PromptSample,
+            PromptEvalTest,
             r#"
-            INSERT INTO prompt_sample (prompt_id, input_data, name)
-            VALUES (?, ?, ?)
+            INSERT INTO prompt_eval (prompt_id, input_data, name, evaluation_type)
+            VALUES (?, ?, ?, ?)
             RETURNING *
             "#,
             prompt_id,
             input_data,
-            name
+            name,
+            evaluation_type
         )
         .fetch_one(&self.pool)
         .await
         .map_err(Into::into)
     }
 
-    pub async fn update(&self, id: i64, input_data: String, name: String) -> Result<PromptSample> {
+    pub async fn update(&self, id: i64, input_data: String, name: String) -> Result<PromptEvalTest> {
         sqlx::query_as!(
-            PromptSample,
+            PromptEvalTest,
             r#"
-            UPDATE prompt_sample
+            UPDATE prompt_eval
             SET 
                 input_data = ?,
                 name = ?,
@@ -89,7 +91,7 @@ impl PromptSampleRepository {
     pub async fn delete(&self, id: i64) -> Result<()> {
         sqlx::query!(
             r#"
-            DELETE FROM prompt_sample
+            DELETE FROM prompt_eval
             WHERE id = ?
             "#,
             id

@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            SELECT * \n            FROM prompt_sample \n            WHERE prompt_id = ?\n            ",
+  "query": "\n            SELECT * \n            FROM prompt_eval \n            WHERE prompt_id = ?\n            ",
   "describe": {
     "columns": [
       {

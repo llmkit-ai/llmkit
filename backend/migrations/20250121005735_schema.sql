@@ -42,10 +42,10 @@ CREATE TABLE prompt_version (
     FOREIGN KEY (model_id) REFERENCES model(id)
 );
 
-CREATE TABLE prompt_version_eval (
+CREATE TABLE prompt_eval_run (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     prompt_version_id INTEGER NOT NULL,
-    evaluation_type TEXT NOT NULL CHECK(evaluation_type IN ('human', 'automated')) DEFAULT 'human',
+    prompt_eval_id INTEGER NOT NULL,
     score INTEGER CHECK (score BETWEEN 1 AND 5),
     output TEXT NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -53,16 +53,17 @@ CREATE TABLE prompt_version_eval (
     FOREIGN KEY (prompt_version_id) REFERENCES prompt_version(id)
 );
 
-CREATE TABLE prompt_sample (
+CREATE TABLE prompt_eval (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     prompt_id INTEGER NOT NULL,
+    evaluation_type TEXT NOT NULL CHECK(evaluation_type IN ('human', 'automated')) DEFAULT 'human',
     name TEXT NOT NULL,
     input_data TEXT NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (prompt_id) REFERENCES prompt(id)
 );
-CREATE UNIQUE INDEX idx_unique_prompt_sample_name ON prompt_sample(prompt_id, name);
+CREATE UNIQUE INDEX idx_unique_prompt_eval_name ON prompt_eval(prompt_id, name);
 
 CREATE TABLE log (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,

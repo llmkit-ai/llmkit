@@ -4,12 +4,7 @@ use sqlx::migrate::Migrator;
 use std::str::FromStr;
 
 use super::{
-    logs::LogRepository, 
-    prompts::PromptRepository,
-    prompt_samples::PromptSampleRepository,
-    prompt_version_evals::PromptVersionEvalRepository,
-    providers::ProviderRepository,
-    models::ModelRepository,
+    logs::LogRepository, models::ModelRepository, prompt_eval::PromptEvalTestRepository, prompt_eval_run::PromptEvalTestRunRepository, prompts::PromptRepository, providers::ProviderRepository
 };
 
 
@@ -20,8 +15,8 @@ static MIGRATOR: Migrator = sqlx::migrate!();
 #[allow(dead_code)]
 pub struct DbData {
     pub prompt: PromptRepository,
-    pub prompt_version_eval: PromptVersionEvalRepository,
-    pub prompt_sample: PromptSampleRepository,
+    pub prompt_eval_run: PromptEvalTestRunRepository,
+    pub prompt_eval: PromptEvalTestRepository,
     pub provider: ProviderRepository,
     pub log: LogRepository,
     pub model: ModelRepository,
@@ -39,8 +34,8 @@ impl DbData {
         MIGRATOR.run(&pool).await?;
 
         let prompt = PromptRepository::new(pool.clone()).await?;
-        let prompt_version_eval = PromptVersionEvalRepository::new(pool.clone()).await?;
-        let prompt_sample = PromptSampleRepository::new(pool.clone()).await?;
+        let prompt_eval_run = PromptEvalTestRunRepository::new(pool.clone()).await?;
+        let prompt_eval = PromptEvalTestRepository::new(pool.clone()).await?;
         let provider = ProviderRepository::new(pool.clone()).await?;
         let log = LogRepository::new(pool.clone()).await?;
         let model = ModelRepository::new(pool.clone()).await?;
@@ -49,8 +44,8 @@ impl DbData {
             log,
             model,
             prompt,
-            prompt_version_eval,
-            prompt_sample,
+            prompt_eval_run,
+            prompt_eval,
             provider
         })
     }

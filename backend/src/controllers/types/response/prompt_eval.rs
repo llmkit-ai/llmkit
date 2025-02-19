@@ -1,9 +1,9 @@
 use serde::Serialize;
-use crate::db::types::prompt_sample::PromptSample;
+use crate::db::types::prompt_eval::PromptEvalTest;
 
 
 #[derive(Debug, Serialize)]
-pub struct PromptSampleResponse {
+pub struct PromptEvalTestResponse {
     pub id: i64,
     pub prompt_id: i64,
     pub input_data: String,
@@ -12,9 +12,9 @@ pub struct PromptSampleResponse {
     pub updated_at: String,
 }
 
-impl From<PromptSample> for PromptSampleResponse {
-    fn from(prompt: PromptSample) -> Self {
-        PromptSampleResponse {
+impl From<PromptEvalTest> for PromptEvalTestResponse {
+    fn from(prompt: PromptEvalTest) -> Self {
+        PromptEvalTestResponse {
             id: prompt.id,
             prompt_id: prompt.prompt_id,
             input_data: prompt.input_data,

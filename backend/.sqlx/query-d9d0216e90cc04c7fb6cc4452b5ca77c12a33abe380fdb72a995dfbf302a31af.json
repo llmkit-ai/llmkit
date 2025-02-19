@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            INSERT INTO prompt_sample (prompt_id, input_data, name)\n            VALUES (?, ?, ?)\n            RETURNING *\n            ",
+  "query": "\n            INSERT INTO prompt_eval (prompt_id, input_data, name)\n            VALUES (?, ?, ?)\n            RETURNING *\n            ",
   "describe": {
     "columns": [
       {

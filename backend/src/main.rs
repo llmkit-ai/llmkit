@@ -14,7 +14,7 @@ use anyhow::Result;
 use controllers::{
     logs::{
         get_log, get_logs_count, list_logs
-    }, models::list_models, prompt_samples::{create_sample, delete_sample, get_sample_by_id, get_samples_by_prompt, update_sample}, prompts::{
+    }, models::list_models, prompt_eval::{create_eval_test, delete_eval_test, get_eval_test_by_id, get_eval_test_by_prompt, update_eval_test}, prompts::{
         create_prompt, delete_prompt, execute_prompt, execute_prompt_stream, get_prompt, list_prompts, update_prompt
     }
 };
@@ -57,7 +57,7 @@ fn api_v1_routes() -> Router<AppState> {
     Router::new()
         .route("/", get(api_version_handler))
         .nest("/prompts", prompt_routes())
-        .nest("/prompt-samples", prompt_samples_routes())
+        .nest("/prompt-eval-tests", prompt_evals_routes())
         .nest("/prompts/execute", execute_routes())
         .nest("/models", model_routes())
         .nest("/logs", logs_routes())
@@ -73,13 +73,13 @@ fn prompt_routes() -> Router<AppState> {
     Router::new()
         .route("/", post(create_prompt).get(list_prompts))
         .route("/{id}", get(get_prompt).put(update_prompt).delete(delete_prompt))
-        .route("/{id}/prompt-samples", get(get_samples_by_prompt))
+        .route("/{id}/prompt-eval-tests", get(get_eval_test_by_prompt))
 }
 
-fn prompt_samples_routes() -> Router<AppState> {
+fn prompt_evals_routes() -> Router<AppState> {
     Router::new()
-        .route("/", post(create_sample))
-        .route("/{id}", get(get_sample_by_id).put(update_sample).delete(delete_sample))
+        .route("/", post(create_eval_test))
+        .route("/{id}", get(get_eval_test_by_id).put(update_eval_test).delete(delete_eval_test))
 }
 
 fn model_routes() -> Router<AppState> {
