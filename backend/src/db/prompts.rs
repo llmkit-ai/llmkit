@@ -106,6 +106,7 @@ impl PromptRepository {
                 pv.system_diff,
                 pv.user_diff,
                 pv.version_number,
+                pv.id as version_id,
                 pv.created_at,
                 pv.updated_at
             FROM prompt p
@@ -139,6 +140,7 @@ impl PromptRepository {
                 pv.system_diff,
                 pv.user_diff,
                 pv.version_number,
+                pv.id as version_id,
                 pv.created_at,
                 pv.updated_at
             FROM prompt p

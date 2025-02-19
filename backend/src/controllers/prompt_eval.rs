@@ -6,14 +6,14 @@ use axum::{
 
 use crate::{AppError, AppState};
 
-use super::types::{request::prompt_eval::{CreateEvalTestRequest, UpdateEvalTestRequest}, response::prompt_eval::PromptEvalTestResponse};
+use super::types::{request::prompt_eval::{CreateEvalTestRequest, UpdateEvalTestRequest}, response::prompt_eval::PromptEvalResponse};
 
 
 // Handlers
 pub async fn get_eval_test_by_id(
     Path(id): Path<i64>,
     State(state): State<AppState>,
-) -> Result<Json<PromptEvalTestResponse>, AppError> {
+) -> Result<Json<PromptEvalResponse>, AppError> {
     let sample = state.db.prompt_eval.get_by_id(id).await?;
     Ok(Json(sample.into()))
 }
@@ -21,7 +21,7 @@ pub async fn get_eval_test_by_id(
 pub async fn get_eval_test_by_prompt(
     Path(prompt_id): Path<i64>,
     State(state): State<AppState>,
-) -> Result<Json<Vec<PromptEvalTestResponse>>, AppError> {
+) -> Result<Json<Vec<PromptEvalResponse>>, AppError> {
     let samples = state.db.prompt_eval.get_by_prompt(prompt_id).await?;
     Ok(Json(samples.into_iter().map(|s| s.into()).collect()))
 }
@@ -29,7 +29,7 @@ pub async fn get_eval_test_by_prompt(
 pub async fn create_eval_test(
     State(state): State<AppState>,
     Json(request): Json<CreateEvalTestRequest>,
-) -> Result<Json<PromptEvalTestResponse>, AppError> {
+) -> Result<Json<PromptEvalResponse>, AppError> {
     let sample = state.db.prompt_eval
         .create(
             request.prompt_id,
@@ -46,7 +46,7 @@ pub async fn update_eval_test(
     Path(id): Path<i64>,
     State(state): State<AppState>,
     Json(request): Json<UpdateEvalTestRequest>,
-) -> Result<Json<PromptEvalTestResponse>, AppError> {
+) -> Result<Json<PromptEvalResponse>, AppError> {
     let existing = state.db.prompt_eval.get_by_id(id).await?;
     
     let result = state.db.prompt_eval.update(

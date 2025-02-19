@@ -27,6 +27,7 @@ pub struct PromptRowWithModel {
     pub model_name: String,
     pub provider_name: String,
     pub version_number: i64,
+    pub version_id: i64,
     pub system_diff: Option<String>,
     pub user_diff: Option<String>,
     pub created_at: chrono::NaiveDateTime,

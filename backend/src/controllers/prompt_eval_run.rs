@@ -9,7 +9,7 @@ use super::types::response::prompts::PromptExecutionResponse;
 
 
 #[axum::debug_handler]
-pub async fn execute_prompt(
+pub async fn execute_eval_run(
     Path((prompt_id, prompt_version_id)): Path<(i64, i64)>,
     State(state): State<AppState>
 ) -> Result<Json<PromptExecutionResponse>, AppError> {

@@ -1,7 +1,7 @@
 use anyhow::Result;
 use serde_json::Value;
 
-use super::types::prompt_eval::PromptEvalTest;
+use super::types::prompt_eval::PromptEval;
 
 #[derive(Clone, Debug)]
 pub struct PromptEvalTestRepository {
@@ -13,9 +13,9 @@ impl PromptEvalTestRepository {
         Ok(PromptEvalTestRepository { pool })
     }
 
-    pub async fn get_by_id(&self, id: i64) -> Result<PromptEvalTest> {
+    pub async fn get_by_id(&self, id: i64) -> Result<PromptEval> {
         sqlx::query_as!(
-            PromptEvalTest,
+            PromptEval,
             r#"
             SELECT * 
             FROM prompt_eval 
@@ -28,9 +28,9 @@ impl PromptEvalTestRepository {
         .map_err(Into::into)
     }
 
-    pub async fn get_by_prompt(&self, prompt_id: i64) -> Result<Vec<PromptEvalTest>> {
+    pub async fn get_by_prompt(&self, prompt_id: i64) -> Result<Vec<PromptEval>> {
         sqlx::query_as!(
-            PromptEvalTest,
+            PromptEval,
             r#"
             SELECT * 
             FROM prompt_eval 
@@ -49,9 +49,9 @@ impl PromptEvalTestRepository {
         input_data: sqlx::types::Json<Value>,
         evaluation_type: &str,
         name: Option<String>,
-    ) -> Result<PromptEvalTest> {
+    ) -> Result<PromptEval> {
         sqlx::query_as!(
-            PromptEvalTest,
+            PromptEval,
             r#"
             INSERT INTO prompt_eval (prompt_id, input_data, name, evaluation_type)
             VALUES (?, ?, ?, ?)
@@ -67,9 +67,9 @@ impl PromptEvalTestRepository {
         .map_err(Into::into)
     }
 
-    pub async fn update(&self, id: i64, input_data: String, name: String) -> Result<PromptEvalTest> {
+    pub async fn update(&self, id: i64, input_data: String, name: String) -> Result<PromptEval> {
         sqlx::query_as!(
-            PromptEvalTest,
+            PromptEval,
             r#"
             UPDATE prompt_eval
             SET 
