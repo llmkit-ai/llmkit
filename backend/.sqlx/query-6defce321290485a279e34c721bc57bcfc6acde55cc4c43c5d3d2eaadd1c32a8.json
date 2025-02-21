@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            UPDATE prompt_eval\n            SET \n                input_data = ?,\n                name = ?,\n                updated_at = CURRENT_TIMESTAMP\n            WHERE id = ?\n            RETURNING *\n            ",
+  "query": "\n            SELECT * \n            FROM prompt_eval \n            WHERE id = ?\n            ",
   "describe": {
     "columns": [
       {
@@ -14,30 +14,36 @@
         "type_info": "Integer"
       },
       {
-        "name": "name",
+        "name": "evaluation_type",
         "ordinal": 2,
         "type_info": "Text"
       },
       {
-        "name": "input_data",
+        "name": "name",
         "ordinal": 3,
         "type_info": "Text"
       },
       {
-        "name": "created_at",
+        "name": "input_data",
         "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 5,
         "type_info": "Datetime"
       },
       {
         "name": "updated_at",
-        "ordinal": 5,
+        "ordinal": 6,
         "type_info": "Datetime"
       }
     ],
     "parameters": {
-      "Right": 3
+      "Right": 1
     },
     "nullable": [
+      false,
       false,
       false,
       false,
@@ -46,5 +52,5 @@
       false
     ]
   },
-  "hash": "73d3f23a163b939ad610d8fcb1277ad4cd5111f41194a641fb6c98257a5f73b0"
+  "hash": "6defce321290485a279e34c721bc57bcfc6acde55cc4c43c5d3d2eaadd1c32a8"
 }

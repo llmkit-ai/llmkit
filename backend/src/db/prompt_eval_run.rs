@@ -16,9 +16,12 @@ impl PromptEvalTestRunRepository {
         sqlx::query_as!(
             PromptEvalRun,
             r#"
-            SELECT * 
-            FROM prompt_eval_run 
-            WHERE id = ?
+            SELECT
+                per.*,
+                pe.name AS prompt_eval_name
+            FROM prompt_eval_run per
+            JOIN prompt_eval pe ON per.prompt_eval_id = pe.id
+            WHERE per.id = ?
             "#,
             id
         )
@@ -34,9 +37,12 @@ impl PromptEvalTestRunRepository {
         sqlx::query_as!(
             PromptEvalRun,
             r#"
-            SELECT * 
-            FROM prompt_eval_run 
-            WHERE prompt_version_id = ?
+            SELECT
+                per.*,
+                pe.name AS prompt_eval_name
+            FROM prompt_eval_run per
+            JOIN prompt_eval pe ON per.prompt_eval_id = pe.id
+            WHERE per.prompt_version_id = ?
             "#,
             prompt_version_id
         )
@@ -47,26 +53,49 @@ impl PromptEvalTestRunRepository {
 
     pub async fn create(
         &self,
+        run_id: &str,
         prompt_version_id: i64,
         prompt_eval_id: i64,
         score: Option<i64>,
-        output: &str
+        output: &str,
     ) -> Result<PromptEvalRun> {
-        sqlx::query_as!(
-            PromptEvalRun,
+        let result = sqlx::query!(
             r#"
-            INSERT INTO prompt_eval_run (prompt_version_id, prompt_eval_id, score, output)
-            VALUES (?, ?, ?, ?)
-            RETURNING *
+            INSERT INTO prompt_eval_run (run_id, prompt_version_id, prompt_eval_id, score, output)
+            VALUES (?, ?, ?, ?, ?)
             "#,
+            run_id,
             prompt_version_id,
             prompt_eval_id,
             score,
             output
         )
-        .fetch_one(&self.pool)
-        .await
-        .map_err(Into::into)
+        .execute(&self.pool)
+        .await?;
+
+        let id = result.last_insert_rowid();
+
+        self.get_by_id(id).await
+    }
+
+    pub async fn update_score(
+        &self,
+        id: i64,
+        score: i64,
+    ) -> Result<PromptEvalRun> {
+        sqlx::query!(
+            r#"
+            UPDATE prompt_eval_run
+            SET SCORE = ?
+            WHERE ID = ?
+            "#,
+            score,
+            id,
+        )
+        .execute(&self.pool)
+        .await?;
+
+        self.get_by_id(id).await
     }
 
     pub async fn delete(&self, id: i64) -> Result<()> {

@@ -44,6 +44,7 @@ CREATE TABLE prompt_version (
 
 CREATE TABLE prompt_eval_run (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    run_id TEXT NOT NULL,
     prompt_version_id INTEGER NOT NULL,
     prompt_eval_id INTEGER NOT NULL,
     score INTEGER CHECK (score BETWEEN 1 AND 5),

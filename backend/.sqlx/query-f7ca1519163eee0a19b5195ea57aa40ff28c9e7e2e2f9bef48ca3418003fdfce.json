@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            INSERT INTO prompt_version_eval (prompt_version_id, evaluation_type, score)\n            VALUES (?, ?, ?)\n            RETURNING *\n            ",
+  "query": "\n            SELECT * \n            FROM prompt_eval_run \n            WHERE id = ?\n            ",
   "describe": {
     "columns": [
       {
@@ -9,40 +9,46 @@
         "type_info": "Integer"
       },
       {
-        "name": "prompt_version_id",
+        "name": "run_id",
         "ordinal": 1,
-        "type_info": "Integer"
-      },
-      {
-        "name": "evaluation_type",
-        "ordinal": 2,
         "type_info": "Text"
       },
       {
-        "name": "score",
+        "name": "prompt_version_id",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "prompt_eval_id",
         "ordinal": 3,
         "type_info": "Integer"
       },
       {
-        "name": "output",
+        "name": "score",
         "ordinal": 4,
+        "type_info": "Integer"
+      },
+      {
+        "name": "output",
+        "ordinal": 5,
         "type_info": "Text"
       },
       {
         "name": "created_at",
-        "ordinal": 5,
+        "ordinal": 6,
         "type_info": "Datetime"
       },
       {
         "name": "updated_at",
-        "ordinal": 6,
+        "ordinal": 7,
         "type_info": "Datetime"
       }
     ],
     "parameters": {
-      "Right": 3
+      "Right": 1
     },
     "nullable": [
+      false,
       false,
       false,
       false,
@@ -52,5 +58,5 @@
       false
     ]
   },
-  "hash": "fe9d53243543e9acf4a532af294c2068d0d2c7a3dbc7fd47761cf93bfd29443f"
+  "hash": "f7ca1519163eee0a19b5195ea57aa40ff28c9e7e2e2f9bef48ca3418003fdfce"
 }

@@ -76,9 +76,10 @@
       />
     </div>
 
-    <div v-if="view === 'view'" class="mt-6">
+    <div v-if="view === 'view'">
       <EvalsViewPromptEvalInput
         :evals="evals"
+        :prompt="prompt"
         @create-eval="view = 'create'"
         @edit-eval="handlePromptEvalEdit"
       />

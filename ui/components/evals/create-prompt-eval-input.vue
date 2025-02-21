@@ -194,7 +194,7 @@ async function handleEvalTestInput() {
 
   const payload = {
     prompt_id: props.prompt.id,
-    input_data: JSON.stringify(cleanContext),
+    input_data: cleanContext,
     name: sampleInputName.value
   };
 

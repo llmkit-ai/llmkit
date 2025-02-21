@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            UPDATE prompt_version_eval\n            SET \n                prompt_version_id = ?,\n                evaluation_type = ?,\n                score = ?,\n                updated_at = CURRENT_TIMESTAMP\n            WHERE id = ?\n            RETURNING *\n            ",
+  "query": "\n            UPDATE prompt_eval\n            SET \n                input_data = ?,\n                name = ?,\n                updated_at = CURRENT_TIMESTAMP\n            WHERE id = ?\n            RETURNING *\n            ",
   "describe": {
     "columns": [
       {
@@ -9,7 +9,7 @@
         "type_info": "Integer"
       },
       {
-        "name": "prompt_version_id",
+        "name": "prompt_id",
         "ordinal": 1,
         "type_info": "Integer"
       },
@@ -19,12 +19,12 @@
         "type_info": "Text"
       },
       {
-        "name": "score",
+        "name": "name",
         "ordinal": 3,
-        "type_info": "Integer"
+        "type_info": "Text"
       },
       {
-        "name": "output",
+        "name": "input_data",
         "ordinal": 4,
         "type_info": "Text"
       },
@@ -40,17 +40,17 @@
       }
     ],
     "parameters": {
-      "Right": 4
+      "Right": 3
     },
     "nullable": [
       false,
       false,
       false,
-      true,
+      false,
       false,
       false,
       false
     ]
   },
-  "hash": "583ca69ffa311812d9c0972793ea3aca853f47fc49e1d70b54b5aa86d51709ec"
+  "hash": "e0a279df635bc96800fb5e2d46a5bcbf0e2b2991215e6e8efe8a0b61539c45b1"
 }
