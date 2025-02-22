@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::db::types::prompt_eval_run::PromptEvalRun;
+use crate::db::types::prompt_eval_run::{PromptEvalRun, PromptEvalVersionPerformance};
 
 // GET EVAL RESPONSE
 #[derive(Debug, Serialize, Deserialize)]
@@ -54,3 +54,24 @@ impl From<Vec<PromptEvalRun>> for PromptEvalExecutionRunResponse {
 }
 
 
+// PERFORMANCE
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PromptEvalVersionPerformanceResponse {
+    pub version_id: i64,
+    pub version_number: i64,
+    pub version_date: String,
+    pub avg_score: Option<f64>,
+    pub run_count: i64,
+}
+
+impl From<PromptEvalVersionPerformance> for PromptEvalVersionPerformanceResponse {
+    fn from(res: PromptEvalVersionPerformance) -> Self {
+        PromptEvalVersionPerformanceResponse {
+            version_id: res.version_id,
+            version_number: res.version_number,
+            version_date: res.version_date.to_string(),
+            avg_score: res.avg_score,
+            run_count: res.run_count
+        }
+    }
+}

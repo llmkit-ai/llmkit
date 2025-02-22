@@ -109,8 +109,13 @@ SELECT id, 'gpt-4o-mini', 1, 1
 FROM provider
 WHERE name = 'azure';
 
--- Insert a prompt version
+-- 1. insert a prompt row without a current version id
+INSERT INTO prompt (key, current_prompt_version_id)
+VALUES ('ANOTHER-TEST-PROMPT', NULL);
+
+-- 2. insert a new prompt version, referencing the prompt's id
 INSERT INTO prompt_version (
+    prompt_id,
     version_number,
     system_diff,
     user_diff,
@@ -122,30 +127,28 @@ INSERT INTO prompt_version (
     json_mode
 )
 SELECT
-1,
-null,
-null,
-'{% if sarcastic %}
-You are sarcastic
-{% else %}
-Youre friendly
-{% endif %}',
-'Tell me funny story about {{ name }}',
-m.id,
-250,
-0.7,
-0
-FROM model m
-WHERE m.name = 'gpt-4o-mini-2024-07-18';
+    p.id,
+    1,
+    NULL,
+    NULL,
+    '{% if sarcastic %} You are sarcastic {% else %} Youre friendly {% endif %}',
+    'Tell me funny story about {{ name }}',
+    m.id,
+    250,
+    0.7,
+    0
+FROM prompt p 
+JOIN model m ON m.name = 'gpt-4o-mini-2024-07-18'
+WHERE p.key = 'ANOTHER-TEST-PROMPT'
+ORDER BY p.id DESC
+LIMIT 1;
 
--- Insert a prompt, referencing the prompt version
-INSERT INTO prompt (key, prompt_version_id)
-SELECT
-    'ANOTHER-TEST-PROMPT',
-    (
-        SELECT id
-        FROM prompt_version
-        ORDER BY id DESC
-        LIMIT 1
-    );
-
+-- 3. update the prompt row to reference the newly inserted prompt version
+UPDATE prompt
+SET current_prompt_version_id = (
+    SELECT id FROM prompt_version
+    WHERE prompt_id = (SELECT id FROM prompt WHERE key = 'ANOTHER-TEST-PROMPT')
+    ORDER BY id DESC
+    LIMIT 1
+)
+WHERE key = 'ANOTHER-TEST-PROMPT';

@@ -5,7 +5,7 @@ use axum::{
 use serde_json::Value;
 use uuid::Uuid;
 
-use super::types::{request::prompt_eval_run::UpdateEvalRunRequest, response::prompt_eval_run::{PromptEvalExecutionRunResponse, PromptEvalRunResponse}};
+use super::types::{request::prompt_eval_run::UpdateEvalRunRequest, response::prompt_eval_run::{PromptEvalExecutionRunResponse, PromptEvalRunResponse, PromptEvalVersionPerformanceResponse}};
 use crate::{
     services::{llm::Llm, types::llm_props::LlmProps},
     AppError, AppState,
@@ -55,6 +55,17 @@ pub async fn get_eval_run_by_id(
 ) -> Result<Json<PromptEvalRunResponse>, AppError> {
     let eval_run = state.db.prompt_eval_run.get_by_id(id).await?;
     Ok(Json(eval_run.into()))
+}
+
+pub async fn get_eval_performance_by_prompt_id(
+    Path(id): Path<i64>,
+    State(state): State<AppState>,
+) -> Result<Json<Vec<PromptEvalVersionPerformanceResponse>>, AppError> {
+    let performance = state.db.prompt_eval_run.get_prompt_version_performance(id).await?;
+
+    tracing::info!("performance: {:?}", performance);
+
+    Ok(Json(performance.into_iter().map(|p| p.into()).collect()))
 }
 
 pub async fn get_eval_runs_by_prompt_version(

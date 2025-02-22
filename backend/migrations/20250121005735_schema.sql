@@ -22,12 +22,13 @@ CREATE TABLE model (
 CREATE TABLE prompt (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     key TEXT NOT NULL UNIQUE,
-    prompt_version_id INTEGER NOT NULL,
-    FOREIGN KEY (prompt_version_id) REFERENCES prompt_version(id)
+    current_prompt_version_id INTEGER,
+    FOREIGN KEY (current_prompt_version_id) REFERENCES prompt_version(id)
 );
 
 CREATE TABLE prompt_version (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    prompt_id INTEGER NOT NULL,
     version_number INTEGER NOT NULL,
     system_diff TEXT,
     user_diff TEXT,
@@ -40,6 +41,7 @@ CREATE TABLE prompt_version (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (model_id) REFERENCES model(id)
+    FOREIGN KEY (prompt_id) REFERENCES prompt(id)
 );
 
 CREATE TABLE prompt_eval_run (

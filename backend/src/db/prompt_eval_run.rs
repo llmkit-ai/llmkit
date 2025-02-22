@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-use super::types::prompt_eval_run::PromptEvalRun;
+use super::types::prompt_eval_run::{PromptEvalRun, PromptEvalVersionPerformance};
 
 #[derive(Clone, Debug)]
 pub struct PromptEvalTestRunRepository {
@@ -50,6 +50,43 @@ impl PromptEvalTestRunRepository {
         .await
         .map_err(Into::into)
     }
+
+    pub async fn get_prompt_version_performance(
+        &self,
+        prompt_id: i64,
+    ) -> Result<Vec<PromptEvalVersionPerformance>> {
+        let query = r#"
+            WITH avg_scores AS (
+                SELECT 
+                    pv.id AS version_id,
+                    pv.version_number,
+                    pv.created_at AS version_date,
+                    CAST(ROUND(AVG(CAST(per.score AS FLOAT)), 2) AS FLOAT) AS avg_score,
+                    COUNT(per.id) AS run_count
+                FROM prompt_version pv
+                INNER JOIN prompt_eval_run per
+                    ON pv.id = per.prompt_version_id
+                WHERE per.score IS NOT NULL
+                  AND pv.prompt_id = ?
+                GROUP BY pv.id, pv.version_number, pv.created_at
+            )
+            SELECT 
+                version_id,
+                version_number,
+                version_date,
+                COALESCE(avg_score, 0.0) AS avg_score,
+                run_count
+            FROM avg_scores
+            ORDER BY version_number ASC
+        "#;
+
+        let rows = sqlx::query_as::<_, PromptEvalVersionPerformance>(query)
+            .bind(prompt_id)
+            .fetch_all(&self.pool)
+            .await?;
+        Ok(rows)
+    }
+
 
     pub async fn create(
         &self,

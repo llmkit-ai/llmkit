@@ -29,20 +29,27 @@ impl PromptRepository {
     ) -> Result<i64> {
         let mut conn = self.pool.acquire().await?;
 
-        // 1. get the latest version number for this prompt (if any)
-        let latest_version: Option<i64> = sqlx::query!(
-            "SELECT MAX(version_number) as version_number FROM prompt_version"
+        // 1. insert the prompt row with a null current_prompt_version_id
+        let prompt = sqlx::query!(
+            r#"
+            INSERT INTO prompt (key, current_prompt_version_id)
+            VALUES (?, ?)
+            "#,
+            key,
+            Option::<i64>::None,
         )
-        .fetch_optional(&mut *conn)
-        .await?
-        .and_then(|row| row.version_number);
+        .execute(&mut *conn)
+        .await?;
+        let prompt_id = prompt.last_insert_rowid();
 
-        let next_version = latest_version.map(|v| v + 1).unwrap_or(1);
+        // new prompt -> version 1
+        let next_version = 1;
 
-        // 2. insert the new prompt version
-        let prompt_version_id = sqlx::query!(
+        // 2. insert the prompt_version row with prompt_id ref
+        let prompt_version = sqlx::query!(
             r#"
             INSERT INTO prompt_version (
+                prompt_id,
                 version_number,
                 system_diff,
                 user_diff,
@@ -53,8 +60,9 @@ impl PromptRepository {
                 temperature,
                 json_mode
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             "#,
+            prompt_id,
             next_version,
             "", // initial system_diff is empty
             "", // initial user_diff is empty
@@ -66,24 +74,21 @@ impl PromptRepository {
             json_mode
         )
         .execute(&mut *conn)
-        .await?
-        .last_insert_rowid();
+        .await?;
+        let prompt_version_id = prompt_version.last_insert_rowid();
 
-        // 3. insert the prompt, linking to the new version
-        let prompt_id = sqlx::query!(
+        // 3. update the prompt with the current_prompt_version_id
+        sqlx::query!(
             r#"
-            INSERT INTO prompt (
-                key,
-                prompt_version_id
-            )
-            VALUES (?, ?)
+            UPDATE prompt
+            SET current_prompt_version_id = ?
+            WHERE id = ?
             "#,
-            key,
-            prompt_version_id
+            prompt_version_id,
+            prompt_id
         )
         .execute(&mut *conn)
-        .await?
-        .last_insert_rowid();
+        .await?;
 
         Ok(prompt_id)
     }
@@ -110,7 +115,7 @@ impl PromptRepository {
                 pv.created_at,
                 pv.updated_at
             FROM prompt p
-            JOIN prompt_version pv ON p.prompt_version_id = pv.id
+            JOIN prompt_version pv ON p.current_prompt_version_id = pv.id
             JOIN model m ON pv.model_id = m.id
             JOIN provider pr ON m.provider_id = pr.id
             WHERE p.id = ?
@@ -144,7 +149,7 @@ impl PromptRepository {
                 pv.created_at,
                 pv.updated_at
             FROM prompt p
-            JOIN prompt_version pv ON p.prompt_version_id = pv.id
+            JOIN prompt_version pv ON p.current_prompt_version_id = pv.id
             JOIN model m ON pv.model_id = m.id
             JOIN provider pr ON m.provider_id = pr.id
             ORDER BY pv.created_at DESC
@@ -168,27 +173,31 @@ impl PromptRepository {
     ) -> Result<bool> {
         let mut conn = self.pool.acquire().await?;
 
-        // 1. get the current prompt version
+        // 1. fetch current prompt to compute diffs
         let current_prompt = self.get_prompt(id).await?;
 
-        // 2. calculate the diffs
         let system_diff = generate_diff(&current_prompt.system, system_prompt);
         let user_diff = generate_diff(&current_prompt.user, user_prompt);
 
-        // 3. get the latest version number for this prompt
+        // 2. get the latest version number for THIS prompt (using prompt_id)
         let latest_version: Option<i64> = sqlx::query!(
-            "SELECT MAX(version_number) as version_number FROM prompt_version"
+            r#"
+            SELECT MAX(version_number) as version_number
+            FROM prompt_version
+            WHERE prompt_id = ?
+            "#,
+            id
         )
         .fetch_optional(&mut *conn)
         .await?
         .and_then(|row| row.version_number);
-
         let next_version = latest_version.map(|v| v + 1).unwrap_or(1);
 
-        // 4. insert the new prompt version
-        let prompt_version_id = sqlx::query!(
+        // 3. insert a new prompt_version referencing the prompt via prompt_id
+        let prompt_version = sqlx::query!(
             r#"
             INSERT INTO prompt_version (
+                prompt_id,
                 version_number,
                 system_diff,
                 user_diff,
@@ -199,8 +208,9 @@ impl PromptRepository {
                 temperature,
                 json_mode
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             "#,
+            id,
             next_version,
             system_diff,
             user_diff,
@@ -212,16 +222,15 @@ impl PromptRepository {
             json_mode
         )
         .execute(&mut *conn)
-        .await?
-        .last_insert_rowid();
+        .await?;
+        let prompt_version_id = prompt_version.last_insert_rowid();
 
-        // 5. update the prompt to point to the new version
-        let rows_affected = sqlx::query!(
+        // 4. update the prompt row with the new key and new current_prompt_version_id
+        let affected = sqlx::query!(
             r#"
             UPDATE prompt
-            SET
-                key = ?,
-                prompt_version_id = ?
+            SET key = ?,
+                current_prompt_version_id = ?
             WHERE id = ?
             "#,
             key,
@@ -232,7 +241,7 @@ impl PromptRepository {
         .await?
         .rows_affected();
 
-        Ok(rows_affected > 0)
+        Ok(affected > 0)
     }
 
     pub async fn delete_prompt(&self, id: i64) -> Result<bool> {

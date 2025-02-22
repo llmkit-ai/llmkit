@@ -1,7 +1,8 @@
-import type { Prompt, PromptExecutionResponse } from '../types/response/prompts'
+import type { Prompt, PromptEvalVersionPerformanceResponse, PromptExecutionResponse } from '../types/response/prompts'
 
 export const usePrompts = () => {
   const prompts = ref<Prompt[]>([])
+  const promptPerformance = ref<PromptEvalVersionPerformanceResponse[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
 
@@ -14,6 +15,16 @@ export const usePrompts = () => {
       error.value = 'Failed to fetch prompts'
     } finally {
       loading.value = false
+    }
+  }
+
+  const getPromptPerformance = async (promptId: number) => {
+    try {
+      promptPerformance.value = await $fetch<PromptEvalVersionPerformanceResponse[]>(`/api/v1/prompts/${promptId}/performance`)
+    } catch (err) {
+      console.error(err)
+      error.value = 'Failed to fetch performance'
+    } finally {
     }
   }
 
@@ -114,9 +125,11 @@ export const usePrompts = () => {
 
   return {
     prompts,
+    promptPerformance,
     loading,
     error,
     fetchPrompts,
+    getPromptPerformance,
     createPrompt,
     updatePrompt,
     deletePrompt,

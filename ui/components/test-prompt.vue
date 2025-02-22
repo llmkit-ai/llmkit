@@ -152,7 +152,6 @@ const handleEdit = inject('handleEdit', () => {});
 
 const { 
   executePrompt,
-  executePromptStream
 } = usePrompts();
 
 const { 

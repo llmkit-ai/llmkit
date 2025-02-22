@@ -36,7 +36,7 @@
         </div>
       </div>
 
-      <div class="mt-10">
+      <div v-if="currentEvalRun" class="mt-10">
         <div class="mt-3">
           <dl class="grid grid-cols-1 sm:grid-cols-2">
             <div class="px-4 pb-4 sm:col-span-2 sm:px-0">

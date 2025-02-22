@@ -14,7 +14,7 @@ use anyhow::Result;
 use controllers::{
     logs::{
         get_log, get_logs_count, list_logs
-    }, models::list_models, prompt_eval::{create_eval_test, delete_eval_test, get_eval_test_by_id, get_eval_test_by_prompt, update_eval_test}, prompt_eval_run::{execute_eval_run, get_eval_run_by_id, get_eval_runs_by_prompt_version, update_eval_run_score}, prompts::{
+    }, models::list_models, prompt_eval::{create_eval_test, delete_eval_test, get_eval_test_by_id, get_eval_test_by_prompt, update_eval_test}, prompt_eval_run::{execute_eval_run, get_eval_performance_by_prompt_id, get_eval_run_by_id, get_eval_runs_by_prompt_version, update_eval_run_score}, prompts::{
         create_prompt, delete_prompt, execute_prompt, execute_prompt_stream, get_prompt, list_prompts, update_prompt
     }
 };
@@ -75,6 +75,7 @@ fn prompt_routes() -> Router<AppState> {
         .route("/", post(create_prompt).get(list_prompts))
         .route("/{id}", get(get_prompt).put(update_prompt).delete(delete_prompt))
         .route("/{id}/prompt-evals", get(get_eval_test_by_prompt))
+        .route("/{id}/performance", get(get_eval_performance_by_prompt_id))
 }
 
 fn prompt_evals_routes() -> Router<AppState> {

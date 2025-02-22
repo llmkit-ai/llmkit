@@ -12,6 +12,7 @@
   "dependencies": {
     "@nuxtjs/tailwindcss": "6.13.1",
     "@types/nunjucks": "^3.2.6",
+    "chart.js": "^4.4.8",
     "date-fns": "^4.1.0",
     "lucide-vue-next": "^0.473.0",
     "nunjucks": "^3.2.4",

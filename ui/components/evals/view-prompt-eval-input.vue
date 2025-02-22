@@ -48,7 +48,7 @@
       <div class="mt-16">
         <div class="sm:flex sm:items-center">
           <div class="sm:flex-auto">
-            <h1 class="text-base font-semibold text-neutral-900 dark:text-neutral-100">Eval runs</h1>
+            <h1 class="text-base font-semibold text-neutral-900 dark:text-neutral-100">Current eval performance</h1>
             <p class="mt-2 text-sm text-neutral-700 dark:text-neutral-300">View eval performance for the current version of your prompt.</p>
           </div>
           <div class="mt-4 sm:ml-16 sm:mt-0 sm:flex-none flex items-center space-x-2">
@@ -98,6 +98,18 @@
             <p v-else class="text-center text-neutral-600 dark:text-neutral-400 animate-pulse">Running evals now</p>
           </div>
         </div>
+
+        <div v-if="evalRuns.length > 0 && promptPerformance" class="mt-8 flow-root">
+          <div class="sm:flex-auto">
+            <h1 class="text-base font-semibold text-neutral-900 dark:text-neutral-100">Performance across versions</h1>
+            <p class="mt-2 text-sm text-neutral-700 dark:text-neutral-300">Performance metrics of how your prompt has been performing over time.</p>
+          </div>
+
+          <EvalsPerformanceChart 
+            :performance="promptPerformance"
+            :prompt-name="props.prompt.key"
+          />
+        </div>
       </div>
     </div>
 
@@ -138,6 +150,9 @@ const mode = ref<"view" | "score-eval-run">("view")
 const { createEvalRun, fetchEvalRunByPromptVersion, evalRuns, loading: evalRunsLoading } = usePromptEvalRuns();
 await fetchEvalRunByPromptVersion(props.prompt.id, props.prompt.version_id)
 
+const { getPromptPerformance, promptPerformance } = usePrompts();
+await getPromptPerformance(props.prompt.id)
+
 const requiresEvalRun = computed(() => {
   if (evalRuns.value.length === 0) {
     return true
@@ -164,6 +179,16 @@ const requiresNoEvalRun = computed(() => {
   return false
 })
 
+const averageScore = computed(() => {
+  if (!evalRuns.value || evalRuns.value.length === 0) {
+    return null
+  }
+
+  const total = evalRuns.value.map(e => e.score).reduce((acc, val) => acc! + val!, 0) || 0
+
+  return total / evalRuns.value.length
+})
+
 const executeLoading = ref(false)
 
 async function executeEvalRun() {
@@ -174,6 +199,7 @@ async function executeEvalRun() {
 }
 
 async function handleScoringComplete() {
+  await getPromptPerformance(props.prompt.id)
   await fetchEvalRunByPromptVersion(props.prompt.id, props.prompt.version_id)
   mode.value = 'view'
 }

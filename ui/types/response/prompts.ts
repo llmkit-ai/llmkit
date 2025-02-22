@@ -24,3 +24,13 @@ export interface PromptExecutionResponse {
   content: string;
   log: ApiLogReponse;
 }
+
+
+// PROMPT PERFORMANCE
+export interface PromptEvalVersionPerformanceResponse {
+    version_id: number,
+    version_number: number,
+    version_date: string,
+    avg_score: number | null,
+    run_count: number,
+}
