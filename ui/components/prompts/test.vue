@@ -42,14 +42,14 @@
       <PrimaryButton
         type="secondary"
         size="sm"
-        @click="handleCancel()"
+        @click="$emit('handle-cancel')"
       >
         Cancel
       </PrimaryButton>
       <PrimaryButton
         type="secondary"
         size="sm"
-        @click="handleEdit()"
+        @click="$emit('handle-edit')"
       >
         Edit
       </PrimaryButton>
@@ -147,8 +147,7 @@ const props = defineProps<{
   prompt: Prompt
 }>();
 
-const handleCancel = inject('handleCancel', () => {});
-const handleEdit = inject('handleEdit', () => {});
+const emit = defineEmits(["handle-edit", "handle-cancel"])
 
 const { 
   executePrompt,

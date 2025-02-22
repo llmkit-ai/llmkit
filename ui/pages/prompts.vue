@@ -6,7 +6,6 @@
     >
       <div class="flex justify-between items-center">
         <h2 class="font-mono font-bold text-black dark:text-white">Prompts</h2>
-        <button @click="handleNewClick" class="text-sm text-black dark:text-neutral-200 hover:text-neutral-700 dark:hover:text-neutral-300">+ New prompt</button>
       </div>
       <ul v-if="prompts && prompts.length > 0" role="list" class="mt-5 space-y-3 divide-y divide-neutral-100 dark:divide-neutral-700">
         <li 
@@ -18,7 +17,7 @@
             v-if="selectedPrompt?.id === p.id" 
             class="absolute -left-3 inset-y-0 border-l-4 border-black dark:border-white"
           />
-          <button @click="selectedPrompt = p, promptMode = 'view'" class="w-full text-left">
+          <button @click="selectedPrompt = p" class="w-full text-left">
             <p class="text-sm/6 text-black dark:text-white">{{ p.key }}</p>
             <div class="flex items-center gap-x-2 text-xs/5 text-neutral-500 dark:text-neutral-400">
               <p>{{ p.model }}</p>
@@ -33,68 +32,110 @@
     </aside>
     <!-- Main Content -->
     <div class="pl-96">
-      <ViewAddEditPrompt 
-        :prompt="selectedPrompt" 
-        :mode="promptMode" 
-        @edit="promptMode = 'edit'"
-        @cancel="handleCancelClick"
-        @saved="handleSaved"
-        @test="handleTest"
-      />
+      <div class="font-mono">
+        <div>
+          <!-- Add or Edit Mode -->
+          <div v-if="(mode === 'edit' || mode === 'new') && selectedPrompt">
+            <PromptsAddEdit 
+              v-if="mode === 'edit' || mode === 'new'" 
+              :prompt="selectedPrompt"
+              :models="models"
+              :mode="mode"
+              @handle-cancel="mode = 'view'"
+              @handle-create="handleCreate"
+              @handle-update="handleUpdate"
+            />
+          </div>
+
+          <!-- Test Mode -->
+          <div v-if="mode === 'test' && selectedPrompt">
+            <PromptsTest 
+              :prompt="selectedPrompt"
+              @handle-cancel="mode = 'view'"
+              @handle-edit="mode = 'edit'"
+            />
+          </div>
+
+          <!-- View Mode -->
+          <div v-if="mode === 'view' && selectedPrompt">
+            <PromptsView 
+              :prompt="selectedPrompt" 
+              @handle-edit="mode = 'edit'"
+              @handle-test="mode = 'test'"
+            />
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import type { Prompt } from '~/types/response/prompts';
+import type { PromptCreateDTO, PromptUpdateDTO } from '~/types/components/prompt';
+
+const mode = ref<'view' | 'edit' | 'new' | 'test'>('view');
 
 const selectedPrompt = ref<Prompt | null>(null);
 const selectedPromptCache = ref<Prompt | null>(null);
-const promptMode = ref<'view' | 'edit' | 'new' | 'test'>('view');
-
-// Provide emit handlers
-provide('handleCancel', () => handleCancelClick());
-provide('handleEdit', () => promptMode.value = 'edit');
-provide('handleSaved', (prompt: Prompt) => handleSaved(prompt));
-provide('handleTest', () => handleTest());
 
 const { 
   prompts, 
+  createPrompt,
+  updatePrompt,
   loading: promptsLoading,
   fetchPrompts 
 } = usePrompts();
 
-onMounted(async () => {
+
+const { models, fetchModels } = useModels();
+
+onBeforeMount(async () => {
+  await fetchModels()
   await fetchPrompts();
   if (prompts.value?.length > 0) {
     selectedPrompt.value = prompts.value[0];
-  } else {
-    promptMode.value = 'new'
   }
-});
+})
+
+// function handleCancelClick() {
+//   if (selectedPromptCache.value) {
+//     selectedPrompt.value = selectedPromptCache.value
+//     selectedPromptCache.value = null
+//   }
+//   promptMode.value = 'view';
+// }
+//
+// function handleNewClick() {
+//   selectedPromptCache.value = selectedPrompt.value
+//   selectedPrompt.value = null
+//   promptMode.value = 'new';
+// }
+
+// async function handleSaved(newPrompt: Prompt) {
+//   await fetchPrompts();
+//   selectedPrompt.value = newPrompt;
+// }
 
 
-function handleCancelClick() {
-  if (selectedPromptCache.value) {
-    selectedPrompt.value = selectedPromptCache.value
-    selectedPromptCache.value = null
+async function handleCreate(payload: PromptCreateDTO) {
+  try {
+    await createPrompt(payload)
+    mode.value = "view"
+  } catch(e) {
+    console.error(e)
   }
-  promptMode.value = 'view';
 }
 
-function handleNewClick() {
-  selectedPromptCache.value = selectedPrompt.value
-  selectedPrompt.value = null
-  promptMode.value = 'new';
-}
-
-async function handleSaved(newPrompt: Prompt) {
-  await fetchPrompts();
-  selectedPrompt.value = newPrompt;
-  promptMode.value = 'view';
-}
-
-async function handleTest() {
-  promptMode.value = 'test';
+async function handleUpdate(payload: PromptUpdateDTO) {
+  if (!selectedPrompt.value) {
+    throw createError({ statusCode: 500, statusMessage: "Missing prompt" })
+  }
+  try {
+    await updatePrompt(selectedPrompt.value.id, payload)
+    mode.value = "view"
+  } catch(e) {
+    console.error(e)
+  }
 }
 </script>

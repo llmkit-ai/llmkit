@@ -1,3 +1,4 @@
+import type { PromptCreateDTO, PromptUpdateDTO } from '~/types/components/prompt'
 import type { Prompt, PromptEvalVersionPerformanceResponse, PromptExecutionResponse } from '../types/response/prompts'
 
 export const usePrompts = () => {
@@ -28,26 +29,18 @@ export const usePrompts = () => {
     }
   }
 
-  const createPrompt = async (promptData: { 
-    key: string
-    system: string
-    user: string
-    model_id: number 
-    max_tokens: number
-    temperature: number
-    json_mode: boolean
-  }) => {
+  const createPrompt = async (prompt: PromptCreateDTO) => {
     try {
       const newPrompt = await $fetch<Prompt>('/api/v1/prompts', {
         method: 'POST',
         body: {
-          key: promptData.key,
-          system: promptData.system,
-          user: promptData.user,
-          model_id: promptData.model_id,
-          max_tokens: promptData.max_tokens,
-          temperature: promptData.temperature,
-          json_mode: promptData.json_mode
+          key: prompt.key,
+          system: prompt.system,
+          user: prompt.user,
+          model_id: prompt.model_id,
+          max_tokens: prompt.max_tokens,
+          temperature: prompt.temperature,
+          json_mode: prompt.json_mode
         }
       })
       prompts.value.push(newPrompt)
@@ -58,26 +51,18 @@ export const usePrompts = () => {
     }
   }
 
-  const updatePrompt = async (id: number, updates: { 
-    key?: string
-    system?: string
-    user?: string
-    model_id?: number 
-    max_tokens: number
-    temperature: number
-    json_mode: boolean
-  }) => {
+  const updatePrompt = async (id: number, prompt: PromptUpdateDTO) => {
     try {
       const updatedPrompt = await $fetch<Prompt>(`/api/v1/prompts/${id}`, {
         method: 'PUT',
         body: {
-          key: updates.key,
-          system: updates.system,
-          user: updates.user,
-          model_id: updates.model_id,
-          max_tokens: updates.max_tokens,
-          temperature: updates.temperature,
-          json_mode: updates.json_mode
+          key: prompt.key,
+          system: prompt.system,
+          user: prompt.user,
+          model_id: prompt.model_id,
+          max_tokens: prompt.max_tokens,
+          temperature: prompt.temperature,
+          json_mode: prompt.json_mode
         }
       })
       const index = prompts.value.findIndex(p => p.id === id)
