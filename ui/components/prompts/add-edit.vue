@@ -1,5 +1,5 @@
 <template>
-  <form >
+  <form>
     <div class="space-y-12">
       <div>
         <h2 class="text-base/7 font-semibold text-neutral-900 dark:text-white">
@@ -188,7 +188,7 @@ import type { Model } from '~/types/response/models';
 import type { PromptCreateDTO, PromptUpdateDTO } from '~/types/components/prompt';
 
 const props = defineProps<{
-  prompt: Prompt
+  prompt: Prompt | null
   models: Model[]
   mode: "edit" | "new"
 }>();
@@ -245,7 +245,7 @@ const handleSubmit = () => {
     });
   } else {
     emit("handle-update", {
-      id: props.prompt.id,
+      id: props.prompt!.id,
       key: promptKey.value,
       system: systemPrompt.value,
       user: userPrompt.value,

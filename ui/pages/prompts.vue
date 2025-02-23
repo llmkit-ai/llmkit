@@ -6,6 +6,12 @@
     >
       <div class="flex justify-between items-center">
         <h2 class="font-mono font-bold text-black dark:text-white">Prompts</h2>
+        <PrimaryButton 
+          @click="mode = 'new'"
+          size="sm"
+        >
+          New Prompt 
+        </PrimaryButton>
       </div>
       <ul v-if="prompts && prompts.length > 0" role="list" class="mt-5 space-y-3 divide-y divide-neutral-100 dark:divide-neutral-700">
         <li 
@@ -37,8 +43,17 @@
           <!-- Add or Edit Mode -->
           <div v-if="(mode === 'edit' || mode === 'new') && selectedPrompt">
             <PromptsAddEdit 
-              v-if="mode === 'edit' || mode === 'new'" 
+              v-if="mode === 'edit'" 
               :prompt="selectedPrompt"
+              :models="models"
+              :mode="mode"
+              @handle-cancel="mode = 'view'"
+              @handle-create="handleCreate"
+              @handle-update="handleUpdate"
+            />
+            <PromptsAddEdit 
+              v-if="mode === 'new'" 
+              :prompt="null"
               :models="models"
               :mode="mode"
               @handle-cancel="mode = 'view'"
@@ -73,6 +88,7 @@
 <script setup lang="ts">
 import type { Prompt } from '~/types/response/prompts';
 import type { PromptCreateDTO, PromptUpdateDTO } from '~/types/components/prompt';
+import type PrimaryButton from '~/components/global/primary-button.vue';
 
 const mode = ref<'view' | 'edit' | 'new' | 'test'>('view');
 
