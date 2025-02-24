@@ -6,6 +6,8 @@ export interface PromptCreateDTO {
   max_tokens: number;
   temperature: number;
   json_mode: boolean;
+  prompt_type: string;
+  is_chat: boolean;
 }
 
 export interface PromptUpdateDTO {
@@ -17,5 +19,7 @@ export interface PromptUpdateDTO {
   max_tokens: number;
   temperature: number;
   json_mode: boolean;
+  prompt_type: string;
+  is_chat: boolean;
 }
 

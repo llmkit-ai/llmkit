@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div v-if="mode === 'new'">
+    <div v-if="mode === 'new' && currentCreatePromptStep === 1">
       <div class="px-4 sm:px-0">
         <h3 class="text-base/7 font-semibold text-neutral-900 dark:text-neutral-200">
           Create new prompt
@@ -13,7 +13,9 @@
       <div class="mt-6 grid grid-cols-1 gap-4">
         <button
           v-for="c in createPromptOptions"
+          :key="c.type"
           class="text-left inline-flex p-4 border border-neutral-600 dark:border-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 dark:hover:border-neutral-200 hover:border-neutral-900"
+          @click="selectPromptType(c.type)"
         >
           <div>
             <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-200">
@@ -27,7 +29,7 @@
               Use cases
             </h4>
             <ul class="mt-1 pl-6 list-disc text-neutral-600 dark:text-neutral-400">
-              <li v-for="u in c.usedFor" class="">{{ u }}</li>
+              <li v-for="u in c.usedFor" :key="u" class="">{{ u }}</li>
             </ul>
           </div>
         </button>
@@ -166,6 +168,32 @@
                 <span class="text-sm/6 font-medium text-neutral-900 dark:text-white">JSON Mode</span>
               </label>
             </div>
+            
+            <!-- Chat Mode Checkbox (only available for appropriate prompt types) -->
+            <div class="sm:col-span-2">
+              <label class="inline-flex items-center gap-2" :class="{ 'opacity-50': !canEnableChat }">
+                <input
+                  v-model="isChat"
+                  type="checkbox"
+                  class="border-2 border-black dark:border-white"
+                  :disabled="!canEnableChat"
+                >
+                <span class="text-sm/6 font-medium text-neutral-900 dark:text-white">Chat Mode</span>
+              </label>
+              <p v-if="!canEnableChat" class="mt-1 text-xs text-neutral-500">
+                Chat mode is only available for Static and Dynamic System prompts
+              </p>
+            </div>
+            
+            <!-- Prompt Type Display (read-only when editing) -->
+            <div class="sm:col-span-2">
+              <label class="block text-sm/6 font-medium text-neutral-900 dark:text-white">Prompt Type</label>
+              <div class="mt-2">
+                <div class="p-2 border-2 border-black dark:border-white bg-neutral-100 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300">
+                  {{ selectedPromptTypeLabel }}
+                </div>
+              </div>
+            </div>
 
             <!-- Prompt Content -->
             <div class="col-span-full">
@@ -180,13 +208,15 @@
                 />
               </div>
             </div>
-            <div class="col-span-full">
+            
+            <!-- Show User Prompt only for Dynamic System & User Prompts type -->
+            <div v-if="promptType === 'dynamic_both'" class="col-span-full">
               <label for="user-prompt" class="block text-sm/6 font-medium text-neutral-900 dark:text-white">User Prompt</label>
               <div class="mt-2">
                 <textarea
                   v-model="userPrompt"
                   name="user-prompt"
-                  id="user- prompt"
+                  id="user-prompt"
                   rows="1"
                   class="block w-full border-2 border-black dark:border-white bg-white dark:bg-neutral-800 p-2 text-base text-neutral-900 dark:text-white focus:outline-none sm:text-sm/6"
                 />
@@ -241,19 +271,66 @@ const selectedModelId = ref<number | null>(props.prompt?.model_id || null);
 const maxTokens = ref(props.prompt?.max_tokens || 256);
 const temperatureValue = ref(props.prompt?.temperature || 0.7);
 const jsonMode = ref(props.prompt?.json_mode || false);
+const promptType = ref(props.prompt?.prompt_type || 'static');
+const isChat = ref(props.prompt?.is_chat || false);
 const isOpen = ref(false);
 
 const currentCreatePromptStep = ref(1);
+
 const createPromptOptions = ref([
-  { title: "Static System Prompt", description: "Best used for back and forth chat scenarios or very simple prompts without any dynamic input.", usedFor: ["Chat style prompts", "Basic prompts"] },
-  { title: "Dynamic System Prompt", description: "Best used for when you want a dynamic system prompt and your user input is dynamic text/json.", usedFor: ["Dynamic application conditions", "Non structured user input", "One shot prompts (not chat)"] },
-  { title: "Dynamic System & User Prompts", description: "Best used for when you have structured system and user prompts and will provide a consistent structured payload.", usedFor: ["Dynamic application conditions", "Dynamic and structured user input", "One shot prompts (not chat)"] },
+  { 
+    title: "Static System Prompt", 
+    type: "static",
+    description: "Best used for back and forth chat scenarios or very simple prompts without any dynamic input.", 
+    usedFor: ["Chat style prompts", "Basic prompts"],
+    canBeChat: true
+  },
+  { 
+    title: "Dynamic System Prompt", 
+    type: "dynamic_system",
+    description: "Best used for when you want a dynamic system prompt and your user input is dynamic text/json.", 
+    usedFor: ["Dynamic application conditions", "Non structured user input", "One shot prompts (not chat)"],
+    canBeChat: true
+  },
+  { 
+    title: "Dynamic System & User Prompts", 
+    type: "dynamic_both",
+    description: "Best used for when you have structured system and user prompts and will provide a consistent structured payload.", 
+    usedFor: ["Dynamic application conditions", "Dynamic and structured user input", "One shot prompts (not chat)"],
+    canBeChat: false
+  },
 ])
+
+function selectPromptType(type: string) {
+  promptType.value = type;
+  // If the selected type doesn't support chat, disable chat mode
+  const option = createPromptOptions.value.find(opt => opt.type === type);
+  if (option && !option.canBeChat) {
+    isChat.value = false;
+  }
+  
+  // Clear user prompt for non-dynamic_both types
+  if (type !== 'dynamic_both') {
+    userPrompt.value = '';
+  }
+  
+  currentCreatePromptStep.value = 2;
+}
 
 // Computed
 const selectedModel = computed(() =>
   props.models.find(m => m.id === selectedModelId.value) || null
 );
+
+const selectedPromptTypeLabel = computed(() => {
+  const option = createPromptOptions.value.find(opt => opt.type === promptType.value);
+  return option ? option.title : 'Static System Prompt';
+});
+
+const canEnableChat = computed(() => {
+  const option = createPromptOptions.value.find(opt => opt.type === promptType.value);
+  return option ? option.canBeChat : false;
+});
 
 function toggleDropdown() {
   isOpen.value = !isOpen.value;
@@ -272,29 +349,38 @@ function resetForm() {
   maxTokens.value = 256;
   temperatureValue.value = 0.7;
   jsonMode.value = false;
+  promptType.value = 'static';
+  isChat.value = false;
 }
 
 const handleSubmit = () => {
+  // Ensure user prompt is empty for non-dynamic_both types
+  const finalUserPrompt = promptType.value === 'dynamic_both' ? userPrompt.value : '';
+  
   if (props.mode === 'new') {
     emit("handle-create", {
       key: promptKey.value,
       system: systemPrompt.value,
-      user: userPrompt.value,
+      user: finalUserPrompt,
       model_id: selectedModelId.value,
       max_tokens: maxTokens.value,
       temperature: temperatureValue.value,
       json_mode: jsonMode.value,
+      prompt_type: promptType.value,
+      is_chat: isChat.value,
     });
   } else {
     emit("handle-update", {
       id: props.prompt!.id,
       key: promptKey.value,
       system: systemPrompt.value,
-      user: userPrompt.value,
+      user: finalUserPrompt,
       model_id: selectedModelId.value,
       max_tokens: maxTokens.value,
       temperature: temperatureValue.value,
       json_mode: jsonMode.value,
+      prompt_type: promptType.value,
+      is_chat: isChat.value,
     });
   }
 };

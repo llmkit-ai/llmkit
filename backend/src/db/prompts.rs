@@ -26,6 +26,8 @@ impl PromptRepository {
         max_tokens: i64,
         temperature: f64,
         json_mode: bool,
+        prompt_type: &str,
+        is_chat: bool,
     ) -> Result<i64> {
         let mut conn = self.pool.acquire().await?;
 
@@ -58,9 +60,11 @@ impl PromptRepository {
                 model_id,
                 max_tokens,
                 temperature,
-                json_mode
+                json_mode,
+                prompt_type,
+                is_chat
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             "#,
             prompt_id,
             next_version,
@@ -71,7 +75,9 @@ impl PromptRepository {
             model_id,
             max_tokens,
             temperature,
-            json_mode
+            json_mode,
+            prompt_type,
+            is_chat
         )
         .execute(&mut *conn)
         .await?;
@@ -106,6 +112,8 @@ impl PromptRepository {
                 pv.max_tokens,
                 pv.temperature,
                 pv.json_mode,
+                pv.prompt_type,
+                pv.is_chat,
                 m.name as model_name,
                 pr.name as provider_name,
                 pv.system_diff,
@@ -140,6 +148,8 @@ impl PromptRepository {
                 pv.max_tokens,
                 pv.temperature,
                 pv.json_mode,
+                pv.prompt_type,
+                pv.is_chat,
                 m.name as model_name,
                 pr.name as provider_name,
                 pv.system_diff,
@@ -170,6 +180,8 @@ impl PromptRepository {
         max_tokens: i64,
         temperature: f64,
         json_mode: bool,
+        prompt_type: &str,
+        is_chat: bool,
     ) -> Result<bool> {
         let mut conn = self.pool.acquire().await?;
 
@@ -206,9 +218,11 @@ impl PromptRepository {
                 model_id,
                 max_tokens,
                 temperature,
-                json_mode
+                json_mode,
+                prompt_type,
+                is_chat
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             "#,
             id,
             next_version,
@@ -219,7 +233,9 @@ impl PromptRepository {
             model_id,
             max_tokens,
             temperature,
-            json_mode
+            json_mode,
+            prompt_type,
+            is_chat
         )
         .execute(&mut *conn)
         .await?;

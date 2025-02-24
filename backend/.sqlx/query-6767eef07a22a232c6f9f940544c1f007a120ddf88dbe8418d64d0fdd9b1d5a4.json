@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            INSERT INTO prompt_eval_run (prompt_version_id, prompt_eval_id, score, output)\n            VALUES (?, ?, ?, ?)\n            RETURNING *\n            ",
+  "query": "\n            SELECT\n                per.*,\n                pe.name AS prompt_eval_name\n            FROM prompt_eval_run per\n            JOIN prompt_eval pe ON per.prompt_eval_id = pe.id\n            WHERE per.id = ?\n            ",
   "describe": {
     "columns": [
       {
@@ -42,10 +42,15 @@
         "name": "updated_at",
         "ordinal": 7,
         "type_info": "Datetime"
+      },
+      {
+        "name": "prompt_eval_name",
+        "ordinal": 8,
+        "type_info": "Text"
       }
     ],
     "parameters": {
-      "Right": 4
+      "Right": 1
     },
     "nullable": [
       false,
@@ -55,8 +60,9 @@
       true,
       false,
       false,
+      false,
       false
     ]
   },
-  "hash": "a792d42045195b335df6de1d47f3abc4310a02364e90ca084bd125b81c117c4c"
+  "hash": "6767eef07a22a232c6f9f940544c1f007a120ddf88dbe8418d64d0fdd9b1d5a4"
 }

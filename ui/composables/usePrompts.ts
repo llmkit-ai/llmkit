@@ -1,5 +1,5 @@
 import type { PromptCreateDTO, PromptUpdateDTO } from '~/types/components/prompt'
-import type { Prompt, PromptEvalVersionPerformanceResponse, PromptExecutionResponse } from '../types/response/prompts'
+import type { Message, Prompt, PromptEvalVersionPerformanceResponse, PromptExecutionResponse } from '../types/response/prompts'
 
 export const usePrompts = () => {
   const prompts = ref<Prompt[]>([])
@@ -40,7 +40,9 @@ export const usePrompts = () => {
           model_id: prompt.model_id,
           max_tokens: prompt.max_tokens,
           temperature: prompt.temperature,
-          json_mode: prompt.json_mode
+          json_mode: prompt.json_mode,
+          prompt_type: prompt.prompt_type,
+          is_chat: prompt.is_chat
         }
       })
       prompts.value.push(newPrompt)
@@ -62,7 +64,9 @@ export const usePrompts = () => {
           model_id: prompt.model_id,
           max_tokens: prompt.max_tokens,
           temperature: prompt.temperature,
-          json_mode: prompt.json_mode
+          json_mode: prompt.json_mode,
+          prompt_type: prompt.prompt_type,
+          is_chat: prompt.is_chat
         }
       })
       const index = prompts.value.findIndex(p => p.id === id)
@@ -108,6 +112,22 @@ export const usePrompts = () => {
     }
   }
 
+  // Chat execution (non-streaming)
+  const executeChat = async (id: number, context: Record<string, any> = {}, messages: Message[]) => {
+    try {
+      return await $fetch<PromptExecutionResponse>(`/api/v1/prompts/execute/${id}/chat`, { 
+        method: 'POST',
+        body: {
+          context,
+          messages
+        }
+      })
+    } catch (err) {
+      error.value = 'Failed to execute chat prompt'
+      throw err
+    }
+  }
+
   return {
     prompts,
     promptPerformance,
@@ -119,6 +139,7 @@ export const usePrompts = () => {
     updatePrompt,
     deletePrompt,
     executePrompt,
-    executePromptStream
+    executePromptStream,
+    executeChat
   }
 }

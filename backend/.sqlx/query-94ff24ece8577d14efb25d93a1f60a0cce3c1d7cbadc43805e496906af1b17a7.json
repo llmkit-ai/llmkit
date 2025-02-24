@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            SELECT * \n            FROM prompt_eval_run \n            WHERE prompt_version_id = ?\n            ",
+  "query": "\n            SELECT\n                per.*,\n                pe.name AS prompt_eval_name\n            FROM prompt_eval_run per\n            JOIN prompt_eval pe ON per.prompt_eval_id = pe.id\n            WHERE per.prompt_version_id = ?\n            ",
   "describe": {
     "columns": [
       {
@@ -42,6 +42,11 @@
         "name": "updated_at",
         "ordinal": 7,
         "type_info": "Datetime"
+      },
+      {
+        "name": "prompt_eval_name",
+        "ordinal": 8,
+        "type_info": "Text"
       }
     ],
     "parameters": {
@@ -55,8 +60,9 @@
       true,
       false,
       false,
+      false,
       false
     ]
   },
-  "hash": "2dc7b8232b6f233f739388ee6680b239877e42dc7336b386d3f496deefb21922"
+  "hash": "94ff24ece8577d14efb25d93a1f60a0cce3c1d7cbadc43805e496906af1b17a7"
 }

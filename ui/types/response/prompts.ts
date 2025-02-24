@@ -11,6 +11,8 @@ export interface Prompt {
   max_tokens: number
   temperature: number
   json_mode: boolean
+  prompt_type: string
+  is_chat: boolean
   version_id: number
   version_number: number
   system_version_diff: string | null
@@ -18,6 +20,12 @@ export interface Prompt {
   updated_at: string
 }
 
+
+// Message type for chat
+export interface Message {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
 
 // PROMPT EXECUTION RESPONSE
 export interface PromptExecutionResponse {

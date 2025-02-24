@@ -1,30 +1,36 @@
 use axum::{
     http::StatusCode,
-    response::{
-        IntoResponse,
-        Response
-    },
-    routing::{get, post}, 
-    Router
+    response::{IntoResponse, Response},
+    routing::{get, post},
+    Router,
 };
 
 use tracing_subscriber;
 
 use anyhow::Result;
 use controllers::{
-    logs::{
-        get_log, get_logs_count, list_logs
-    }, models::list_models, prompt_eval::{create_eval_test, delete_eval_test, get_eval_test_by_id, get_eval_test_by_prompt, update_eval_test}, prompt_eval_run::{execute_eval_run, get_eval_performance_by_prompt_id, get_eval_run_by_id, get_eval_runs_by_prompt_version, update_eval_run_score}, prompts::{
-        create_prompt, delete_prompt, execute_prompt, execute_prompt_stream, get_prompt, list_prompts, update_prompt
-    }
+    logs::{get_log, get_logs_count, list_logs},
+    models::list_models,
+    prompt_eval::{
+        create_eval_test, delete_eval_test, get_eval_test_by_id, get_eval_test_by_prompt,
+        update_eval_test,
+    },
+    prompt_eval_run::{
+        execute_eval_run, get_eval_performance_by_prompt_id, get_eval_run_by_id,
+        get_eval_runs_by_prompt_version, update_eval_run_score,
+    },
+    prompts::{
+        create_prompt, delete_prompt, execute_chat, execute_chat_stream, execute_prompt,
+        execute_prompt_stream, get_prompt, list_prompts, update_prompt,
+    },
 };
 
 use db::{init::DbData, types::prompt::PromptRowWithModel};
 use moka::future::Cache;
 
 pub mod common;
-pub mod db;
 pub mod controllers;
+pub mod db;
 pub mod services;
 
 #[tokio::main]
@@ -34,9 +40,7 @@ async fn main() -> Result<()> {
     let database_url = std::env::var("DATABASE_URL")?;
     let log_level = std::env::var("RUST_LOG").unwrap_or("info".to_string());
 
-    tracing_subscriber::fmt()
-        .with_env_filter(log_level)
-        .init();
+    tracing_subscriber::fmt().with_env_filter(log_level).init();
 
     let data = DbData::new(&database_url).await?;
     let app_state = AppState::new(data).await;
@@ -68,31 +72,41 @@ fn execute_routes() -> Router<AppState> {
     Router::new()
         .route("/{id}", post(execute_prompt))
         .route("/{id}/stream", post(execute_prompt_stream))
+        .route("/{id}/chat", post(execute_chat))
+        .route("/{id}/chat/stream", post(execute_chat_stream))
 }
 
 fn prompt_routes() -> Router<AppState> {
     Router::new()
         .route("/", post(create_prompt).get(list_prompts))
-        .route("/{id}", get(get_prompt).put(update_prompt).delete(delete_prompt))
+        .route(
+            "/{id}",
+            get(get_prompt).put(update_prompt).delete(delete_prompt),
+        )
         .route("/{id}/prompt-evals", get(get_eval_test_by_prompt))
         .route("/{id}/performance", get(get_eval_performance_by_prompt_id))
 }
 
 fn prompt_evals_routes() -> Router<AppState> {
-    Router::new()
-        .route("/", post(create_eval_test))
-        .route("/{id}", get(get_eval_test_by_id).put(update_eval_test).delete(delete_eval_test))
+    Router::new().route("/", post(create_eval_test)).route(
+        "/{id}",
+        get(get_eval_test_by_id)
+            .put(update_eval_test)
+            .delete(delete_eval_test),
+    )
 }
 
 fn prompt_eval_runs_routes() -> Router<AppState> {
     Router::new()
-        .route("/{prompt_id}/version/{prompt_version_id}", post(execute_eval_run).get(get_eval_runs_by_prompt_version))
+        .route(
+            "/{prompt_id}/version/{prompt_version_id}",
+            post(execute_eval_run).get(get_eval_runs_by_prompt_version),
+        )
         .route("/{id}", get(get_eval_run_by_id).put(update_eval_run_score))
 }
 
 fn model_routes() -> Router<AppState> {
-    Router::new()
-        .route("/", get(list_models))
+    Router::new().route("/", get(list_models))
 }
 
 fn logs_routes() -> Router<AppState> {
@@ -117,10 +131,12 @@ impl AppState {
     pub async fn new(data: DbData) -> Self {
         let prompt_cache: Cache<i64, PromptRowWithModel> = Cache::new(500);
 
-        AppState { db: data, prompt_cache }
+        AppState {
+            db: data,
+            prompt_cache,
+        }
     }
 }
-
 
 // ANYHOW ERROR HANDLING
 #[allow(dead_code)]
@@ -132,7 +148,7 @@ pub enum AppError {
     Conflict(String),
     InternalServerError(String),
     TooManyRequests(String),
-    Other(anyhow::Error)
+    Other(anyhow::Error),
 }
 
 impl IntoResponse for AppError {
@@ -140,8 +156,9 @@ impl IntoResponse for AppError {
         match self {
             AppError::Unauthorized(e) => {
                 tracing::error!("Unauthorized | error: {}", e);
-                return (StatusCode::UNAUTHORIZED, format!("Unauthorized: {:?}", e)).into_response();
-            },
+                return (StatusCode::UNAUTHORIZED, format!("Unauthorized: {:?}", e))
+                    .into_response();
+            }
             AppError::BadRequest(e) => {
                 tracing::error!("Bad Request | error: {}", e);
                 return (StatusCode::BAD_REQUEST, format!("Bad Request: {:?}", e)).into_response();
@@ -164,11 +181,13 @@ impl IntoResponse for AppError {
             }
             AppError::Other(e) => {
                 tracing::error!("Internal Server Error | error: {}", e);
-                return (StatusCode::INTERNAL_SERVER_ERROR, format!("Internal Server Error")).into_response();
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Internal Server Error"),
+                )
+                    .into_response();
             }
-
         }
-        
     }
 }
 
@@ -177,4 +196,3 @@ impl From<anyhow::Error> for AppError {
         AppError::Other(err)
     }
 }
-

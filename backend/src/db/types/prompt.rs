@@ -10,6 +10,8 @@ pub struct PromptRow {
     pub max_tokens: i64,
     pub temperature: f64,
     pub json_mode: bool,
+    pub prompt_type: String,
+    pub is_chat: bool,
     pub created_at: chrono::NaiveDateTime,
     pub updated_at: chrono::NaiveDateTime,
 }
@@ -24,6 +26,8 @@ pub struct PromptRowWithModel {
     pub max_tokens: i64,
     pub temperature: f64,
     pub json_mode: bool,
+    pub prompt_type: String,
+    pub is_chat: bool,
     pub model_name: String,
     pub provider_name: String,
     pub version_number: i64,

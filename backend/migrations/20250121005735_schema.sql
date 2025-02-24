@@ -38,6 +38,8 @@ CREATE TABLE prompt_version (
     max_tokens INTEGER NOT NULL DEFAULT 256,
     temperature REAL NOT NULL DEFAULT 0.7,
     json_mode BOOLEAN NOT NULL DEFAULT FALSE,
+    prompt_type TEXT NOT NULL CHECK(prompt_type IN ('static', 'dynamic_system', 'dynamic_both')) DEFAULT 'static',
+    is_chat BOOLEAN NOT NULL DEFAULT FALSE,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (model_id) REFERENCES model(id)

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO prompt (key, current_prompt_version_id)\n            VALUES (?, ?)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "c83a8d33d4f5e078f2226b311b786d8acdc6c9e32e6cd06480f0afcc802bad39"
+}

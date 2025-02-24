@@ -24,7 +24,7 @@
             v-if="selectedPrompt?.id === p.id" 
             class="absolute -left-3 inset-y-0 border-l-4 border-black dark:border-white"
           />
-          <button @click="selectedPrompt = p" class="w-full text-left">
+          <button @click="selectedPrompt = p, mode = 'view'" class="w-full text-left">
             <p class="text-sm/6 text-black dark:text-white">{{ p.key }}</p>
             <div class="flex items-center gap-x-2 text-xs/5 text-neutral-500 dark:text-neutral-400">
               <p>{{ p.model }}</p>
@@ -65,7 +65,16 @@
 
           <!-- Test Mode -->
           <div v-if="mode === 'test' && selectedPrompt">
+            <!-- Use Chat Test for chat-enabled prompts -->
+            <PromptsChatTest 
+              v-if="selectedPrompt.is_chat"
+              :prompt="selectedPrompt"
+              @handle-cancel="mode = 'view'"
+              @handle-edit="mode = 'edit'"
+            />
+            <!-- Use regular Test for standard prompts -->
             <PromptsTest 
+              v-else
               :prompt="selectedPrompt"
               @handle-cancel="mode = 'view'"
               @handle-edit="mode = 'edit'"
@@ -90,6 +99,7 @@
 import type { Prompt } from '~/types/response/prompts';
 import type { PromptCreateDTO, PromptUpdateDTO } from '~/types/components/prompt';
 import type PrimaryButton from '~/components/global/primary-button.vue';
+import PromptsChatTest from '~/components/prompts/chat-test.vue';
 
 const mode = ref<'view' | 'edit' | 'new' | 'test'>('view');
 

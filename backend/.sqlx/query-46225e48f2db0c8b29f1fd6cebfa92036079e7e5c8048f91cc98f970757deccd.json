@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            SELECT\n                p.id,\n                p.key,\n                pv.system,\n                pv.user,\n                pv.model_id,\n                pv.max_tokens,\n                pv.temperature,\n                pv.json_mode,\n                m.name as model_name,\n                pr.name as provider_name,\n                pv.system_diff,\n                pv.user_diff,\n                pv.version_number,\n                pv.id as version_id,\n                pv.created_at,\n                pv.updated_at\n            FROM prompt p\n            JOIN prompt_version pv ON p.prompt_version_id = pv.id\n            JOIN model m ON pv.model_id = m.id\n            JOIN provider pr ON m.provider_id = pr.id\n            ORDER BY pv.created_at DESC\n            ",
+  "query": "\n            SELECT\n                p.id,\n                p.key,\n                pv.system,\n                pv.user,\n                pv.model_id,\n                pv.max_tokens,\n                pv.temperature,\n                pv.json_mode,\n                pv.prompt_type,\n                pv.is_chat,\n                m.name as model_name,\n                pr.name as provider_name,\n                pv.system_diff,\n                pv.user_diff,\n                pv.version_number,\n                pv.id as version_id,\n                pv.created_at,\n                pv.updated_at\n            FROM prompt p\n            JOIN prompt_version pv ON p.current_prompt_version_id = pv.id\n            JOIN model m ON pv.model_id = m.id\n            JOIN provider pr ON m.provider_id = pr.id\n            WHERE p.id = ?\n            ",
   "describe": {
     "columns": [
       {
@@ -44,50 +44,62 @@
         "type_info": "Bool"
       },
       {
-        "name": "model_name",
+        "name": "prompt_type",
         "ordinal": 8,
         "type_info": "Text"
       },
       {
-        "name": "provider_name",
+        "name": "is_chat",
         "ordinal": 9,
-        "type_info": "Text"
+        "type_info": "Bool"
       },
       {
-        "name": "system_diff",
+        "name": "model_name",
         "ordinal": 10,
         "type_info": "Text"
       },
       {
-        "name": "user_diff",
+        "name": "provider_name",
         "ordinal": 11,
         "type_info": "Text"
       },
       {
-        "name": "version_number",
+        "name": "system_diff",
         "ordinal": 12,
+        "type_info": "Text"
+      },
+      {
+        "name": "user_diff",
+        "ordinal": 13,
+        "type_info": "Text"
+      },
+      {
+        "name": "version_number",
+        "ordinal": 14,
         "type_info": "Integer"
       },
       {
         "name": "version_id",
-        "ordinal": 13,
+        "ordinal": 15,
         "type_info": "Integer"
       },
       {
         "name": "created_at",
-        "ordinal": 14,
+        "ordinal": 16,
         "type_info": "Datetime"
       },
       {
         "name": "updated_at",
-        "ordinal": 15,
+        "ordinal": 17,
         "type_info": "Datetime"
       }
     ],
     "parameters": {
-      "Right": 0
+      "Right": 1
     },
     "nullable": [
+      false,
+      false,
       false,
       false,
       false,
@@ -106,5 +118,5 @@
       false
     ]
   },
-  "hash": "aae36bc28bbe73e4d6a9f3ec0fc5f2ca321a2353158174616c94adab1b97e0aa"
+  "hash": "46225e48f2db0c8b29f1fd6cebfa92036079e7e5c8048f91cc98f970757deccd"
 }

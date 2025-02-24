@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT MAX(version_number) as version_number\n            FROM prompt_version\n            WHERE prompt_id = ?\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "version_number",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "37dac5f033fed737cdd95cb933caa8520185a8682de6ace740529f183eefcca4"
+}
