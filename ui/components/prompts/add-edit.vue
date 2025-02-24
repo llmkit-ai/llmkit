@@ -185,13 +185,23 @@
               </p>
             </div>
             
-            <!-- Prompt Type Display (read-only when editing) -->
+            <!-- Prompt Type Dropdown -->
             <div class="sm:col-span-2">
               <label class="block text-sm/6 font-medium text-neutral-900 dark:text-white">Prompt Type</label>
               <div class="mt-2">
-                <div class="p-2 border-2 border-black dark:border-white bg-neutral-100 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300">
-                  {{ selectedPromptTypeLabel }}
-                </div>
+                <select 
+                  v-model="promptType"
+                  @change="handlePromptTypeChange"
+                  class="block w-full border-2 border-black dark:border-white bg-white dark:bg-neutral-800 p-2 text-base text-neutral-900 dark:text-white focus:outline-none sm:text-sm/6"
+                >
+                  <option 
+                    v-for="option in createPromptOptions" 
+                    :key="option.type" 
+                    :value="option.type"
+                  >
+                    {{ option.title }}
+                  </option>
+                </select>
               </div>
             </div>
 
@@ -226,6 +236,14 @@
         </div>
       </div>
 
+      <!-- Validation Errors -->
+      <div v-if="showValidationErrors && validationErrors.length > 0" class="mt-6 bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-800 rounded p-3">
+        <h3 class="text-sm font-medium text-red-800 dark:text-red-300">Please correct the following issues:</h3>
+        <ul class="mt-2 text-sm text-red-700 dark:text-red-400 list-disc pl-5">
+          <li v-for="error in validationErrors" :key="error">{{ error }}</li>
+        </ul>
+      </div>
+      
       <!-- Form Actions -->
       <div class="mt-6 flex items-center justify-end gap-x-3">
         <PrimaryButton
@@ -317,6 +335,22 @@ function selectPromptType(type: string) {
   currentCreatePromptStep.value = 2;
 }
 
+function handlePromptTypeChange() {
+  // If the selected type doesn't support chat, disable chat mode
+  const option = createPromptOptions.value.find(opt => opt.type === promptType.value);
+  if (option && !option.canBeChat) {
+    isChat.value = false;
+  }
+  
+  // Clear user prompt for non-dynamic_both types
+  if (promptType.value !== 'dynamic_both') {
+    userPrompt.value = '';
+  }
+  
+  // Reset validation error display when type changes
+  showValidationErrors.value = false;
+}
+
 // Computed
 const selectedModel = computed(() =>
   props.models.find(m => m.id === selectedModelId.value) || null
@@ -331,6 +365,8 @@ const canEnableChat = computed(() => {
   const option = createPromptOptions.value.find(opt => opt.type === promptType.value);
   return option ? option.canBeChat : false;
 });
+
+// No need for watch since we're using computed properties for validation
 
 function toggleDropdown() {
   isOpen.value = !isOpen.value;
@@ -353,7 +389,47 @@ function resetForm() {
   isChat.value = false;
 }
 
+const showValidationErrors = ref(false);
+
+// Computed property for validation errors
+const validationErrors = computed(() => {
+  const errors: string[] = [];
+  
+  // Check prompt key
+  if (!promptKey.value.trim()) {
+    errors.push('Prompt key is required');
+  }
+  
+  // Check system prompt
+  if (!systemPrompt.value.trim()) {
+    errors.push('System prompt is required');
+  }
+  
+  // Check user prompt only for dynamic_both
+  if (promptType.value === 'dynamic_both' && !userPrompt.value.trim()) {
+    errors.push('User prompt is required for Dynamic System & User Prompts type');
+  }
+  
+  // Check model selection
+  if (selectedModelId.value === null) {
+    errors.push('Model selection is required');
+  }
+  
+  return errors;
+});
+
+// Computed property to check if form is valid
+const isFormValid = computed(() => {
+  return validationErrors.value.length === 0;
+});
+
 const handleSubmit = () => {
+  // Validate form first
+  if (!isFormValid.value) {
+    showValidationErrors.value = true;
+    return;
+  }
+  
   // Ensure user prompt is empty for non-dynamic_both types
   const finalUserPrompt = promptType.value === 'dynamic_both' ? userPrompt.value : '';
   
