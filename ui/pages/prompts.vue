@@ -8,9 +8,10 @@
         <h2 class="font-mono font-bold text-black dark:text-white">Prompts</h2>
         <PrimaryButton 
           @click="mode = 'new'"
-          size="sm"
+          size="xs"
+          type="primary"
         >
-          New Prompt 
+          New Prompt +
         </PrimaryButton>
       </div>
       <ul v-if="prompts && prompts.length > 0" role="list" class="mt-5 space-y-3 divide-y divide-neutral-100 dark:divide-neutral-700">
