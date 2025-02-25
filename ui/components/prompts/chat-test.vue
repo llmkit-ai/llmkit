@@ -213,6 +213,41 @@ function scrollToBottom() {
   });
 }
 
+// Function to create messages array including context in system message
+function createMessagesWithContext() {
+  // For first message or when system context is needed
+  // We'll add a system message with the context as JSON string
+  if (Object.keys(jsonContext.value).length > 0) {
+    // Check if there's already a system message
+    const hasSystemMessage = chatMessages.value.some(msg => msg.role === 'system');
+    
+    // Create a copy of the messages array
+    const messagesWithContext = [...chatMessages.value];
+    
+    // If no system message exists, add one with the context
+    if (!hasSystemMessage) {
+      messagesWithContext.unshift({
+        role: 'system',
+        content: JSON.stringify(jsonContext.value)
+      });
+    } else {
+      // Replace the existing system message with one containing context
+      const systemIndex = messagesWithContext.findIndex(msg => msg.role === 'system');
+      if (systemIndex !== -1) {
+        messagesWithContext[systemIndex] = {
+          role: 'system',
+          content: JSON.stringify(jsonContext.value)
+        };
+      }
+    }
+    
+    return messagesWithContext;
+  }
+  
+  // Return the original messages array if no context
+  return chatMessages.value;
+}
+
 async function sendMessage() {
   if (userInput.value.trim() === '' || isStreaming.value) {
     return;
@@ -235,20 +270,21 @@ async function sendMessage() {
   streamingResponse.value = '';
   
   try {
-    // Create SSE connection for streaming
-    const source = new SSE(`/api/v1/ui/prompts/execute/${props.prompt.id}/chat/stream`, {
+    // Create SSE connection for streaming using the OpenAI-compatible API
+    const source = new SSE(`/api/v1/ui/prompts/execute/chat/stream`, {
       headers: { 'Content-Type': 'application/json' },
       payload: JSON.stringify({
-        context: jsonContext.value,
-        messages: chatMessages.value
+        model: props.prompt.key,
+        messages: createMessagesWithContext(),
+        stream: true
       })
     });
     
     source.addEventListener('message', function(e: any) {
       const data = e.data;
       
-      // Check if this is the log ID message (last message)
-      if (data.includes('log_id')) {
+      // Check if this is the done message
+      if (data === "[DONE]") {
         isStreaming.value = false;
         
         // Add assistant message to chat history
@@ -262,9 +298,49 @@ async function sendMessage() {
         return;
       }
       
-      // Append to streaming response
-      streamingResponse.value += data;
-      scrollToBottom();
+      try {
+        // Parse the JSON chunk
+        const chunk = JSON.parse(data);
+        
+        // Extract the content from the delta
+        if (chunk.choices && chunk.choices.length > 0) {
+          const choice = chunk.choices[0];
+          
+          // Check for finish reason
+          if (choice.finish_reason) {
+            // Do nothing, we'll handle completion when we receive the [DONE] message
+            return;
+          }
+          
+          // Handle the actual content delta
+          if (choice.delta && choice.delta.content) {
+            // Append the content to our streaming response
+            streamingResponse.value += choice.delta.content;
+            scrollToBottom();
+          }
+        }
+      } catch (err) {
+        console.error("Error parsing streaming response:", err);
+        
+        // Fallback to the old format if JSON parsing fails
+        if (data.includes('log_id')) {
+          isStreaming.value = false;
+          
+          // Add assistant message to chat history
+          if (streamingResponse.value) {
+            chatMessages.value.push({
+              role: 'assistant',
+              content: streamingResponse.value
+            });
+          }
+          source.close();
+          return;
+        }
+        
+        // Just append the data directly as fallback
+        streamingResponse.value += data;
+        scrollToBottom();
+      }
     });
     
     source.addEventListener('error', function(e: any) {

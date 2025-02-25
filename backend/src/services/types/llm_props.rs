@@ -105,29 +105,7 @@ impl LlmProps {
         context: serde_json::Value, 
         messages: Vec<Message>
     ) -> Result<Self, LlmPropsError> {
-        // For chat input we need to
-        // 1. Determine if this is the first input based on messages length
-        // 2. If it is, then and only then do the templating
-        // 3. If not, simply return the messages as is
-
-        let messages_len = messages.len();
-
-        if messages_len > 2 {
-            return Ok(LlmProps {
-                provider: prompt.provider_name.into(),
-                model_name: prompt.model_name,
-                max_tokens: prompt.max_tokens,
-                temperature: prompt.temperature,
-                json_mode: prompt.json_mode,
-                messages: messages.to_vec(),
-                prompt_id: prompt.id,
-                model_id: prompt.model_id,
-            });
-        }
-
-        let mut messages = messages;
-
-        // First, render the system prompt with context (always needed)
+        // Always render the system prompt with context
         let mut tera = Tera::default();
         tera.add_raw_template("system_prompt", &prompt.system)?;
         
@@ -141,15 +119,17 @@ impl LlmProps {
         let rendered_system_prompt = tera.render("system_prompt", &tera_ctx)
             .map_err(|e| LlmPropsError::TeraRenderError(e))?;
         
-        // If there are two messages, this indicates that the user passed in both a
-        // system and user message and in this case we should just swap out the system message.
-        //
-        // If there is only 1 message, then we know that is just the User message because
-        // the system prompt may have not needed to be dynamic at all, and thus had no context.
-        // In this case we have to insert the system message before the user message
-        if messages_len == 2 {
-            messages[0] = Message::System { content: rendered_system_prompt };
+        let mut messages = messages;
+        
+        // Check if there's already a system message in the input
+        let has_system_message = messages.iter().any(|msg| matches!(msg, Message::System { .. }));
+        
+        if has_system_message {
+            // Replace the first system message with our rendered one
+            let system_index = messages.iter().position(|msg| matches!(msg, Message::System { .. })).unwrap();
+            messages[system_index] = Message::System { content: rendered_system_prompt };
         } else {
+            // No system message found, add one at the beginning
             messages.insert(0, Message::System { content: rendered_system_prompt });
         }
 

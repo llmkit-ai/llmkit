@@ -33,6 +33,48 @@ export interface PromptExecutionResponse {
   log: ApiLogReponse;
 }
 
+// OpenAI compatible API types
+export interface ApiCompletionResponse {
+  id: string;
+  object: string;
+  created: number;
+  model: string;
+  choices: ApiChoice[];
+  usage: ApiUsage;
+}
+
+export interface ApiChoice {
+  index: number;
+  message: Message;
+  finish_reason: string;
+}
+
+export interface ApiUsage {
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+}
+
+// For streaming responses
+export interface ApiCompletionChunk {
+  id: string;
+  object: string;
+  created: number;
+  model: string;
+  choices: ApiChunkChoice[];
+}
+
+export interface ApiChunkChoice {
+  index: number;
+  delta: ApiDelta;
+  finish_reason?: string;
+}
+
+export interface ApiDelta {
+  content?: string;
+  role?: string;
+}
+
 
 // PROMPT PERFORMANCE
 export interface PromptEvalVersionPerformanceResponse {

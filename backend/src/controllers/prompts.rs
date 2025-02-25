@@ -14,7 +14,7 @@ use uuid;
 use crate::{services::{llm::Llm, types::{llm_props::LlmProps, message::Message}}, AppError, AppState};
 
 use super::types::{
-    request::prompts::{ChatExecuteRequest, CreatePromptRequest, UpdatePromptRequest, ApiCompletionRequest}, 
+    request::prompts::{CreatePromptRequest, UpdatePromptRequest, ApiCompletionRequest}, 
     response::prompts::{PromptExecutionResponse, PromptResponse, ApiCompletionResponse, ApiCompletionChunk, ApiChunkChoice, ApiDelta}
 };
 
@@ -155,52 +155,6 @@ pub async fn execute_prompt(
     Ok(Json(PromptExecutionResponse::from_log_row(res.content, log)))
 }
 
-#[axum::debug_handler]
-pub async fn execute_chat(
-    Path(id): Path<i64>,
-    State(state): State<AppState>,
-    Json(payload): Json<ChatExecuteRequest>,
-) -> Result<Json<PromptExecutionResponse>, AppError> {
-    let prompt = match state.prompt_cache.get(&id).await {
-        Some(p) => p,
-        None => { 
-            let prompt = state.db.prompt.get_prompt(id).await?;
-            state.prompt_cache.insert(id, prompt.clone()).await;
-            prompt
-        }
-    };
-    
-    // Verify this is a chat-enabled prompt
-    if !prompt.is_chat {
-        return Err(AppError::BadRequest("This prompt is not configured for chat mode".into()));
-    }
-    
-    // For dynamic_both prompts, we can't use chat mode
-    if prompt.prompt_type == "dynamic_both" {
-        return Err(AppError::BadRequest("Chat mode is not supported for Dynamic System & User prompts".into()));
-    }
-
-    let llm_props = LlmProps::new_chat(prompt.clone(), payload.context, payload.messages).map_err(|e| {
-        tracing::error!("{}", e);
-        AppError::InternalServerError("An error occured processing chat prompt".to_string())
-    })?;
-
-    let llm = Llm::new(llm_props, state.db.log.clone());
-
-    // Chat mode doesn't support JSON mode
-    if prompt.json_mode {
-        return Err(AppError::BadRequest("JSON mode is not supported for chat".into()));
-    }
-    
-    let res = llm.text()
-        .await
-        .map_err(|_| AppError::InternalServerError("Something went wrong".to_string()))?;
-
-    let log = state.db.log.get_log_by_id(res.log_id).await?.ok_or_else(|| AppError::NotFound("Log not found".to_string()))?;
-
-    Ok(Json(PromptExecutionResponse::from_log_row(res.content, log)))
-}
-
 pub async fn execute_prompt_stream(
     Path(id): Path<i64>,
     State(state): State<AppState>,
@@ -220,85 +174,6 @@ pub async fn execute_prompt_stream(
     let (stream_res_tx, stream_res_rx) = tokio::sync::oneshot::channel();
     
     let llm_props = LlmProps::new(prompt.clone(), payload).map_err(|e| {
-        tracing::error!("{}", e);
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?;
-
-    let llm = Llm::new(llm_props, state.db.log);
-
-    tokio::spawn(async move {
-        let result = llm.stream(tx).await;
-
-        if let Ok(llm_stream_response) = result {
-            let _ = stream_res_tx.send(llm_stream_response.log_id);
-        }
-    });
-
-    let stream = async_stream::stream! {
-        // Process regular stream messages
-        while let Some(result) = rx.recv().await {
-            match result {
-                Ok(content) => {
-                    let event = Event::default().data(content.clone());
-                    if content.contains("[DONE]") || content.contains("Done:") {
-                        break;
-                    }
-
-                    yield Ok(event);
-                }
-                Err(e) => {
-                    tracing::error!("error in stream: {:?}", e);
-                }
-            }
-        }
-
-        // Wait for and send log ID after stream completes
-        match stream_res_rx.await {
-            Ok(log_id) => {
-                let log_event = json!({ "log_id": log_id });
-                yield Ok(Event::default().data(log_event.to_string()));
-            },
-            Err(_) => tracing::error!("Failed to receive log ID"),
-        }
-    };
-
-    Ok(Sse::new(stream).keep_alive(KeepAlive::default()))
-}
-
-pub async fn execute_chat_stream(
-    Path(id): Path<i64>,
-    State(state): State<AppState>,
-    Json(payload): Json<ChatExecuteRequest>,
-) -> Result<Sse<impl Stream<Item = Result<Event, Infallible>>>, StatusCode> {
-    let prompt = match state.prompt_cache.get(&id).await {
-        Some(p) => p,
-        None => {
-            let prompt = state.db.prompt.get_prompt(id).await.unwrap();
-            state.prompt_cache.insert(id, prompt.clone()).await;
-            prompt
-        }
-    };
-    
-    // Verify this is a chat-enabled prompt
-    if !prompt.is_chat {
-        return Err(StatusCode::BAD_REQUEST);
-    }
-    
-    // For dynamic_both prompts, we can't use chat mode
-    if prompt.prompt_type == "dynamic_both" {
-        return Err(StatusCode::BAD_REQUEST);
-    }
-    
-    // Chat mode doesn't support JSON mode
-    if prompt.json_mode {
-        return Err(StatusCode::BAD_REQUEST);
-    }
-
-    let (tx, mut rx) = mpsc::channel(100);
-    // Create oneshot channel for log ID
-    let (stream_res_tx, stream_res_rx) = tokio::sync::oneshot::channel();
-    
-    let llm_props = LlmProps::new_chat(prompt.clone(), payload.context, payload.messages).map_err(|e| {
         tracing::error!("{}", e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
@@ -519,7 +394,32 @@ pub async fn api_completions_stream(
         }
     } else if prompt.prompt_type == "dynamic_both" {
         // For dynamic_both, we pass the entire request as context
-        match LlmProps::new(prompt.clone(), json!(payload)) {
+        // Extract context from the system message if it exists
+        let system_context = payload.messages.iter()
+            .find(|msg| matches!(msg, Message::System { .. }))
+            .and_then(|msg| {
+                if let Message::System { content } = msg {
+                    // Try to parse content as JSON, or use empty object if it fails
+                    serde_json::from_str::<serde_json::Value>(content).ok()
+                } else {
+                    None
+                }
+            })
+            .unwrap_or(json!({}));
+
+        let user_context = payload.messages.iter()
+            .find(|msg| matches!(msg, Message::User { .. }))
+            .and_then(|msg| {
+                if let Message::User { content } = msg {
+                    // Try to parse content as JSON, or use empty object if it fails
+                    serde_json::from_str::<serde_json::Value>(content).ok()
+                } else {
+                    None
+                }
+            })
+            .unwrap_or(json!({}));
+
+        match LlmProps::new_split_context(prompt.clone(), system_context, user_context) {
             Ok(props) => props,
             Err(e) => {
                 tracing::error!("{}", e);
@@ -529,6 +429,9 @@ pub async fn api_completions_stream(
     } else {
         return Err(StatusCode::BAD_REQUEST);
     };
+
+    tracing::info!("messages: {:?}", payload.messages);
+    tracing::info!("llm_props: {:?}", llm_props);
     
     // Apply request overrides if specified
     let llm_props = if let Some(max_tokens) = payload.max_tokens {

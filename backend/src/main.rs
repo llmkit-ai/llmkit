@@ -20,7 +20,7 @@ use controllers::{
         get_eval_runs_by_prompt_version, update_eval_run_score,
     },
     prompts::{
-        create_prompt, delete_prompt, execute_chat, execute_chat_stream, execute_prompt,
+        create_prompt, delete_prompt, execute_prompt,
         execute_prompt_stream, get_prompt, list_prompts, update_prompt,
         api_completions, api_completions_stream,
     },
@@ -76,8 +76,8 @@ fn execute_routes() -> Router<AppState> {
     Router::new()
         .route("/{id}", post(execute_prompt))
         .route("/{id}/stream", post(execute_prompt_stream))
-        .route("/{id}/chat", post(execute_chat))
-        .route("/{id}/chat/stream", post(execute_chat_stream))
+        .route("/chat", post(api_completions))
+        .route("/chat/stream", post(api_completions_stream))
 }
 
 fn api_chat_routes() -> Router<AppState> {
