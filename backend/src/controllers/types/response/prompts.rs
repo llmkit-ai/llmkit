@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
+use chrono::Utc;
 
 use crate::db::types::{log::LogRowModel, prompt::PromptRowWithModel};
+use crate::services::types::message::Message;
 
 
 // GET PROMPT RESPONSE
@@ -95,6 +97,83 @@ impl PromptExecutionResponse {
         PromptExecutionResponse {
             content,
             log: ApiLogResponse::from(log_row),
+        }
+    }
+}
+
+// New OpenAI standard API responses
+
+#[derive(Debug, Serialize)]
+pub struct ApiCompletionResponse {
+    pub id: String,
+    pub object: String,
+    pub created: i64,
+    pub model: String,
+    pub choices: Vec<ApiChoice>,
+    pub usage: ApiUsage,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ApiChoice {
+    pub index: i64,
+    pub message: Message,
+    pub finish_reason: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ApiUsage {
+    pub prompt_tokens: i64,
+    pub completion_tokens: i64,
+    pub total_tokens: i64,
+}
+
+// For streaming responses
+#[derive(Debug, Serialize)]
+pub struct ApiCompletionChunk {
+    pub id: String,
+    pub object: String,
+    pub created: i64,
+    pub model: String,
+    pub choices: Vec<ApiChunkChoice>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ApiChunkChoice {
+    pub index: i64,
+    pub delta: ApiDelta,
+    pub finish_reason: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ApiDelta {
+    pub content: Option<String>,
+    pub role: Option<String>,
+}
+
+impl PromptExecutionResponse {
+    pub fn to_api_response(&self, prompt_key: &str) -> ApiCompletionResponse {
+        let now = Utc::now().timestamp();
+        
+        ApiCompletionResponse {
+            id: format!("chatcmpl-{}", self.log.id),
+            object: "chat.completion".to_string(),
+            created: self.log.created_at.as_ref()
+                .and_then(|date_str| date_str.parse::<chrono::DateTime<chrono::Utc>>().ok())
+                .map(|dt| dt.timestamp())
+                .unwrap_or(now),
+            model: prompt_key.to_string(),
+            choices: vec![
+                ApiChoice {
+                    index: 0,
+                    message: Message::Assistant { content: self.content.clone() },
+                    finish_reason: "stop".to_string(),
+                }
+            ],
+            usage: ApiUsage {
+                prompt_tokens: self.log.input_tokens.unwrap_or(0),
+                completion_tokens: self.log.output_tokens.unwrap_or(0),
+                total_tokens: self.log.input_tokens.unwrap_or(0) + self.log.output_tokens.unwrap_or(0),
+            },
         }
     }
 }

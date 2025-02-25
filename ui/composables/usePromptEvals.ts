@@ -16,7 +16,7 @@ export const usePromptEvals = () => {
   const fetchEvalById = async (id: number) => {
     try {
       loading.value = true
-      currentEval.value = await $fetch<PromptEvalResponse>(`/api/v1/prompt-evals/${id}`)
+      currentEval.value = await $fetch<PromptEvalResponse>(`/api/v1/ui/prompt-evals/${id}`)
     } catch (err) {
       console.error(err)
       error.value = 'Failed to fetch sample'
@@ -28,7 +28,7 @@ export const usePromptEvals = () => {
   const fetchEvalByPrompt = async (promptId: number) => {
     try {
       loading.value = true
-      evals.value = await $fetch<PromptEvalResponse[]>(`/api/v1/prompts/${promptId}/prompt-evals`)
+      evals.value = await $fetch<PromptEvalResponse[]>(`/api/v1/ui/prompts/${promptId}/prompt-evals`)
     } catch (err) {
       console.error(err)
       error.value = 'Failed to fetch samples'
@@ -39,7 +39,7 @@ export const usePromptEvals = () => {
 
   const createEval = async (sampleData: CreatePromptEvalRequest) => {
     try {
-      const newEval = await $fetch<PromptEvalResponse>('/api/v1/prompt-evals', {
+      const newEval = await $fetch<PromptEvalResponse>('/api/v1/ui/prompt-evals', {
         method: 'POST',
         body: sampleData
       })
@@ -53,7 +53,7 @@ export const usePromptEvals = () => {
 
   const updateEval = async (id: number, updates: UpdatePromptEvalRequest) => {
     try {
-      const updatedEval = await $fetch<PromptEvalResponse>(`/api/v1/prompt-evals/${id}`, {
+      const updatedEval = await $fetch<PromptEvalResponse>(`/api/v1/ui/prompt-evals/${id}`, {
         method: 'PUT',
         body: updates
       })
@@ -71,7 +71,7 @@ export const usePromptEvals = () => {
 
   const deleteEval = async (id: number) => {
     try {
-      await $fetch(`/api/v1/prompt-evals/${id}`, { method: 'DELETE' })
+      await $fetch(`/api/v1/ui/prompt-evals/${id}`, { method: 'DELETE' })
       evals.value = evals.value.filter(s => s.id !== id)
       if (currentEval.value?.id === id) currentEval.value = null
     } catch (err) {

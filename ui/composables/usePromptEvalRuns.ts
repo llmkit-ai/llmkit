@@ -9,7 +9,7 @@ export const usePromptEvalRuns = () => {
   const fetchEvalRunById = async (id: number) => {
     try {
       loading.value = true
-      currentEvalRun.value = await $fetch<PromptEvalRunResponse>(`/api/v1/prompt-eval-runs/${id}`)
+      currentEvalRun.value = await $fetch<PromptEvalRunResponse>(`/api/v1/ui/prompt-eval-runs/${id}`)
     } catch (err) {
       console.error(err)
       error.value = 'Failed to fetch sample'
@@ -21,7 +21,7 @@ export const usePromptEvalRuns = () => {
   const fetchEvalRunsByPromptVersion = async (promptId: number, promptVersionId: number) => {
     try {
       loading.value = true
-      evalRuns.value = await $fetch<PromptEvalRunResponse[]>(`/api/v1/prompt-eval-runs/${promptId}/version/${promptVersionId}`)
+      evalRuns.value = await $fetch<PromptEvalRunResponse[]>(`/api/v1/ui/prompt-eval-runs/${promptId}/version/${promptVersionId}`)
     } catch (err) {
       console.error(err)
       error.value = 'Failed to fetch samples'
@@ -33,7 +33,7 @@ export const usePromptEvalRuns = () => {
   // const fetchEvalRunsByRunId = async (promptId: number, promptVersionId: number) => {
   //   try {
   //     loading.value = true
-  //     evals.value = await $fetch<PromptEvalRunResponse[]>(`/api/v1/prompt-eval-runs/${promptId}/version/${promptVersionId}`)
+  //     evals.value = await $fetch<PromptEvalRunResponse[]>(`/api/v1/ui/prompt-eval-runs/${promptId}/version/${promptVersionId}`)
   //   } catch (err) {
   //     console.error(err)
   //     error.value = 'Failed to fetch samples'
@@ -44,7 +44,7 @@ export const usePromptEvalRuns = () => {
 
   const createEvalRun = async (promptId: number, promptVersionId: number) => {
     try {
-      const newEval = await $fetch<PromptEvalExecutionRunResponse>(`/api/v1/prompt-eval-runs/${promptId}/version/${promptVersionId}`, {
+      const newEval = await $fetch<PromptEvalExecutionRunResponse>(`/api/v1/ui/prompt-eval-runs/${promptId}/version/${promptVersionId}`, {
         method: 'POST',
       })
 
@@ -64,7 +64,7 @@ export const usePromptEvalRuns = () => {
 
   const updateEvalRunScore = async (id: number, score: number) => {
     try {
-      const updatedEval = await $fetch<PromptEvalRunResponse>(`/api/v1/prompt-eval-runs/${id}`, {
+      const updatedEval = await $fetch<PromptEvalRunResponse>(`/api/v1/ui/prompt-eval-runs/${id}`, {
         method: 'PUT',
         body: {
           id,

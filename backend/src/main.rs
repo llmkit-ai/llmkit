@@ -22,6 +22,7 @@ use controllers::{
     prompts::{
         create_prompt, delete_prompt, execute_chat, execute_chat_stream, execute_prompt,
         execute_prompt_stream, get_prompt, list_prompts, update_prompt,
+        api_completions, api_completions_stream,
     },
 };
 
@@ -60,12 +61,15 @@ async fn main() -> Result<()> {
 fn api_v1_routes() -> Router<AppState> {
     Router::new()
         .route("/", get(api_version_handler))
-        .nest("/prompts", prompt_routes())
-        .nest("/prompt-evals", prompt_evals_routes())
-        .nest("/prompt-eval-runs", prompt_eval_runs_routes())
-        .nest("/prompts/execute", execute_routes())
-        .nest("/models", model_routes())
-        .nest("/logs", logs_routes())
+        // UI specific routes
+        .nest("/ui/prompts", prompt_routes())
+        .nest("/ui/prompt-evals", prompt_evals_routes())
+        .nest("/ui/prompt-eval-runs", prompt_eval_runs_routes())
+        .nest("/ui/prompts/execute", execute_routes())
+        .nest("/ui/models", model_routes())
+        .nest("/ui/logs", logs_routes())
+        // API routes (OpenAI compatible)
+        .nest("/chat", api_chat_routes())
 }
 
 fn execute_routes() -> Router<AppState> {
@@ -74,6 +78,12 @@ fn execute_routes() -> Router<AppState> {
         .route("/{id}/stream", post(execute_prompt_stream))
         .route("/{id}/chat", post(execute_chat))
         .route("/{id}/chat/stream", post(execute_chat_stream))
+}
+
+fn api_chat_routes() -> Router<AppState> {
+    Router::new()
+        .route("/completions", post(api_completions))
+        .route("/completions/stream", post(api_completions_stream))
 }
 
 fn prompt_routes() -> Router<AppState> {

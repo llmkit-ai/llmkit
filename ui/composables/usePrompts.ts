@@ -10,7 +10,7 @@ export const usePrompts = () => {
   const fetchPrompts = async () => {
     try {
       loading.value = true
-      prompts.value = await $fetch<Prompt[]>('/api/v1/prompts')
+      prompts.value = await $fetch<Prompt[]>('/api/v1/ui/prompts')
     } catch (err) {
       console.error(err)
       error.value = 'Failed to fetch prompts'
@@ -21,7 +21,7 @@ export const usePrompts = () => {
 
   const getPromptPerformance = async (promptId: number) => {
     try {
-      promptPerformance.value = await $fetch<PromptEvalVersionPerformanceResponse[]>(`/api/v1/prompts/${promptId}/performance`)
+      promptPerformance.value = await $fetch<PromptEvalVersionPerformanceResponse[]>(`/api/v1/ui/prompts/${promptId}/performance`)
     } catch (err) {
       console.error(err)
       error.value = 'Failed to fetch performance'
@@ -31,7 +31,7 @@ export const usePrompts = () => {
 
   const createPrompt = async (prompt: PromptCreateDTO) => {
     try {
-      const newPrompt = await $fetch<Prompt>('/api/v1/prompts', {
+      const newPrompt = await $fetch<Prompt>('/api/v1/ui/prompts', {
         method: 'POST',
         body: {
           key: prompt.key,
@@ -55,7 +55,7 @@ export const usePrompts = () => {
 
   const updatePrompt = async (id: number, prompt: PromptUpdateDTO) => {
     try {
-      const updatedPrompt = await $fetch<Prompt>(`/api/v1/prompts/${id}`, {
+      const updatedPrompt = await $fetch<Prompt>(`/api/v1/ui/prompts/${id}`, {
         method: 'PUT',
         body: {
           key: prompt.key,
@@ -80,7 +80,7 @@ export const usePrompts = () => {
 
   const deletePrompt = async (id: number) => {
     try {
-      await $fetch(`/api/v1/prompts/${id}`, { method: 'DELETE' })
+      await $fetch(`/api/v1/ui/prompts/${id}`, { method: 'DELETE' })
       prompts.value = prompts.value.filter(p => p.id !== id)
     } catch (err) {
       error.value = 'Failed to delete prompt'
@@ -90,7 +90,7 @@ export const usePrompts = () => {
 
   const executePrompt = async (id: number, body: any) => {
     try {
-      return await $fetch<PromptExecutionResponse>(`/api/v1/prompts/execute/${id}`, { 
+      return await $fetch<PromptExecutionResponse>(`/api/v1/ui/prompts/execute/${id}`, { 
         method: 'POST',
         body 
       })
@@ -102,7 +102,7 @@ export const usePrompts = () => {
 
   const executePromptStream = async (id: number, body: any) => {
     try {
-      return await $fetch<string>(`/api/v1/prompts/execute/${id}/stream`, { 
+      return await $fetch<string>(`/api/v1/ui/prompts/execute/${id}/stream`, { 
         method: 'POST',
         body 
       })
@@ -115,7 +115,7 @@ export const usePrompts = () => {
   // Chat execution (non-streaming)
   const executeChat = async (id: number, context: Record<string, any> = {}, messages: Message[]) => {
     try {
-      return await $fetch<PromptExecutionResponse>(`/api/v1/prompts/execute/${id}/chat`, { 
+      return await $fetch<PromptExecutionResponse>(`/api/v1/ui/prompts/execute/${id}/chat`, { 
         method: 'POST',
         body: {
           context,

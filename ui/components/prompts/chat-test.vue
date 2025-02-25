@@ -236,7 +236,7 @@ async function sendMessage() {
   
   try {
     // Create SSE connection for streaming
-    const source = new SSE(`/api/v1/prompts/execute/${props.prompt.id}/chat/stream`, {
+    const source = new SSE(`/api/v1/ui/prompts/execute/${props.prompt.id}/chat/stream`, {
       headers: { 'Content-Type': 'application/json' },
       payload: JSON.stringify({
         context: jsonContext.value,

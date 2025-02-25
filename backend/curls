@@ -1,30 +1,151 @@
 # Version check
-curl -v http://localhost:8080/api/v1
+curl -v http://localhost:8000/api/v1
 
+# UI Chat endpoint - for static prompts
+curl -X POST http://localhost:8000/api/v1/ui/prompts/execute/1/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "context": {
+      "name": "John",
+      "city": "San Francisco"
+    },
+    "messages": [
+      {
+        "role": "user",
+        "content": "Tell me a joke."
+      }
+    ]
+  }'
+
+# Test OpenAI-compatible chat completions endpoint - non-streaming (static or dynamic_system prompt)
+curl -X POST http://localhost:8000/api/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "my-test-prompt",
+    "messages": [
+      {
+        "role": "system",
+        "content": "{\"name\": \"John\", \"city\": \"San Francisco\"}"
+      },
+      {
+        "role": "user",
+        "content": "Tell me a joke."
+      }
+    ]
+  }'
+
+# Test OpenAI-compatible chat completions - streaming
+curl -X POST http://localhost:8000/api/v1/chat/completions/stream \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "my-test-prompt",
+    "messages": [
+      {
+        "role": "system",
+        "content": "{\"name\": \"John\", \"city\": \"San Francisco\"}"
+      },
+      {
+        "role": "user",
+        "content": "Tell me a joke."
+      }
+    ],
+    "stream": true
+  }'
+
+# Test with JSON mode
+curl -X POST http://localhost:8000/api/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "my-test-prompt",
+    "messages": [
+      {
+        "role": "system",
+        "content": "{\"name\": \"John\", \"city\": \"San Francisco\"}"
+      },
+      {
+        "role": "user",
+        "content": "Return a JSON object with my name and city."
+      }
+    ],
+    "response_format": {
+      "type": "json_object"
+    }
+  }'
+
+# Test dynamic_both prompt type (entire request is used as context)
+curl -X POST http://localhost:8000/api/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "my-dynamic-both-prompt",
+    "messages": [
+      {
+        "role": "system",
+        "content": "{\"topic\": \"quantum computing\", \"format\": \"bullet points\"}"
+      },
+      {
+        "role": "user",
+        "content": "Tell me about the topic."
+      }
+    ],
+    "max_tokens": 500,
+    "temperature": 0.7
+  }'
+
+# Test multi-turn conversation (continuing chat)
+curl -X POST http://localhost:8000/api/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "my-chat-prompt",
+    "messages": [
+      {
+        "role": "system",
+        "content": "{\"user_name\": \"Alex\", \"experience_level\": \"beginner\"}"
+      },
+      {
+        "role": "user",
+        "content": "Hello, I want to learn about programming."
+      },
+      {
+        "role": "assistant",
+        "content": "Hi there! I would be happy to help you learn about programming. What specific area are you interested in? For example, web development, mobile apps, data science, game development, or something else?"
+      },
+      {
+        "role": "user",
+        "content": "I am interested in web development."
+      },
+      {
+        "role": "assistant",
+        "content": "Great choice! Web development is a versatile and in-demand field. It has several components you should know about:\n\n1. **Frontend Development**: This is what users see and interact with\n   - HTML: For structure\n   - CSS: For styling\n   - JavaScript: For interactivity\n\n2. **Backend Development**: The server-side that powers the application\n   - Languages: Python, JavaScript (Node.js), Ruby, PHP, Java, etc.\n   - Databases: MySQL, PostgreSQL, MongoDB, etc.\n\nWould you like to start with frontend or backend? Or would you prefer a roadmap for becoming a full-stack developer?"
+      },
+      {
+        "role": "user",
+        "content": "I want to start with frontend. Can you recommend some resources for beginners?"
+      }
+    ]
+  }'
+
+# Old curl examples for reference
 # Prompts - Create
-curl -v -X POST http://localhost:8080/api/v1/prompts \
-  -H "Content-Type: application/json" \
-  -d '{"prompt": "Hello world", "model": "gpt-4"}'
-
+# curl -v -X POST http://localhost:8000/api/v1/ui/prompts \
+#   -H "Content-Type: application/json" \
+#   -d '{"prompt": "Hello world", "model": "gpt-4"}'
+#
 # Prompts - List
-curl -v http://localhost:8080/api/v1/prompts
-
+# curl -v http://localhost:8000/api/v1/ui/prompts
+#
 # Prompts - Get
-curl -v http://localhost:8080/api/v1/prompts/123
-
+# curl -v http://localhost:8000/api/v1/ui/prompts/123
+#
 # Prompts - Update
-curl -v -X PUT http://localhost:8080/api/v1/prompts/123 \
-  -H "Content-Type: application/json" \
-  -d '{"prompt": "Updated prompt", "model": "gpt-4-turbo"}'
-
+# curl -v -X PUT http://localhost:8000/api/v1/ui/prompts/123 \
+#   -H "Content-Type: application/json" \
+#   -d '{"prompt": "Updated prompt", "model": "gpt-4-turbo"}'
+#
 # Prompts - Delete
-curl -v -X DELETE http://localhost:8080/api/v1/prompts/1
-
+# curl -v -X DELETE http://localhost:8000/api/v1/ui/prompts/1
+#
 # Logs - List
-curl -v http://localhost:8080/api/v1/logs
-
+# curl -v http://localhost:8000/api/v1/ui/logs
+#
 # Logs - Get Single
-curl -v http://localhost:8080/api/v1/logs/456
-
-# Example error case
-curl -v http://localhost:8080/api/v1/prompts/999
+# curl -v http://localhost:8000/api/v1/ui/logs/456

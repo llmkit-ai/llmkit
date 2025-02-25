@@ -16,7 +16,7 @@ pub enum LlmPropsError {
 }
 
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct LlmProps {
     pub provider: LlmApiProvider,
     pub model_name: String,
@@ -44,6 +44,44 @@ impl LlmProps {
         let rendered_system_prompt = tera.render("system_prompt", &tera_ctx)
             .map_err(|e| LlmPropsError::TeraRenderError(e))?;
         let rendered_user_prompt = tera.render("user_prompt", &tera_ctx)
+            .map_err(|e| LlmPropsError::TeraRenderError(e))?;
+
+        let messages = vec![ Message::System { content: rendered_system_prompt }, Message::User { content: rendered_user_prompt } ];
+
+        Ok(LlmProps {
+            provider: prompt.provider_name.into(),
+            model_name: prompt.model_name,
+            max_tokens: prompt.max_tokens,
+            temperature: prompt.temperature,
+            json_mode: prompt.json_mode,
+            messages,
+            prompt_id: prompt.id,
+            model_id: prompt.model_id,
+        })
+    }
+
+    pub fn new_split_context(prompt: PromptRowWithModel, system_context: serde_json::Value, user_context: serde_json::Value) -> Result<Self, LlmPropsError> {
+        let mut tera = Tera::default();
+        tera.add_raw_template("system_prompt", &prompt.system)?;
+        tera.add_raw_template("user_prompt", &prompt.user)?;
+
+        let mut system_ctx = Context::new();
+        if let serde_json::Value::Object(context) = system_context {
+            for (k, v) in context {
+                system_ctx.insert(k, &v);
+            }
+        }
+
+        let mut user_ctx = Context::new();
+        if let serde_json::Value::Object(context) = user_context {
+            for (k, v) in context {
+                user_ctx.insert(k, &v);
+            }
+        }
+
+        let rendered_system_prompt = tera.render("system_prompt", &system_ctx)
+            .map_err(|e| LlmPropsError::TeraRenderError(e))?;
+        let rendered_user_prompt = tera.render("user_prompt", &user_ctx)
             .map_err(|e| LlmPropsError::TeraRenderError(e))?;
 
         let messages = vec![ Message::System { content: rendered_system_prompt }, Message::User { content: rendered_user_prompt } ];

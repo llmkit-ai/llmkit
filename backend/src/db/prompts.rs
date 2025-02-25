@@ -273,6 +273,42 @@ impl PromptRepository {
         .rows_affected();
         Ok(rows_affected > 0)
     }
+    
+    pub async fn get_prompt_by_key(&self, key: &str) -> Result<PromptRowWithModel> {
+        let prompt = sqlx::query_as!(
+            PromptRowWithModel,
+            r#"
+            SELECT
+                p.id,
+                p.key,
+                pv.system,
+                pv.user,
+                pv.model_id,
+                pv.max_tokens,
+                pv.temperature,
+                pv.json_mode,
+                pv.prompt_type,
+                pv.is_chat,
+                m.name as model_name,
+                pr.name as provider_name,
+                pv.system_diff,
+                pv.user_diff,
+                pv.version_number,
+                pv.id as version_id,
+                pv.created_at,
+                pv.updated_at
+            FROM prompt p
+            JOIN prompt_version pv ON p.current_prompt_version_id = pv.id
+            JOIN model m ON pv.model_id = m.id
+            JOIN provider pr ON m.provider_id = pr.id
+            WHERE p.key = ?
+            "#,
+            key
+        )
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(prompt)
+    }
 }
 
 fn generate_diff(text1: &str, text2: &str) -> String {
