@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>llmkit - Prompt Management</title>
+  <style>
+    :root {
+      --border-color: #eaeaea;
+      --bg-color: #fff;
+      --text-color: #000;
+      --accent-bg: #fafafa;
+      --code-bg: #000;
+      --code-text: #fff;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      line-height: 1.6;
+      font-family: 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0;
+    }
+    
+    .container {
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .no-border {
+      border-bottom: none;
+    }
+    
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+    
+    .logo {
+      font-size: 1.5rem;
+      font-weight: 600;
+      text-decoration: none;
+      color: var(--text-color);
+      letter-spacing: -0.05em;
+    }
+    
+    nav {
+      display: flex;
+      gap: 1.5rem;
+      align-items: center;
+    }
+    
+    nav a {
+      font-size: 0.875rem;
+      text-decoration: none;
+      color: var(--text-color);
+      transition: opacity 0.2s;
+    }
+    
+    nav a:hover {
+      opacity: 0.7;
+    }
+    
+    nav a.btn {
+      background-color: var(--text-color);
+      color: var(--bg-color);
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+    }
+    
+    nav a.btn:hover {
+      opacity: 0.9;
+    }
+    
+    .hero {
+      padding: 6rem 0 4rem;
+      text-align: center;
+    }
+    
+    .hero h1 {
+      font-size: 3.5rem;
+      margin-bottom: 1.5rem;
+      font-weight: 800;
+      letter-spacing: -0.05em;
+      line-height: 1.1;
+    }
+    
+    .hero p {
+      font-size: 1.25rem;
+      max-width: 650px;
+      margin: 0 auto 2.5rem;
+      color: #666;
+    }
+    
+    .btn {
+      background-color: var(--text-color);
+      color: var(--bg-color);
+      padding: 0.75rem 1.5rem;
+      text-decoration: none;
+      border-radius: 4px;
+      font-weight: 500;
+      display: inline-block;
+      font-size: 0.875rem;
+      transition: opacity 0.2s;
+    }
+    
+    .btn:hover {
+      opacity: 0.9;
+    }
+    
+    .tag {
+      display: inline-block;
+      background-color: var(--accent-bg);
+      padding: 0.25rem 0.75rem;
+      border-radius: 99px;
+      font-size: 0.75rem;
+      margin-bottom: 1.5rem;
+      border: 1px solid var(--border-color);
+    }
+    
+    .section-title {
+      font-size: 2rem;
+      margin-bottom: 3rem;
+      font-weight: 700;
+      letter-spacing: -0.05em;
+      text-align: center;
+    }
+    
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 2rem;
+      margin: 3rem 0;
+    }
+    
+    .feature {
+      padding: 2rem;
+      background-color: var(--accent-bg);
+      border-radius: 4px;
+      transition: transform 0.2s;
+    }
+    
+    .feature:hover {
+      transform: translateY(-5px);
+    }
+    
+    .feature h3 {
+      margin-bottom: 1rem;
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+    
+    .feature-icon {
+      font-size: 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+    
+    .terminal {
+      background-color: var(--code-bg);
+      color: var(--code-text);
+      padding: 1.5rem;
+      border-radius: 4px;
+      overflow: hidden;
+      margin: 2rem 0;
+      position: relative;
+      font-size: 0.875rem;
+    }
+    
+    .terminal pre {
+      white-space: pre-wrap;
+      line-height: 1.5;
+    }
+    
+    .blink {
+      animation: blink 1s step-end infinite;
+    }
+    
+    @keyframes blink {
+      50% { opacity: 0; }
+    }
+    
+    .open-source-banner {
+      text-align: center;
+      padding: 4rem 1.5rem;
+      background-color: var(--accent-bg);
+      margin: 4rem 0;
+    }
+    
+    .open-source-banner h2 {
+      margin-bottom: 1rem;
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.05em;
+    }
+    
+    .open-source-banner p {
+      margin-bottom: 2rem;
+      max-width: 650px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    
+    .providers {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 1rem;
+      margin: 3rem 0;
+    }
+    
+    .provider {
+      padding: 0.75rem 1.25rem;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      font-size: 0.875rem;
+    }
+    
+    .how-it-works {
+      margin: 3rem 0;
+    }
+    
+    .pricing-plans {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    
+    .plan {
+      padding: 2.5rem;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      transition: transform 0.2s;
+    }
+    
+    .plan.featured {
+      background-color: var(--accent-bg);
+    }
+    
+    .plan:hover {
+      transform: translateY(-5px);
+    }
+    
+    .plan h3 {
+      margin-bottom: 1rem;
+      font-size: 1.5rem;
+      font-weight: 600;
+    }
+    
+    .plan-price {
+      font-size: 2.5rem;
+      margin: 1.5rem 0;
+      font-weight: 700;
+      letter-spacing: -0.05em;
+    }
+    
+    .plan-features {
+      margin: 1.5rem 0;
+      list-style-type: none;
+    }
+    
+    .plan-features li {
+      margin-bottom: 0.75rem;
+      padding-left: 1.5rem;
+      position: relative;
+    }
+    
+    .plan-features li::before {
+      content: "–";
+      position: absolute;
+      left: 0;
+    }
+    
+    .consulting-services {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 2rem;
+      margin: 3rem 0;
+    }
+    
+    .consulting-service {
+      padding: 2rem;
+      background-color: var(--accent-bg);
+      border-radius: 4px;
+    }
+    
+    .consulting-service h4 {
+      margin-bottom: 1rem;
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+    
+    footer {
+      text-align: center;
+      padding: 4rem 1.5rem;
+      font-size: 0.875rem;
+      color: #666;
+    }
+    
+    footer a {
+      color: #666;
+      text-decoration: none;
+      margin: 0 0.75rem;
+      transition: color 0.2s;
+    }
+    
+    footer a:hover {
+      color: var(--text-color);
+    }
+    
+    code {
+      background-color: var(--accent-bg);
+      padding: 0.2rem 0.4rem;
+      border-radius: 3px;
+      font-size: 0.875rem;
+    }
+    
+    .cta-section {
+      text-align: center;
+      padding: 6rem 1.5rem;
+    }
+    
+    .cta-section h2 {
+      font-size: 2rem;
+      margin-bottom: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.05em;
+    }
+    
+    .cta-section p {
+      margin-bottom: 2rem;
+      max-width: 650px;
+      margin-left: auto;
+      margin-right: auto;
+      color: #666;
+    }
+    
+    @media (max-width: 768px) {
+      header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1.5rem;
+      }
+      
+      nav {
+        width: 100%;
+        justify-content: space-between;
+      }
+      
+      .hero h1 {
+        font-size: 2.5rem;
+      }
+      
+      .hero p {
+        font-size: 1.125rem;
+      }
+      
+      .section-title {
+        font-size: 1.75rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <a href="#" class="logo">llmkit</a>
+      <nav>
+        <a href="#features">Features</a>
+        <a href="#how-it-works">How It Works</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#consulting">Consulting</a>
+        <a href="#" class="btn">Contact</a>
+      </nav>
+    </header>
+    
+    <div class="hero">
+      <div class="tag">Open Source</div>
+      <h1>Prompt Management<br>for the Modern Stack</h1>
+      <p>One server to manage, test, evaluate, and run prompts across multiple LLM providers.</p>
+      <a href="#" class="btn">Get Started</a>
+    </div>
+  </div>
+  
+  <div class="container">
+    <div class="terminal">
+      <pre>> Installing llmkit...
+> Setup complete
+> Running first prompt test
+
+TEST-PROMPT [gemini-2.0-flash-001 · gemini]
+Evaluating response...
+┌─────────────────────────────┐
+│ Response Quality: 9.2/10    │
+│ Latency: 230ms              │
+│ Token Usage: 145/256        │
+└─────────────────────────────┘
+> Ready for more commands<span class="blink">_</span></pre>
+    </div>
+  </div>
+  
+  <div class="container" id="features">
+    <h2 class="section-title">Features</h2>
+    <div class="features">
+      <div class="feature">
+        <div class="feature-icon">📝</div>
+        <h3>Prompt Management</h3>
+        <p>Create, organize, and version control your prompts with a clean, focused interface.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">🧪</div>
+        <h3>Prompt Testing</h3>
+        <p>Test prompts against multiple parameters and see results in real-time.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">📊</div>
+        <h3>Prompt Evaluation</h3>
+        <p>Evaluate performance with actionable insights to improve quality and efficiency.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">🚀</div>
+        <h3>Prompt Inference</h3>
+        <p>Run prompts through a unified API connecting to multiple LLM providers.</p>
+      </div>
+    </div>
+  </div>
+  
+  <div class="open-source-banner">
+    <h2>100% Open Source</h2>
+    <p>llmkit is fully open source. Contribute to the project, customize it for your needs, or self-host.</p>
+    <a href="#" class="btn">View on GitHub</a>
+  </div>
+  
+  <div class="container" id="how-it-works">
+    <h2 class="section-title">One Server, Many Providers</h2>
+    <div class="how-it-works">
+      <div class="providers">
+        <div class="provider">OpenAI</div>
+        <div class="provider">Gemini</div>
+        <div class="provider">Claude</div>
+        <div class="provider">Llama</div>
+        <div class="provider">Mistral</div>
+        <div class="provider">+ More</div>
+      </div>
+      <div class="terminal">
+        <pre>> llmkit setup
+> Adding providers...
+┌─────────────────────────────┐
+│ Provider: OpenAI            │
+│ Status: Connected           │
+│ Models: 12 available        │
+└─────────────────────────────┘
+┌─────────────────────────────┐
+│ Provider: Gemini            │
+│ Status: Connected           │
+│ Models: 4 available         │
+└─────────────────────────────┘
+> All systems operational<span class="blink">_</span></pre>
+      </div>
+    </div>
+  </div>
+  
+  <div class="container" id="pricing">
+    <h2 class="section-title">Pricing</h2>
+    <div class="pricing-plans">
+      <div class="plan">
+        <h3>Small Teams</h3>
+        <div class="plan-price">$50/mo</div>
+        <p>Perfect for small teams and startups</p>
+        <ul class="plan-features">
+          <li>Unlimited prompts</li>
+          <li>All LLM providers</li>
+          <li>Advanced analytics</li>
+          <li>Team collaboration</li>
+          <li>Email support</li>
+        </ul>
+        <div style="margin-top: 2rem;">
+          <a href="#" class="btn">Get Started</a>
+        </div>
+      </div>
+      <div class="plan featured">
+        <h3>Enterprise</h3>
+        <div class="plan-price">$200/mo</div>
+        <p>For larger teams and organizations</p>
+        <ul class="plan-features">
+          <li>Everything in Small Teams</li>
+          <li>Custom deployment</li>
+          <li>Advanced security features</li>
+          <li>Dedicated support</li>
+          <li>Custom integrations</li>
+          <li>Environment setup included</li>
+        </ul>
+        <div style="margin-top: 2rem;">
+          <a href="#" class="btn">Contact Us</a>
+        </div>
+      </div>
+    </div>
+    <p style="text-align: center; margin-top: 3rem; color: #666; max-width: 650px; margin-left: auto; margin-right: auto;">
+      Need to self-host? Contact us for enterprise setup. We'll help you get your environment configured.
+    </p>
+  </div>
+  
+  <div class="container" id="consulting">
+    <h2 class="section-title">Consulting Services</h2>
+    <p style="text-align: center; max-width: 650px; margin: 0 auto 3rem; color: #666;">
+      Our team offers specialized consulting services to help you get the most out of your LLM implementations
+    </p>
+    <div class="consulting-services">
+      <div class="consulting-service">
+        <h4>Prompt Engineering</h4>
+        <p>Expert guidance on crafting effective prompts that deliver consistent, high-quality results.</p>
+      </div>
+      <div class="consulting-service">
+        <h4>LLM Integration</h4>
+        <p>Custom solutions for integrating LLMs into your existing workflows and applications.</p>
+      </div>
+      <div class="consulting-service">
+        <h4>Performance Optimization</h4>
+        <p>Strategies to reduce costs and improve response quality across your LLM implementations.</p>
+      </div>
+    </div>
+    <div style="text-align: center; margin-top: 3rem;">
+      <a href="#" class="btn">Contact for Consulting</a>
+    </div>
+  </div>
+  
+  <div class="container no-border">
+    <div class="cta-section">
+      <h2>Ready to streamline your LLM workflow?</h2>
+      <p>Join developers and teams who are managing their prompts efficiently with llmkit.</p>
+      <a href="#" class="btn">Get Started</a>
+    </div>
+  </div>
+  
+  <footer>
+    <p>© 2025 llmkit - Open Source Prompt Management</p>
+    <p style="margin-top: 1.5rem;">
+      <a href="#">GitHub</a>
+      <a href="#">Documentation</a>
+      <a href="#">Terms</a>
+      <a href="#">Privacy</a>
+      <a href="#">Contact</a>
+    </p>
+  </footer>
+</body>
+</html>
