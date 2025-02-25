@@ -180,7 +180,7 @@ pub async fn execute_chat(
         return Err(AppError::BadRequest("Chat mode is not supported for Dynamic System & User prompts".into()));
     }
 
-    let llm_props = LlmProps::for_chat(prompt.clone(), payload.context, payload.messages).map_err(|e| {
+    let llm_props = LlmProps::new_chat(prompt.clone(), payload.context, payload.messages).map_err(|e| {
         tracing::error!("{}", e);
         AppError::InternalServerError("An error occured processing chat prompt".to_string())
     })?;
@@ -298,7 +298,7 @@ pub async fn execute_chat_stream(
     // Create oneshot channel for log ID
     let (stream_res_tx, stream_res_rx) = tokio::sync::oneshot::channel();
     
-    let llm_props = LlmProps::for_chat(prompt.clone(), payload.context, payload.messages).map_err(|e| {
+    let llm_props = LlmProps::new_chat(prompt.clone(), payload.context, payload.messages).map_err(|e| {
         tracing::error!("{}", e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
@@ -380,7 +380,7 @@ pub async fn api_completions(
             .unwrap_or(json!({}));
 
         
-        LlmProps::for_chat(
+        LlmProps::new_chat(
             prompt.clone(), 
             context, 
             payload.messages.clone()
@@ -506,7 +506,7 @@ pub async fn api_completions_stream(
             })
             .unwrap_or(json!({}));
         
-        match LlmProps::for_chat(
+        match LlmProps::new_chat(
             prompt.clone(), 
             context, 
             payload.messages.clone()

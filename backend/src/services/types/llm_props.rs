@@ -13,10 +13,12 @@ pub enum LlmPropsError {
     TeraTemplateError(#[from] tera::Error),
     #[error("Tera render error: {0}")]
     TeraRenderError(tera::Error),
+    #[error("Malformed input for Chat")]
+    ChatMessagesInputError,
 }
 
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Clone, Debug)]
 pub struct LlmProps {
     pub provider: LlmApiProvider,
     pub model_name: String,
@@ -97,17 +99,33 @@ impl LlmProps {
             model_id: prompt.model_id,
         })
     }
-    
-    pub fn for_chat(
+
+    pub fn new_chat(
         prompt: PromptRowWithModel, 
         context: serde_json::Value, 
-        chat_messages: Vec<Message>
+        messages: Vec<Message>
     ) -> Result<Self, LlmPropsError> {
-        // For chat mode, we need to prepare a different message structure:
-        // 1. System message comes from the prompt template
-        // 2. First user message is either the rendered user template (if this is first message)
-        //    or the first user message from chat_messages if continuing conversation
-        // 3. Subsequent messages come from chat_messages
+        // For chat input we need to
+        // 1. Determine if this is the first input based on messages length
+        // 2. If it is, then and only then do the templating
+        // 3. If not, simply return the messages as is
+
+        let messages_len = messages.len();
+
+        if messages_len > 2 {
+            return Ok(LlmProps {
+                provider: prompt.provider_name.into(),
+                model_name: prompt.model_name,
+                max_tokens: prompt.max_tokens,
+                temperature: prompt.temperature,
+                json_mode: prompt.json_mode,
+                messages: messages.to_vec(),
+                prompt_id: prompt.id,
+                model_id: prompt.model_id,
+            });
+        }
+
+        let mut messages = messages;
 
         // First, render the system prompt with context (always needed)
         let mut tera = Tera::default();
@@ -123,28 +141,16 @@ impl LlmProps {
         let rendered_system_prompt = tera.render("system_prompt", &tera_ctx)
             .map_err(|e| LlmPropsError::TeraRenderError(e))?;
         
-        let mut messages = Vec::new();
-        
-        // Always add the system message first
-        messages.push(Message::System { content: rendered_system_prompt });
-        
-        // If chat_messages is empty, this is the first message, so use the template
-        if chat_messages.is_empty() && prompt.prompt_type != "dynamic_both" {
-            // Only render user template for first message
-            tera.add_raw_template("user_prompt", &prompt.user)?;
-            let rendered_user_prompt = tera.render("user_prompt", &tera_ctx)
-                .map_err(|e| LlmPropsError::TeraRenderError(e))?;
-            
-            messages.push(Message::User { content: rendered_user_prompt });
+        // If there are two messages, this indicates that the user passed in both a
+        // system and user message and in this case we should just swap out the system message.
+        //
+        // If there is only 1 message, then we know that is just the User message because
+        // the system prompt may have not needed to be dynamic at all, and thus had no context.
+        // In this case we have to insert the system message before the user message
+        if messages_len == 2 {
+            messages[0] = Message::System { content: rendered_system_prompt };
         } else {
-            // Otherwise, use the provided chat history
-            // Skip system messages in chat_messages as we've already added our own
-            for msg in chat_messages {
-                if let Message::System { .. } = msg {
-                    continue; // Skip system messages from chat history
-                }
-                messages.push(msg);
-            }
+            messages.insert(0, Message::System { content: rendered_system_prompt });
         }
 
         Ok(LlmProps {
@@ -153,7 +159,7 @@ impl LlmProps {
             max_tokens: prompt.max_tokens,
             temperature: prompt.temperature,
             json_mode: prompt.json_mode,
-            messages,
+            messages: messages.to_vec(),
             prompt_id: prompt.id,
             model_id: prompt.model_id,
         })
