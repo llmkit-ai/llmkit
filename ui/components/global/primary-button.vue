@@ -1,6 +1,7 @@
 <template>
   <div>
     <button
+      type="button"
       :disabled="disabled"
       :class="[
         'font-mono transition-colors border-2', // 👈 Added 'border' here

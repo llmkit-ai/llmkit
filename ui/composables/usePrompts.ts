@@ -180,6 +180,74 @@ export const usePrompts = () => {
     }
   }
 
+  // OpenAI-compatible API execution
+  const executeApiCompletion = async (
+    modelKey: string, 
+    messages: Message[], 
+    jsonMode: boolean = false
+  ) => {
+    try {
+      const requestBody: any = {
+        model: modelKey,
+        messages
+      };
+      
+      // Add JSON mode if required
+      if (jsonMode) {
+        requestBody.response_format = {
+          type: "json_object"
+        };
+      }
+      
+      // Use the OpenAI-compatible API endpoint
+      return await $fetch<ApiCompletionResponse>('/api/v1/ui/prompts/execute', {
+        method: 'POST',
+        body: requestBody
+      });
+    } catch (err) {
+      error.value = 'Failed to execute API completion'
+      throw err
+    }
+  }
+
+  // OpenAI-compatible API streaming (no direct return value since it streams)
+  const executeApiCompletionStream = async (
+    modelKey: string, 
+    messages: Message[], 
+    jsonMode: boolean = false,
+    onChunk: (chunk: string) => void,
+    onError: (err: any) => void
+  ) => {
+    try {
+      const requestBody: any = {
+        model: modelKey,
+        messages,
+        stream: true
+      };
+      
+      // Add JSON mode if required
+      if (jsonMode) {
+        requestBody.response_format = {
+          type: "json_object"
+        };
+      }
+      
+      // Use the SSE implementation for streaming
+      const { startStream } = useSSE();
+      await startStream(
+        requestBody,
+        `/api/v1/ui/prompts/execute/stream`,
+        {
+          onMessage: onChunk,
+          onError
+        }
+      );
+    } catch (err) {
+      error.value = 'Failed to execute API streaming'
+      throw err
+    }
+  }
+
   return {
     prompts,
     promptPerformance,
@@ -192,6 +260,8 @@ export const usePrompts = () => {
     deletePrompt,
     executePrompt,
     executePromptStream,
-    executeChat
+    executeChat,
+    executeApiCompletion,
+    executeApiCompletionStream
   }
 }

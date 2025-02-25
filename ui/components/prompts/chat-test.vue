@@ -21,20 +21,22 @@
         <h3 class="text-base/7 font-semibold text-neutral-700 dark:text-white">Template Variables</h3>
         <p class="max-w-2xl text-sm/6 text-neutral-500 dark:text-neutral-400">These variables will be used in the system prompt.</p>
       </div>
-      <div class="mt-4 grid grid-cols-4 gap-x-2">
-        <div v-for="f in templateFields" :key="f">
-          <label :for="f" class="block text-sm/6 font-medium text-neutral-900 dark:text-white">{{ f }}</label>
-          <div class="mt-0.5">
-            <input 
-              v-on:input="templateFieldInput" 
-              type="text" 
-              :name="f" 
-              :id="f" 
-              class="block w-full bg-white dark:bg-neutral-800 px-3 py-1.5 text-base text-neutral-900 dark:text-white outline outline-1 -outline-offset-1 outline-neutral-300 dark:outline-neutral-600 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-black dark:focus:outline-white sm:text-sm/6"
-            >
+      <form @submit.prevent>
+        <div class="mt-4 grid grid-cols-4 gap-x-2">
+          <div v-for="f in templateFields" :key="f">
+            <label :for="f" class="block text-sm/6 font-medium text-neutral-900 dark:text-white">{{ f }}</label>
+            <div class="mt-0.5">
+              <input 
+                v-on:input="templateFieldInput" 
+                type="text" 
+                :name="f" 
+                :id="f" 
+                class="block w-full bg-white dark:bg-neutral-800 px-3 py-1.5 text-base text-neutral-900 dark:text-white outline outline-1 -outline-offset-1 outline-neutral-300 dark:outline-neutral-600 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-black dark:focus:outline-white sm:text-sm/6"
+              >
+            </div>
           </div>
         </div>
-      </div>
+      </form>
     </div>
     
     <!-- Chat Interface -->
@@ -67,7 +69,7 @@
       </div>
       
       <!-- Input Area -->
-      <div class="border-t border-neutral-200 dark:border-neutral-700 p-3 bg-white dark:bg-neutral-800 flex">
+      <form @submit.prevent="sendMessage" class="border-t border-neutral-200 dark:border-neutral-700 p-3 bg-white dark:bg-neutral-800 flex">
         <textarea 
           v-model="userInput"
           @keydown.enter.prevent="sendMessage"
@@ -83,7 +85,7 @@
         >
           Send
         </PrimaryButton>
-      </div>
+      </form>
     </div>
     
     <!-- Debug Info -->
@@ -276,7 +278,8 @@ async function sendMessage() {
       payload: JSON.stringify({
         model: props.prompt.key,
         messages: createMessagesWithContext(),
-        stream: true
+        stream: true,
+        ...(props.prompt.json_mode ? { response_format: { type: "json_object" } } : {})
       })
     });
     

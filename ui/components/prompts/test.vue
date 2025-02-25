@@ -24,20 +24,22 @@
         <h3 class="text-base/7 font-semibold text-neutral-700 dark:text-white">Dynamic fields</h3>
         <p class="max-w-2xl text-sm/6 text-neutral-500 dark:text-neutral-400">The below fields are extracted based on handlebar syntax from your prompts. Populating them will dynamically swap the values into your prompt at runtime.</p>
       </div>
-      <div class="mt-4 grid grid-cols-4 gap-x-2">
-        <div v-for="f in templateFields">
-          <label :for="f" class="block text-sm/6 font-medium text-neutral-900 dark:text-white">{{ f }}</label>
-          <div class="mt-0.5">
-            <input 
-              v-on:input="templateFieldInput" 
-              type="text" 
-              :name="f" 
-              :id="f" 
-              class="block w-full bg-white dark:bg-neutral-800 px-3 py-1.5 text-base text-neutral-900 dark:text-white outline outline-1 -outline-offset-1 outline-neutral-300 dark:outline-neutral-600 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-black dark:focus:outline-white sm:text-sm/6"
-            >
+      <form @submit.prevent="execute">
+        <div class="mt-4 grid grid-cols-4 gap-x-2">
+          <div v-for="f in templateFields">
+            <label :for="f" class="block text-sm/6 font-medium text-neutral-900 dark:text-white">{{ f }}</label>
+            <div class="mt-0.5">
+              <input 
+                v-on:input="templateFieldInput" 
+                type="text" 
+                :name="f" 
+                :id="f" 
+                class="block w-full bg-white dark:bg-neutral-800 px-3 py-1.5 text-base text-neutral-900 dark:text-white outline outline-1 -outline-offset-1 outline-neutral-300 dark:outline-neutral-600 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-black dark:focus:outline-white sm:text-sm/6"
+              >
+            </div>
           </div>
         </div>
-      </div>
+      </form>
     </div>
     <div class="mt-6 flex justify-end px-4 sm:px-0 space-x-2">
       <PrimaryButton
@@ -55,8 +57,10 @@
         Edit
       </PrimaryButton>
       <PrimaryButton
+        v-if="!props.prompt.json_mode"
         type="primary"
         size="sm"
+        :disabled="executeLoading"
         @click="executeStream()"
       >
         Stream
@@ -64,6 +68,7 @@
       <PrimaryButton
         type="primary"
         size="sm"
+        :disabled="executeLoading"
         @click="execute()"
       >
         Execute
@@ -151,10 +156,6 @@ const props = defineProps<{
 const emit = defineEmits(["handle-edit", "handle-cancel"])
 
 const { 
-  executePrompt,
-} = usePrompts();
-
-const { 
   log,
   fetchLogById
 } = useLogs();
@@ -168,6 +169,7 @@ const logResponse = ref<ApiLogReponse | null>(null)
 const showLog = ref(false)
 const showJsonContext = ref(false)
 const showResponse = ref(true)
+const executeLoading = ref(false)
 
 
 const templateFields = computed<string[]>(() => {
@@ -224,36 +226,156 @@ function templateFieldInput(event: any) {
 }
 
 async function execute() {
-  const res = await executePrompt(props.prompt.id, jsonContext.value)
-  testResponse.value = res.content
-  logResponse.value = res.log
+  try {
+    executeLoading.value = true
+    // Prepare messages based on prompt type
+    let messages = [];
+    
+    // For dynamic_both prompts, we need to handle system and user contexts separately
+    if (props.prompt.prompt_type === 'dynamic_both') {
+      messages = [
+        {
+          role: 'system',
+          content: JSON.stringify(jsonContext.value)
+        },
+        {
+          role: 'user',
+          content: JSON.stringify(jsonContext.value)
+        }
+      ];
+    } else {
+      // For other prompt types, just include the system message
+      messages = [
+        {
+          role: 'system',
+          content: JSON.stringify(jsonContext.value)
+        }
+      ];
+    }
+    
+    // Get API client from composable
+    const { executeApiCompletion } = usePrompts();
+    
+    // Execute the prompt using the composable
+    const response = await executeApiCompletion(
+      props.prompt.key,
+      // @ts-ignore
+      messages,
+      props.prompt.json_mode
+    );
+    
+    // Extract content from response
+    if (response.choices && response.choices.length > 0) {
+      testResponse.value = response.choices[0].message.content;
+      
+      // Try to get the log ID from the response ID
+      const logId = parseInt(response.id.split('-')[1]);
+      if (logId) {
+        await getLogRecord(logId);
+      }
+    }
+  } catch (err) {
+    console.error('Error executing prompt:', err);
+  } finally {
+    executeLoading.value = false
+  }
 }
 
-const { startStream } = useSSE()
+// Error handling
 const error = ref<Error | null>(null)
 
 const executeStream = async () => {
-  testResponse.value = ''
-  error.value = null
+  executeLoading.value = true
+  testResponse.value = '';
+  error.value = null;
 
-  await startStream(
-    jsonContext.value,
-    `/api/v1/prompts/execute/${props.prompt.id}/stream`,
-    {
-      onMessage: async (chunk) => {
-        if (chunk.includes("log_id")) {
-          const logChunk = JSON.parse(chunk)
-          const logId = logChunk["log_id"]
-          await getLogRecord(logId)
-          return
+  // Prepare messages based on prompt type
+  let messages = [];
+  
+  // For dynamic_both prompts, we need to handle system and user contexts separately
+  if (props.prompt.prompt_type === 'dynamic_both') {
+    messages = [
+      {
+        role: 'system',
+        content: JSON.stringify(jsonContext.value)
+      },
+      {
+        role: 'user',
+        content: JSON.stringify(jsonContext.value)
+      }
+    ];
+  } else {
+    // For other prompt types, just include the system message
+    messages = [
+      {
+        role: 'system',
+        content: JSON.stringify(jsonContext.value)
+      }
+    ];
+  }
+
+  // Get API client from composable
+  const { executeApiCompletionStream } = usePrompts();
+  
+  // Execute streaming using the composable
+  await executeApiCompletionStream(
+    props.prompt.key,
+    // @ts-ignore
+    messages,
+    props.prompt.json_mode,
+    async (chunk) => {
+      // Handle each chunk of the stream
+      
+      // Check if this is the [DONE] message
+      if (chunk === "[DONE]") {
+        executeLoading.value = false
+        return;
+      }
+      
+      try {
+        // Try to parse as JSON (new OpenAI format)
+        const parsed = JSON.parse(chunk);
+        
+        // Check if it has choices and delta content
+        if (parsed.choices && parsed.choices.length > 0) {
+          const choice = parsed.choices[0];
+          
+          // If it has a finish_reason, the stream is complete
+          if (choice.finish_reason) {
+            // Try to get the log ID from the response ID
+            const logId = parseInt(parsed.id.split('-')[1]);
+            if (logId) {
+              await getLogRecord(logId);
+            }
+            return;
+          }
+          
+          // Add delta content if available
+          if (choice.delta && choice.delta.content) {
+            testResponse.value += choice.delta.content;
+          }
         }
-        testResponse.value += chunk
-      },
-      onError: (err) => {
-        error.value = err
-      },
+      } catch (err) {
+        // Fallback to old format handling
+        if (chunk.includes("log_id")) {
+          try {
+            const logChunk = JSON.parse(chunk);
+            const logId = logChunk["log_id"];
+            await getLogRecord(logId);
+          } catch (parseErr) {
+            console.error("Error parsing log_id chunk:", parseErr);
+          }
+          return;
+        }
+        
+        // If not JSON or doesn't match expected format, just append it
+        testResponse.value += chunk;
+      }
+    },
+    (err) => {
+      error.value = err;
     }
-  )
+  );
 }
 
 async function getLogRecord(log_id: number) {
