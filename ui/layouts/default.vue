@@ -150,6 +150,13 @@
                 >
                   Use System Preference
                 </div>
+                
+                <button 
+                  @click="logout"
+                  class="w-full p-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 cursor-pointer flex items-center focus:outline-none"
+                >
+                  <span>Logout</span>
+                </button>
               </div>
             </div>
           </div>
@@ -177,4 +184,15 @@ const toggleDarkMode = () => {
   showSettingsMenu.value = false
   $colorMode.preference = $colorMode.value === 'dark' ? 'light' : 'dark';
 };
+
+const logout = async () => {
+  showSettingsMenu.value = false
+  try {
+    await $fetch('/api/auth/logout', { method: 'POST' })
+    // Redirect to login page
+    window.location.href = '/login'
+  } catch (error) {
+    console.error('Logout failed:', error)
+  }
+}
 </script>

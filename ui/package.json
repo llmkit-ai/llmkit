@@ -17,6 +17,7 @@
     "lucide-vue-next": "^0.473.0",
     "nunjucks": "^3.2.4",
     "nuxt": "^3.15.2",
+    "nuxt-auth-utils": "^0.5.16",
     "sse.js": "^2.5.0",
     "vue": "latest",
     "vue-router": "latest"

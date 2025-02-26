@@ -26,7 +26,15 @@ pub async fn api_key_middleware(
                 return Err(AppError::Unauthorized("API key is required".to_string()));
             }
 
-            // Verify API key
+            // Check if it's the UI API key from environment variable
+            if let Ok(ui_api_key) = std::env::var("API_KEY") {
+                if api_key == ui_api_key {
+                    // UI API key is valid, proceed
+                    return Ok(next.run(req).await);
+                }
+            }
+
+            // If not UI API key, verify against database
             let is_valid = state
                 .db
                 .api_key
