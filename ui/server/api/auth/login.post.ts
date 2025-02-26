@@ -34,18 +34,25 @@ export default defineEventHandler(async (event) => {
   // Set session data
   await session.update({
     user: {
-      id: user.id,
-      username: user.username,
-      name: user.name
+      id: response.user.id,
+      username: response.user.username,
+      name: response.user.name
     }
   })
   
   return { 
     success: true,
     user: {
-      id: user.id,
-      username: user.username,
-      name: user.name
+      id: response.user.id,
+      username: response.user.username,
+      name: response.user.name
     }
+  }
+  } catch (error: any) {
+    // Handle authentication errors
+    throw createError({
+      statusCode: error.response?.status || 401,
+      message: error.response?.data?.message || 'Invalid username or password'
+    })
   }
 })

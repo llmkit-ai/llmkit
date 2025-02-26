@@ -42,6 +42,7 @@ impl DbData {
         let log = LogRepository::new(pool.clone()).await?;
         let model = ModelRepository::new(pool.clone()).await?;
         let api_key = ApiKeyRepository::new(pool.clone()).await?;
+        let user = UserRepository::new(pool.clone()).await?;
 
         Ok(DbData {
             log,
@@ -50,7 +51,8 @@ impl DbData {
             prompt_eval_run,
             prompt_eval,
             provider,
-            api_key
+            api_key,
+            user
         })
     }
 }

@@ -105,6 +105,11 @@ async fn main() -> Result<()> {
             // Settings routes
             .route("/ui/settings/api-keys", get(list_api_keys).post(create_api_key))
             .route("/ui/settings/api-keys/{id}", delete(delete_api_key))
+            
+            // User routes
+            .route("/ui/auth/login", post(login))
+            .route("/ui/users", get(get_users).post(create_user))
+            .route("/ui/users/{id}", get(get_user).put(update_user).delete(delete_user))
         )
         .with_state(app_state);
 
