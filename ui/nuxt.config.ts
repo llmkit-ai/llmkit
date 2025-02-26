@@ -15,7 +15,7 @@ export default defineNuxtConfig({
   ],
   nitro: {
     routeRules: {
-      "/api/v1/**": { proxy: 'http://127.0.0.1:8000/api/v1/**' },
+      "/v1/**": { proxy: 'http://127.0.0.1:8000/v1/**' },
     }
   },
   colorMode: {

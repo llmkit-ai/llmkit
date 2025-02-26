@@ -170,7 +170,7 @@ onMounted(async () => {
 async function fetchApiKeys() {
   isLoading.value = true
   try {
-    const response = await fetch('/api/v1/ui/settings/api-keys')
+    const response = await fetch('/v1/ui/settings/api-keys')
     if (!response.ok) {
       throw new Error('Failed to fetch API keys')
     }
@@ -187,7 +187,7 @@ async function createApiKey() {
   if (!newKeyName.value.trim()) return
   
   try {
-    const response = await fetch('/api/v1/ui/settings/api-keys', {
+    const response = await fetch('/v1/ui/settings/api-keys', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -216,7 +216,7 @@ async function deleteApiKey(id) {
   }
   
   try {
-    const response = await fetch(`/api/v1/ui/settings/api-keys/${id}`, {
+    const response = await fetch(`/v1/ui/settings/api-keys/${id}`, {
       method: 'DELETE',
     })
     

@@ -52,7 +52,7 @@ async fn main() -> Result<()> {
     // Build the router with all routes directly in main
     // Build the router with all routes directly in main
     let router = Router::new()
-        .nest("/api/v1", Router::new()
+        .nest("/v1", Router::new()
             // API routes (OpenAI compatible) with API key auth
             .route("/chat/completions", post(api_completions))
                 .route_layer(axum_middleware::from_fn_with_state(app_state.clone(), auth::api_key_middleware))

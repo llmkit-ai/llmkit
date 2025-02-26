@@ -1,0 +1,13 @@
+{
+  "name": "llmkit-nodejs-examples",
+  "version": "1.0.0",
+  "description": "Node.js examples for testing LLMKit OpenAI compatibility",
+  "main": "node_examples.js",
+  "scripts": {
+    "start": "node node_examples.js"
+  },
+  "dependencies": {
+    "openai": "^4.28.0"
+  },
+  "type": "module"
+}

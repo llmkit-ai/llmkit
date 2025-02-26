@@ -159,7 +159,9 @@ async function handleUpdate(payload: PromptUpdateDTO) {
     throw createError({ statusCode: 500, statusMessage: "Missing prompt" })
   }
   try {
-    await updatePrompt(selectedPrompt.value.id, payload)
+    const updatedPrompt = await updatePrompt(selectedPrompt.value.id, payload)
+    // Directly update the selectedPrompt with the returned data
+    selectedPrompt.value = updatedPrompt
     mode.value = "view"
   } catch(e) {
     console.error(e)

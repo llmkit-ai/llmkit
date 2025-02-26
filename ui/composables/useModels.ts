@@ -8,7 +8,7 @@ export const useModels = () => {
   const fetchModels = async () => {
     try {
       loading.value = true
-      models.value = await $fetch<Model[]>('/api/v1/ui/models')
+      models.value = await $fetch<Model[]>('/v1/ui/models')
     } catch (err) {
       console.error(err)
       error.value = 'Failed to fetch models'

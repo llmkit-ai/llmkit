@@ -10,7 +10,7 @@ export const useLogs = () => {
   const fetchLogs = async (page: number = 1, pageSize: number = 20) => {
     try {
       loading.value = true
-      logs.value = await $fetch<ApiLogReponse[]>('/api/v1/ui/logs', {
+      logs.value = await $fetch<ApiLogReponse[]>('/v1/ui/logs', {
         query: {
           page: page.toString(),
           page_size: pageSize.toString(),
@@ -27,7 +27,7 @@ export const useLogs = () => {
   const fetchLogById = async (id: number) => {
     try {
       loading.value = true
-      log.value = await $fetch<ApiLogReponse>(`/api/v1/ui/logs/${id}`)
+      log.value = await $fetch<ApiLogReponse>(`/v1/ui/logs/${id}`)
     } catch (err) {
       console.error(err)
       error.value = `failed to fetch log with id ${id}`
@@ -39,7 +39,7 @@ export const useLogs = () => {
   const fetchLogsCount = async () => {
     try {
       loading.value = true
-      const response = await $fetch<{ count: number }>('/api/v1/ui/logs/count')
+      const response = await $fetch<{ count: number }>('/v1/ui/logs/count')
       totalLogs.value = response.count
     } catch (err) {
       console.error(err)
