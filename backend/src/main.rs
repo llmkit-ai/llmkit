@@ -1,14 +1,17 @@
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
-    routing::{get, post},
+    routing::{get, post, delete},
     Router,
 };
+use axum::middleware as axum_middleware;
 
+use middleware::auth;
 use tracing_subscriber;
 
 use anyhow::Result;
 use controllers::{
+    api_keys::{create_api_key, delete_api_key, list_api_keys},
     logs::{get_log, get_logs_count, list_logs},
     models::list_models,
     prompt_eval::{
@@ -32,6 +35,7 @@ pub mod common;
 pub mod controllers;
 pub mod db;
 pub mod services;
+pub mod middleware;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -45,9 +49,65 @@ async fn main() -> Result<()> {
     let data = DbData::new(&database_url).await?;
     let app_state = AppState::new(data).await;
 
+    // Build the router with all routes directly in main
+    // Build the router with all routes directly in main
     let router = Router::new()
-        .nest("/api/v1", api_v1_routes())
+        .nest("/api/v1", Router::new()
+            // API routes (OpenAI compatible) with API key auth
+            .route("/chat/completions", post(api_completions))
+                .route_layer(axum_middleware::from_fn_with_state(app_state.clone(), auth::api_key_middleware))
+            .route("/chat/completions/stream", post(api_completions_stream))
+                .route_layer(axum_middleware::from_fn_with_state(app_state.clone(), auth::api_key_middleware))
+
+            // version
+            .route("/", get(api_version_handler))
+            
+            // UI specific routes
+            // Prompt routes
+            .route("/ui/prompts", post(create_prompt).get(list_prompts))
+            .route(
+                "/ui/prompts/{id}",
+                get(get_prompt).put(update_prompt).delete(delete_prompt),
+            )
+            .route("/ui/prompts/{id}/prompt-evals", get(get_eval_test_by_prompt))
+            .route("/ui/prompts/{id}/performance", get(get_eval_performance_by_prompt_id))
+            
+            // Execute routes
+            .route("/ui/prompts/execute", post(api_completions))
+            .route("/ui/prompts/execute/stream", post(api_completions_stream))
+            .route("/ui/prompts/execute/chat", post(api_completions))
+            .route("/ui/prompts/execute/chat/stream", post(api_completions_stream))
+            
+            // Prompt evals routes
+            .route("/ui/prompt-evals", post(create_eval_test))
+            .route(
+                "/ui/prompt-evals/{id}",
+                get(get_eval_test_by_id)
+                    .put(update_eval_test)
+                    .delete(delete_eval_test),
+            )
+            
+            // Prompt eval runs routes
+            .route(
+                "/ui/prompt-eval-runs/{prompt_id}/version/{prompt_version_id}",
+                post(execute_eval_run).get(get_eval_runs_by_prompt_version),
+            )
+            .route("/ui/prompt-eval-runs/{id}", get(get_eval_run_by_id).put(update_eval_run_score))
+            
+            // Model routes
+            .route("/ui/models", get(list_models))
+            
+            // Logs routes
+            .route("/ui/logs", get(list_logs))
+            .route("/ui/logs/{trace_id}", get(get_log))
+            .route("/ui/logs/count", get(get_logs_count))
+            
+            // Settings routes
+            .route("/ui/settings/api-keys", get(list_api_keys).post(create_api_key))
+            .route("/ui/settings/api-keys/{id}", delete(delete_api_key))
+        )
         .with_state(app_state);
+
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:8000").await?;
 
@@ -55,74 +115,6 @@ async fn main() -> Result<()> {
     axum::serve(listener, router).await.unwrap();
 
     Ok(())
-}
-
-fn api_v1_routes() -> Router<AppState> {
-    Router::new()
-        .route("/", get(api_version_handler))
-        // UI specific routes
-        .nest("/ui/prompts", prompt_routes())
-        .nest("/ui/prompt-evals", prompt_evals_routes())
-        .nest("/ui/prompt-eval-runs", prompt_eval_runs_routes())
-        .nest("/ui/prompts/execute", execute_routes())
-        .nest("/ui/models", model_routes())
-        .nest("/ui/logs", logs_routes())
-        // API routes (OpenAI compatible)
-        .nest("/chat", api_chat_routes())
-}
-
-fn execute_routes() -> Router<AppState> {
-    Router::new()
-        .route("/", post(api_completions))
-        .route("/stream", post(api_completions_stream))
-        .route("/chat", post(api_completions))
-        .route("/chat/stream", post(api_completions_stream))
-}
-
-fn api_chat_routes() -> Router<AppState> {
-    Router::new()
-        .route("/completions", post(api_completions))
-        .route("/completions/stream", post(api_completions_stream))
-}
-
-fn prompt_routes() -> Router<AppState> {
-    Router::new()
-        .route("/", post(create_prompt).get(list_prompts))
-        .route(
-            "/{id}",
-            get(get_prompt).put(update_prompt).delete(delete_prompt),
-        )
-        .route("/{id}/prompt-evals", get(get_eval_test_by_prompt))
-        .route("/{id}/performance", get(get_eval_performance_by_prompt_id))
-}
-
-fn prompt_evals_routes() -> Router<AppState> {
-    Router::new().route("/", post(create_eval_test)).route(
-        "/{id}",
-        get(get_eval_test_by_id)
-            .put(update_eval_test)
-            .delete(delete_eval_test),
-    )
-}
-
-fn prompt_eval_runs_routes() -> Router<AppState> {
-    Router::new()
-        .route(
-            "/{prompt_id}/version/{prompt_version_id}",
-            post(execute_eval_run).get(get_eval_runs_by_prompt_version),
-        )
-        .route("/{id}", get(get_eval_run_by_id).put(update_eval_run_score))
-}
-
-fn model_routes() -> Router<AppState> {
-    Router::new().route("/", get(list_models))
-}
-
-fn logs_routes() -> Router<AppState> {
-    Router::new()
-        .route("/", get(list_logs))
-        .route("/{trace_id}", get(get_log))
-        .route("/count", get(get_logs_count))
 }
 
 async fn api_version_handler() -> &'static str {

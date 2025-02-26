@@ -4,7 +4,8 @@ use sqlx::migrate::Migrator;
 use std::str::FromStr;
 
 use super::{
-    logs::LogRepository, models::ModelRepository, prompt_eval::PromptEvalTestRepository, prompt_eval_run::PromptEvalTestRunRepository, prompts::PromptRepository, providers::ProviderRepository
+    api_keys::ApiKeyRepository, logs::LogRepository, models::ModelRepository, prompt_eval::PromptEvalTestRepository, 
+    prompt_eval_run::PromptEvalTestRunRepository, prompts::PromptRepository, providers::ProviderRepository
 };
 
 
@@ -20,6 +21,7 @@ pub struct DbData {
     pub provider: ProviderRepository,
     pub log: LogRepository,
     pub model: ModelRepository,
+    pub api_key: ApiKeyRepository,
 }
 
 impl DbData {
@@ -39,6 +41,7 @@ impl DbData {
         let provider = ProviderRepository::new(pool.clone()).await?;
         let log = LogRepository::new(pool.clone()).await?;
         let model = ModelRepository::new(pool.clone()).await?;
+        let api_key = ApiKeyRepository::new(pool.clone()).await?;
 
         Ok(DbData {
             log,
@@ -46,7 +49,8 @@ impl DbData {
             prompt,
             prompt_eval_run,
             prompt_eval,
-            provider
+            provider,
+            api_key
         })
     }
 }
