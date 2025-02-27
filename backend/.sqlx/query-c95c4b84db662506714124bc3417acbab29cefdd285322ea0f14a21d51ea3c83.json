@@ -1,0 +1,74 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT \n                u.id, \n                u.email,\n                u.name,\n                u.password_hash,\n                u.role_id,\n                r.name as role_name,\n                u.registration_state_id,\n                s.name as registration_state,\n                u.created_at,\n                u.updated_at\n            FROM user u\n            JOIN user_role r ON u.role_id = r.id\n            JOIN registration_state s ON u.registration_state_id = s.id\n            WHERE u.registration_state_id = ?\n            ORDER BY u.created_at DESC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "email",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "name",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "password_hash",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "role_id",
+        "ordinal": 4,
+        "type_info": "Integer"
+      },
+      {
+        "name": "role_name",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "registration_state_id",
+        "ordinal": 6,
+        "type_info": "Integer"
+      },
+      {
+        "name": "registration_state",
+        "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 8,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "updated_at",
+        "ordinal": 9,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "c95c4b84db662506714124bc3417acbab29cefdd285322ea0f14a21d51ea3c83"
+}

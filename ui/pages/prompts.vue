@@ -101,6 +101,11 @@ import type { PromptCreateDTO, PromptUpdateDTO } from '~/types/components/prompt
 import type PrimaryButton from '~/components/global/primary-button.vue';
 import PromptsChatTest from '~/components/prompts/chat-test.vue';
 
+definePageMeta({
+  layout: 'loggedIn',
+  middleware: ['auth']
+});
+
 const mode = ref<'view' | 'edit' | 'new' | 'test'>('view');
 
 const selectedPrompt = ref<Prompt | null>(null);

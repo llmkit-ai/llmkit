@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT key_hash FROM api_key\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "key_hash",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "57e4b06ff0678b685b8b4b3dee007877c33e57274192772e6a12a62b2820656c"
+}

@@ -6,7 +6,7 @@ use axum::{
 use chrono::Utc;
 use futures::Stream;
 use hyper::StatusCode;
-use serde_json::{json, Value};
+use serde_json::json;
 use std::convert::Infallible;
 use tokio::sync::mpsc;
 use uuid;
