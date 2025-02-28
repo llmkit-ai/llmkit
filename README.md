@@ -17,6 +17,7 @@ LLMKit is a comprehensive toolkit for managing, testing, and deploying LLM promp
 - [Setup and Installation](#setup-and-installation)
   - [Backend Setup](#backend-setup)
   - [Frontend Setup](#frontend-setup)
+  - [Docker Deployment](#docker-deployment)
 - [Usage](#usage)
   - [Managing Prompts](#managing-prompts)
   - [Testing Prompts](#testing-prompts)
@@ -37,8 +38,8 @@ LLMKit provides a unified interface for working with various LLM providers (Open
 ## Key Features
 
 - **= Prompt Versioning**: Track changes and improvements to prompts over time
-- **=Ý Template Variables**: Dynamic system and user prompts with Liquid templating
-- **=Ê Prompt Evaluation**: Create test sets and measure prompt performance
+- **=ï¿½ Template Variables**: Dynamic system and user prompts with Liquid templating
+- **=ï¿½ Prompt Evaluation**: Create test sets and measure prompt performance
 - **= Provider Integration**: Support for multiple LLM providers with a unified API
 - **= API Key Management**: Generate and manage API keys for secure access
 - **< OpenAI Compatible API**: Use with existing OpenAI client libraries
@@ -219,6 +220,44 @@ npm run dev  # or bun run dev
 ```
 
 The UI will be available at `http://localhost:3000`.
+
+### Docker Deployment
+
+#### Prerequisites
+
+- Docker
+- Docker Compose
+
+#### Installation
+
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/llmkit-rs.git
+cd llmkit-rs
+```
+
+2. Create a `.env` file in the root directory:
+```bash
+cp .env.example .env
+```
+
+3. Edit the `.env` file with your API keys and a secure JWT secret:
+```bash
+# Required
+JWT_SECRET=your_secure_random_string
+
+# Optional - add only the providers you need
+OPENAI_API_KEY=your_openai_key
+ANTHROPIC_API_KEY=your_anthropic_key
+# etc.
+```
+
+4. Build and start the containers:
+```bash
+docker-compose up -d
+```
+
+The backend will be available at `http://localhost:8000` and the UI at `http://localhost:3000`.
 
 ## Usage
 

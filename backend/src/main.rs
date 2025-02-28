@@ -68,29 +68,10 @@ async fn main() -> Result<()> {
         .route("/ui/auth/login", post(login))
         .layer(CookieManagerLayer::new());
 
-    // Admin-only routes
-    // let admin_routes = Router::new()
-    //     .route("/ui/auth/users", get(list_users))
-    //     .route("/ui/auth/users/pending", get(list_pending_users))
-    //     .route("/ui/auth/users/{id}/role", put(update_role))
-    //     .route("/ui/auth/users/{id}/state", put(update_registration_state))
-    //     .route("/ui/auth/users/{id}/approve", post(approve_user))
-    //     .route("/ui/auth/users/{id}/reject", post(reject_user))
-    //     .route("/ui/auth/users/{id}", delete(delete_user))
-    //     .layer(axum_middleware::from_fn_with_state(
-    //         app_state.clone(),
-    //         admin_auth_middleware,
-    //     ));
-
     // User authenticated routes
     let user_routes = Router::new()
         .route("/ui/auth/me", get(me))
-        // .route("/ui/auth/users/{id}", get(get_user).put(update_user))
-        // .route("/ui/auth/users/{id}/password", put(update_password))
-        .route(
-            "/ui/settings/api-keys",
-            get(list_api_keys).post(create_api_key),
-        )
+        .route("/ui/settings/api-keys", get(list_api_keys).post(create_api_key))
         .route("/ui/settings/api-keys/{id}", delete(delete_api_key))
         .route("/ui/prompts", post(create_prompt).get(list_prompts))
         .route(
@@ -146,7 +127,8 @@ async fn main() -> Result<()> {
         )
         .with_state(app_state);
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:8000").await?;
+    let bind_address = std::env::var("BIND_ADDRESS").unwrap_or("0.0.0.0:8000".to_string());
+    let listener = tokio::net::TcpListener::bind(&bind_address).await?;
 
     println!("listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, router).await.unwrap();
