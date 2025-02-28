@@ -60,14 +60,14 @@
       <div class="mt-6 flex items-center justify-end gap-x-6">
         <PrimaryButton
           @click="$emit('cancel')"
-          type="secondary"
+          buttonType="secondary"
           size="sm"
         >
           Cancel
         </PrimaryButton>
         <PrimaryButton
           @click="handleEvalTestInput()"
-          type="primary"
+          buttonType="primary"
           size="sm"
           :disabled="sampleInputName === ''"
         >

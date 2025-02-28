@@ -1,12 +1,12 @@
 <template>
   <div>
     <button
-      type="button"
+      :type="htmlType"
       :disabled="disabled"
       :class="[
         'font-mono transition-colors border-2', // 👈 Added 'border' here
         sizeClasses[size],
-        typeClasses[type],
+        typeClasses[buttonType],
         outline ? 'bg-transparent' : 'border-transparent',
         disabled ? 'opacity-50 cursor-not-allowed' : '',
         $attrs.class
@@ -29,9 +29,13 @@ defineProps({
     type: String as () => 'xs' | 'sm' | 'md' | 'lg',
     default: 'md'
   },
-  type: {
+  buttonType: {
     type: String as () => 'default' | 'primary' | 'secondary' | 'success' | 'error',
     default: 'default'
+  },
+  htmlType: {
+    type: String as () => 'button' | 'submit' | 'reset',
+    default: 'button'
   },
   outline: { type: Boolean, default: true },
   disabled: { type: Boolean, default: false }

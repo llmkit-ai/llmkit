@@ -74,14 +74,14 @@
     </div>
     <div class="mt-6 flex justify-end px-4 sm:px-0 space-x-3">
       <PrimaryButton
-        type="secondary"
+        buttonType="secondary"
         size="sm"
         @click="handleEdit()"
       >
         Edit
       </PrimaryButton>
       <PrimaryButton
-        type="primary"
+        buttonType="primary"
         size="sm"
         @click="handleTest()"
       >

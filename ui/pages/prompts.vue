@@ -9,7 +9,7 @@
         <PrimaryButton 
           @click="mode = 'new'"
           size="xs"
-          type="primary"
+          buttonType="default"
         >
           New Prompt +
         </PrimaryButton>
@@ -101,7 +101,8 @@ import type { PromptCreateDTO, PromptUpdateDTO } from '~/types/components/prompt
 import PromptsChatTest from '~/components/prompts/chat-test.vue';
 
 definePageMeta({
-  layout: "logged-in"
+  layout: "logged-in",
+  middleware: ['auth']
 })
 
 const mode = ref<'view' | 'edit' | 'new' | 'test'>('view');

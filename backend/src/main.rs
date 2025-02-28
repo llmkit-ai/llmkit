@@ -6,7 +6,8 @@ use axum::{
 };
 use axum::middleware as axum_middleware;
 
-use middleware::auth;
+use middleware::auth::{self, user_auth_middleware};
+use tower_cookies::CookieManagerLayer;
 use tracing_subscriber;
 
 use anyhow::Result;
@@ -24,7 +25,7 @@ use controllers::{
     },
     prompts::{
         api_completions, api_completions_stream, create_prompt, delete_prompt, get_prompt, list_prompts, update_prompt
-    }, user::{login, register},
+    }, user::{login, register, me},
 };
 
 use db::{init::DbData, types::prompt::PromptRowWithModel};
@@ -35,6 +36,7 @@ pub mod controllers;
 pub mod db;
 pub mod services;
 pub mod middleware;
+pub mod utils;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -63,7 +65,8 @@ async fn main() -> Result<()> {
     let public_routes = Router::new()
         .route("/", get(api_version_handler))
         .route("/ui/auth/register", post(register))
-        .route("/ui/auth/login", post(login));
+        .route("/ui/auth/login", post(login))
+        .layer(CookieManagerLayer::new());
 
     // Admin-only routes
     // let admin_routes = Router::new()
@@ -81,7 +84,7 @@ async fn main() -> Result<()> {
 
     // User authenticated routes
     let user_routes = Router::new()
-        // .route("/ui/auth/current-user", get(get_current_user))
+        .route("/ui/auth/me", get(me))
         // .route("/ui/auth/users/{id}", get(get_user).put(update_user))
         // .route("/ui/auth/users/{id}/password", put(update_password))
         .route(
@@ -127,11 +130,9 @@ async fn main() -> Result<()> {
         .route("/ui/models", get(list_models))
         .route("/ui/logs", get(list_logs))
         .route("/ui/logs/{trace_id}", get(get_log))
-        .route("/ui/logs/count", get(get_logs_count));
-        // .layer(axum_middleware::from_fn_with_state(
-        //     app_state.clone(),
-        //     user_auth_middleware,
-        // ));
+        .route("/ui/logs/count", get(get_logs_count))
+        .layer(axum_middleware::from_fn_with_state(app_state.clone(), user_auth_middleware))
+        .layer(CookieManagerLayer::new());
 
     // Combine all routes into the main router
     let router = Router::new()
@@ -162,15 +163,18 @@ async fn api_version_handler() -> &'static str {
 pub struct AppState {
     pub db: DbData,
     pub prompt_cache: Cache<i64, PromptRowWithModel>,
+    pub jwt_secret: String
 }
 
 impl AppState {
     pub async fn new(data: DbData) -> Self {
         let prompt_cache: Cache<i64, PromptRowWithModel> = Cache::new(500);
+        let jwt_secret = std::env::var("JWT_SECRET").expect("Missing JWT_SECRET from env vars");
 
         AppState {
             db: data,
             prompt_cache,
+            jwt_secret
         }
     }
 }
@@ -185,6 +189,7 @@ pub enum AppError {
     Conflict(String),
     InternalServerError(String),
     TooManyRequests(String),
+    Forbidden(String),
     Other(anyhow::Error),
 }
 
@@ -215,6 +220,10 @@ impl IntoResponse for AppError {
             AppError::TooManyRequests(e) => {
                 tracing::error!("Too many requests | error: {}", e);
                 return (StatusCode::TOO_MANY_REQUESTS, format!("{}", e)).into_response();
+            }
+            AppError::Forbidden(e) => {
+                tracing::error!("Forbidden | error: {}", e);
+                return (StatusCode::FORBIDDEN, format!("{}", e)).into_response();
             }
             AppError::Other(e) => {
                 tracing::error!("Internal Server Error | error: {}", e);

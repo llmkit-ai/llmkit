@@ -6,16 +6,17 @@ use argon2::{
     Argon2, PasswordHash, PasswordVerifier
 };
 
+use tower_cookies::{cookie::time::Duration, Cookie, Cookies};
+
 use axum::{
     extract::State, response::IntoResponse, Json
 };
-use hyper::{header::SET_COOKIE, HeaderMap, StatusCode};
-use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
+use hyper::StatusCode;
+use jsonwebtoken::{encode, EncodingKey, Header};
 use serde::{Deserialize, Serialize};
-use std::env;
 
-use crate::{AppError, AppState};
-use super::types::request::user::{RegisterRequest, LoginRequest};
+use crate::{middleware::auth::UserId, AppError, AppState};
+use super::types::{request::user::{LoginRequest, RegisterRequest}, response::user::MeResponse};
 
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -27,12 +28,19 @@ struct Claims {
 
 pub async fn register(
     State(state): State<AppState>,
-    Json(payload): Json<RegisterRequest>,
+    cookies: Cookies,
+    Json(payload): Json<RegisterRequest>
 ) -> Result<impl IntoResponse, AppError> {
-
-    let jwt_secret = std::env::var("JWT_SECRET")
-        .map_err(|_| AppError::InternalServerError("JWT secret not configured".to_string()))?;
-    let key = jwt_secret.as_bytes();
+    // Check if registration is already completed to provide better error message
+    let registration_completed = state.db.user.check_registration_completed().await
+        .map_err(|e| {
+            tracing::error!("Failed to check registration status | {}", e);
+            AppError::InternalServerError("Something went wrong with registration.".to_string())
+        })?;
+    
+    if registration_completed {
+        return Err(AppError::Forbidden("Registration is closed. System already has a user account.".to_string()));
+    }
 
     let password_hash = hash_password(&payload.password)
         .map_err(|e| {
@@ -40,44 +48,38 @@ pub async fn register(
             AppError::InternalServerError("Something went wrong registering the user.".to_string())
         })?;
 
-    // save user with default role (standard) and status (pending)
+    // Create the user - this will automatically mark registration as completed
     let id = state.db.user.create(
         &payload.name, 
         &payload.email, 
-        &password_hash,
-        "standard", // Default role
-        "pending"   // Default status - requires admin approval
+        &password_hash
     ).await
         .map_err(|e| {
-            tracing::error!("Password failed to save user to DB: | {}", e);
+            tracing::error!("Failed to save user to DB: | {}", e);
             AppError::InternalServerError("Something went wrong registering the user.".to_string())
         })?;
 
-    let token = generate_token(payload.email, id, key)?;
+    let token = generate_token(payload.email, id, &state.jwt_secret)?;
 
-    let mut headers = HeaderMap::new();
-    headers.insert(
-        SET_COOKIE,
-        format!(
-            "auth_token={}; HttpOnly; Path=/; Max-Age=604800; SameSite=Strict; Secure", 
-            token
-        ).parse().unwrap()
-    );
+    let mut cookie = Cookie::new("llmkit_auth_token", token);
+    cookie.set_http_only(true);
+    cookie.set_secure(true);
+    cookie.set_path("/");
+    cookie.set_max_age(Duration::days(7));
+
+    cookies.add(cookie);
     
-    Ok((headers, StatusCode::OK))
+    Ok(StatusCode::OK)
 }
 
 pub async fn login(
     State(state): State<AppState>,
+    cookies: Cookies,
     Json(payload): Json<LoginRequest>,
 ) -> Result<impl IntoResponse, AppError> {
-    let jwt_secret = std::env::var("JWT_SECRET")
-        .map_err(|_| AppError::InternalServerError("JWT secret not configured".to_string()))?;
-    let key = jwt_secret.as_bytes();
-
     let user = state.db.user.find_by_email(&payload.email).await
         .map_err(|e| {
-            tracing::error!("Password failed to find user in DB: | {}", e);
+            tracing::error!("Failed to find user in DB: | {}", e);
             AppError::Unauthorized("Failed to login".to_string())
         })?
         .ok_or_else(|| AppError::Unauthorized("Failed to login".to_string()))?;
@@ -87,24 +89,37 @@ pub async fn login(
         false => return Err(AppError::Unauthorized("Failed to login".to_string())),
         _ => ()
     }
+
+    let token = generate_token(payload.email, user.id, &state.jwt_secret)?;
+
+    let mut cookie = Cookie::new("llmkit_auth_token", token);
+    cookie.set_http_only(true);
+    cookie.set_secure(true);
+    cookie.set_path("/");
+    cookie.set_max_age(Duration::days(7));
+    cookies.add(cookie);
     
-    // Check if user is approved
-    if user.status != "approved" {
-        return Err(AppError::Unauthorized("Your account is pending approval from an administrator".to_string()));
+    Ok(StatusCode::OK)
+}
+
+pub async fn me(
+    State(state): State<AppState>,
+    request: axum::extract::Request
+) -> Result<Json<MeResponse>, AppError> {
+    let user_id = request
+        .extensions()
+        .get::<UserId>()
+        .ok_or_else(|| AppError::InternalServerError("Something went wrong finding user".to_string()))?
+        .0;
+
+    match state.db.user.find_by_id(user_id).await? {
+        Some(u) => {
+            Ok(Json(u.into())) 
+        },
+        None => {
+            return Err(AppError::NotFound("Failed to find user".to_string()));
+        }
     }
-
-    let token = generate_token(payload.email, user.id, key)?;
-
-    let mut headers = HeaderMap::new();
-    headers.insert(
-        SET_COOKIE,
-        format!(
-            "auth_token={}; HttpOnly; Path=/; Max-Age=604800; SameSite=Strict; Secure", 
-            token
-        ).parse().unwrap()
-    );
-    
-    Ok((headers, StatusCode::OK))
 }
 
 pub fn hash_password(password: &str) -> Result<String, password_hash::Error> {
@@ -134,7 +149,9 @@ pub fn is_valid_password(password: &str, password_hash: &str) -> bool {
     }
 }
 
-fn generate_token(email: String, user_id: i64, key: &[u8]) -> Result<String, AppError> {
+fn generate_token(email: String, user_id: i64, secret: &str) -> Result<String, AppError> {
+    let key = secret.as_bytes();
+
     let expiration = chrono::Utc::now()
         .checked_add_signed(chrono::Duration::days(7))
         .expect("valid timestamp")
@@ -146,12 +163,6 @@ fn generate_token(email: String, user_id: i64, key: &[u8]) -> Result<String, App
         exp: expiration,
     };
 
-    let header = Header {
-        kid: Some("default".to_owned()),
-        alg: Algorithm::HS512,
-        ..Default::default()
-    };
-
-    encode(&header, &claims, &EncodingKey::from_secret(key))
+    encode(&Header::default(), &claims, &EncodingKey::from_secret(key))
         .map_err(|e| AppError::InternalServerError(e.to_string()))
 }

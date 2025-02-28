@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use sqlx::SqlitePool;
 
 use crate::db::types::user::User;
@@ -12,23 +12,59 @@ impl UserRepository {
     pub async fn new(pool: SqlitePool) -> Result<Self> {
         Ok(UserRepository { pool })
     }
+    
+    pub async fn check_registration_completed(&self) -> Result<bool> {
+        let result = sqlx::query!(
+            r#"
+            SELECT value FROM system_settings
+            WHERE key = 'registration_completed'
+            "#
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+        
+        match result {
+            Some(row) => Ok(row.value == "true"),
+            None => Ok(false)
+        }
+    }
+    
+    pub async fn set_registration_completed(&self) -> Result<()> {
+        sqlx::query!(
+            r#"
+            UPDATE system_settings
+            SET value = 'true', updated_at = CURRENT_TIMESTAMP
+            WHERE key = 'registration_completed'
+            "#
+        )
+        .execute(&self.pool)
+        .await?;
+        
+        Ok(())
+    }
 
-    pub async fn create(&self, name: &str, email: &str, password_hash: &str, role: &str, status: &str) -> Result<i64> {
+    pub async fn create(&self, name: &str, email: &str, password_hash: &str) -> Result<i64> {
+        // Check if registration is already completed
+        if self.check_registration_completed().await? {
+            return Err(anyhow!("Registration is closed. System already has a user account."));
+        }
+        
         let id = sqlx::query!(
             r#"
-            INSERT INTO user (name, email, password_hash, role, status, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            INSERT INTO user (name, email, password_hash, created_at, updated_at)
+            VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             RETURNING id
             "#,
             name,
             email,
-            password_hash,
-            role,
-            status
+            password_hash
         )
         .fetch_one(&self.pool)
         .await?
         .id;
+        
+        // Mark registration as completed
+        self.set_registration_completed().await?;
 
         Ok(id)
     }
@@ -42,8 +78,6 @@ impl UserRepository {
                 name,
                 email,
                 password_hash,
-                role,
-                status,
                 created_at,
                 updated_at
             FROM user
@@ -66,8 +100,6 @@ impl UserRepository {
                 name,
                 email,
                 password_hash,
-                role,
-                status,
                 created_at,
                 updated_at
             FROM user
@@ -81,59 +113,19 @@ impl UserRepository {
         Ok(user)
     }
 
-    pub async fn update(&self, id: i64, name: &str, email: &str, password_hash: &str, role: &str, status: &str) -> Result<bool> {
+    pub async fn update(&self, id: i64, name: &str, email: &str, password_hash: &str) -> Result<bool> {
         let rows_affected = sqlx::query!(
             r#"
             UPDATE user
             SET name = ?,
                 email = ?,
                 password_hash = ?,
-                role = ?,
-                status = ?,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
             "#,
             name,
             email,
             password_hash,
-            role,
-            status,
-            id
-        )
-        .execute(&self.pool)
-        .await?
-        .rows_affected();
-
-        Ok(rows_affected > 0)
-    }
-    
-    pub async fn update_status(&self, id: i64, status: &str) -> Result<bool> {
-        let rows_affected = sqlx::query!(
-            r#"
-            UPDATE user
-            SET status = ?,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
-            "#,
-            status,
-            id
-        )
-        .execute(&self.pool)
-        .await?
-        .rows_affected();
-
-        Ok(rows_affected > 0)
-    }
-    
-    pub async fn update_role(&self, id: i64, role: &str) -> Result<bool> {
-        let rows_affected = sqlx::query!(
-            r#"
-            UPDATE user
-            SET role = ?,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
-            "#,
-            role,
             id
         )
         .execute(&self.pool)
@@ -155,32 +147,18 @@ impl UserRepository {
         .await?
         .rows_affected();
 
-        Ok(rows_affected > 0)
-    }
-    
-    pub async fn find_all_by_status(&self, status: &str) -> Result<Vec<User>> {
-        let users = sqlx::query_as!(
-            User,
+        // Also reset the registration_completed flag to allow new registration
+        sqlx::query!(
             r#"
-            SELECT 
-                id,
-                name,
-                email,
-                password_hash,
-                role,
-                status,
-                created_at,
-                updated_at
-            FROM user
-            WHERE status = ?
-            ORDER BY created_at DESC
-            "#,
-            status
+            UPDATE system_settings
+            SET value = 'false', updated_at = CURRENT_TIMESTAMP
+            WHERE key = 'registration_completed'
+            "#
         )
-        .fetch_all(&self.pool)
+        .execute(&self.pool)
         .await?;
 
-        Ok(users)
+        Ok(rows_affected > 0)
     }
     
     pub async fn find_all(&self) -> Result<Vec<User>> {
@@ -192,8 +170,6 @@ impl UserRepository {
                 name,
                 email,
                 password_hash,
-                role,
-                status,
                 created_at,
                 updated_at
             FROM user

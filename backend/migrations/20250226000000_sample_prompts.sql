@@ -37,7 +37,7 @@ SELECT
     'static',
     1
 FROM prompt p 
-JOIN model m ON m.name = 'claude-3-5-sonnet-latest'
+JOIN model m ON m.name = 'claude-3-5-haiku-latest'
 WHERE p.key = 'STATIC-SYSTEM-CHAT'
 ORDER BY p.id DESC
 LIMIT 1;
@@ -88,7 +88,7 @@ Here are some examples of good responses:
     'dynamic_system',
     1
 FROM prompt p 
-JOIN model m ON m.name = 'gpt-4o-2024-11-20'
+JOIN model m ON m.name = 'gpt-4o-mini-2024-07-18'
 WHERE p.key = 'DYNAMIC-SYSTEM-CHAT'
 ORDER BY p.id DESC
 LIMIT 1;
@@ -140,7 +140,7 @@ Focus particularly on {{ focus_on }} in your summary.
     'dynamic_system',
     0
 FROM prompt p 
-JOIN model m ON m.name = 'gemini-1.5-pro'
+JOIN model m ON m.name = 'gemini-2.0-flash-001'
 WHERE p.key = 'DYNAMIC-SYSTEM-ONESHOT'
 ORDER BY p.id DESC
 LIMIT 1;
@@ -200,7 +200,7 @@ Provide specific, actionable feedback that will help improve the code.',
     'dynamic_both',
     0
 FROM prompt p 
-JOIN model m ON m.name = 'o1-2024-12-17'
+JOIN model m ON m.name = 'gemini-2.0-flash-001'
 WHERE p.key = 'DYNAMIC-BOTH-ONESHOT'
 ORDER BY p.id DESC
 LIMIT 1;
@@ -268,7 +268,7 @@ Also include a "price_analysis" field with a price_to_value assessment.
     'dynamic_system',
     0
 FROM prompt p 
-JOIN model m ON m.name = 'claude-3-5-sonnet-latest'
+JOIN model m ON m.name = 'gpt-4o-mini-2024-07-18'
 WHERE p.key = 'DYNAMIC-SYSTEM-JSON'
 ORDER BY p.id DESC
 LIMIT 1;

@@ -247,14 +247,14 @@
       <!-- Form Actions -->
       <div class="mt-6 flex items-center justify-end gap-x-3">
         <PrimaryButton
-          type="secondary"
+          buttonType="secondary"
           size="sm"
           @click="$emit('handle-cancel')"
         >
           Cancel
         </PrimaryButton>
         <PrimaryButton
-          type="primary"
+          buttonType="primary"
           size="sm"
           @click="handleSubmit()"
         >

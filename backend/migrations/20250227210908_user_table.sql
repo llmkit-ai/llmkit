@@ -5,12 +5,19 @@ CREATE TABLE user (
     name TEXT NOT NULL,
     email TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
-    role TEXT NOT NULL DEFAULT 'standard',
-    status TEXT NOT NULL DEFAULT 'pending',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_user_email ON user(email);
-CREATE INDEX idx_user_role ON user(role);
-CREATE INDEX idx_user_status ON user(status);
+
+-- Table to track if registration has occurred
+CREATE TABLE system_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Initialize with registration_completed = false
+INSERT INTO system_settings (key, value) VALUES ('registration_completed', 'false');

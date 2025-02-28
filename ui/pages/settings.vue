@@ -48,7 +48,7 @@
               <td class="px-6 py-4 whitespace-nowrap">
                 <PrimaryButton 
                   @click="deleteApiKey(key.id)"
-                  type="error"
+                  buttonType="error"
                   size="xs"
                 >
                   Delete
@@ -63,7 +63,7 @@
       <div v-if="!showNewKeyForm" class="mt-4">
         <PrimaryButton 
           @click="showNewKeyForm = true"
-          type="primary"
+          buttonType="primary"
           size="sm"
         >
           Create new API key
@@ -84,7 +84,7 @@
           <div class="flex ml-3 gap-x-3">
             <PrimaryButton
               @click="createApiKey"
-              type="primary"
+              buttonType="primary"
               size="sm"
               :disabled="!newKeyName.trim()"
             >
@@ -92,7 +92,7 @@
             </PrimaryButton>
             <PrimaryButton
               @click="showNewKeyForm = false; newKeyName = ''"
-              type="secondary"
+              buttonType="secondary"
               size="sm"
             >
               Cancel
@@ -122,7 +122,7 @@
                       <code class="text-sm/6 break-all font-mono text-neutral-700 dark:text-neutral-300">{{ newApiKey }}</code>
                       <PrimaryButton 
                         @click="copyToClipboard"
-                        type="secondary"
+                        buttonType="secondary"
                         size="xs"
                       >
                         Copy
@@ -137,7 +137,7 @@
             </div>
             <div class="mt-5 sm:mt-6 flex justify-end">
               <PrimaryButton 
-                type="primary"
+                buttonType="primary"
                 size="sm"
                 @click="showApiKeyModal = false; newApiKey = ''; copied = false"
               >
@@ -156,7 +156,8 @@ import { ref, onMounted } from 'vue'
 import PrimaryButton from '~/components/global/primary-button.vue'
 
 definePageMeta({
-  layout: "logged-in"
+  layout: "logged-in",
+  middleware: ['auth']
 })
 
 const apiKeys = ref([])

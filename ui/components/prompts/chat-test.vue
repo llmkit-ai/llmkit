@@ -79,7 +79,7 @@
         ></textarea>
         <PrimaryButton 
           @click="sendMessage" 
-          type="primary"
+          buttonType="primary"
           size="md"
           :disabled="isStreaming || userInput.trim() === ''"
         >
@@ -107,21 +107,21 @@
     <!-- Action Buttons -->
     <div class="mt-6 flex justify-end px-4 sm:px-0 space-x-2">
       <PrimaryButton
-        type="secondary"
+        buttonType="secondary"
         size="sm"
         @click="resetChat"
       >
         Reset Chat
       </PrimaryButton>
       <PrimaryButton
-        type="secondary"
+        buttonType="secondary"
         size="sm"
         @click="$emit('handle-cancel')"
       >
         Cancel
       </PrimaryButton>
       <PrimaryButton
-        type="secondary"
+        buttonType="secondary"
         size="sm"
         @click="$emit('handle-edit')"
       >

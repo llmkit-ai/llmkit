@@ -43,14 +43,14 @@
     </div>
     <div class="mt-6 flex justify-end px-4 sm:px-0 space-x-2">
       <PrimaryButton
-        type="secondary"
+        buttonType="secondary"
         size="sm"
         @click="$emit('handle-cancel')"
       >
         Cancel
       </PrimaryButton>
       <PrimaryButton
-        type="secondary"
+        buttonType="secondary"
         size="sm"
         @click="$emit('handle-edit')"
       >
@@ -58,7 +58,7 @@
       </PrimaryButton>
       <PrimaryButton
         v-if="!props.prompt.json_mode"
-        type="primary"
+        buttonType="primary"
         size="sm"
         :disabled="executeLoading"
         @click="executeStream()"
@@ -66,7 +66,7 @@
         Stream
       </PrimaryButton>
       <PrimaryButton
-        type="primary"
+        buttonType="primary"
         size="sm"
         :disabled="executeLoading"
         @click="execute()"

@@ -40,4 +40,3 @@ pub async fn get_logs_count(
     let count = state.db.log.get_logs_count().await?;
     Ok(Json(ApiLogCountResponse { count }))
 }
-

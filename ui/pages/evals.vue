@@ -46,7 +46,8 @@
 import type { Prompt } from '~/types/response/prompts';
 
 definePageMeta({
-  layout: "logged-in"
+  layout: "logged-in",
+  middleware: ['auth']
 })
 
 const selectedPrompt = ref<Prompt | null>(null);

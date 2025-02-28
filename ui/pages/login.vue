@@ -36,7 +36,7 @@
           <div class="flex items-center justify-between">
             <label for="password" class="block text-sm font-medium text-black dark:text-white">Password</label>
             <div class="text-sm">
-              <a href="#" class="font-semibold text-black dark:text-white hover:underline">Forgot password?</a>
+              <a href="#" tabindex="-1" class="font-semibold text-black dark:text-white hover:underline">Forgot password?</a>
             </div>
           </div>
           <div class="mt-2">
@@ -54,12 +54,12 @@
 
         <div>
           <PrimaryButton 
-            type="primary" 
+            buttonType="primary" 
+            htmlType="submit"
             size="md"
             class="w-full justify-center"
             :outline="false"
             :disabled="isLoading"
-            @click="handleLogin"
           >
             {{ isLoading ? 'Signing in...' : 'Sign in' }}
           </PrimaryButton>
@@ -124,6 +124,7 @@ const handleLogin = async () => {
 };
 
 definePageMeta({
-  layout: 'default'
+  layout: 'default',
+  middleware: ['auth'] // Auth middleware will check and skip for login page
 });
 </script>

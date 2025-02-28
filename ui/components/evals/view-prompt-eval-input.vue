@@ -9,7 +9,7 @@
         <div class="mt-4 sm:ml-16 sm:mt-0 sm:flex-none flex items-center space-x-2">
           <PrimaryButton
             @click="$emit('create-eval')"
-            type="secondary"
+            buttonType="secondary"
             size="sm"
           >
             New eval
@@ -56,7 +56,7 @@
               @click="executeEvalRun()"
               v-if="requiresEvalRun"
               :disabled="executeLoading"
-              type="primary"
+              buttonType="primary"
               size="sm"
             >
               New eval run

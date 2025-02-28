@@ -6,6 +6,10 @@ use axum::{
     response::Response,
 };
 
+use serde::{Deserialize, Serialize};
+use tower_cookies::Cookies;
+use jsonwebtoken::{decode, DecodingKey, Validation};
+
 use crate::{AppError, AppState};
 
 pub async fn api_key_middleware(
@@ -44,5 +48,41 @@ pub async fn api_key_middleware(
             Ok(next.run(req).await)
         }
         _ => Err(AppError::Unauthorized("API key is required".to_string())),
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Claims {
+    sub: String,
+    user_id: i64,
+    exp: u64,
+}
+
+#[derive(Debug, Clone)]
+pub struct UserId(pub i64);
+
+pub async fn user_auth_middleware(
+    State(state): State<AppState>,
+    cookies: Cookies,
+    mut req: Request<Body>,
+    next: Next,
+) -> Result<Response, AppError> {
+    match cookies.get("llmkit_auth_token") {
+        Some(token) => {
+            let token = token.value();
+            let key = state.jwt_secret.as_bytes();
+
+            match decode::<Claims>(&token, &DecodingKey::from_secret(key), &Validation::default()) {
+                Ok(t) => {
+                    req.extensions_mut().insert(UserId(t.claims.user_id));
+                    Ok(next.run(req).await)
+                },
+                Err(e) => {
+                    tracing::error!("Failed to decode JWT | {}", e);
+                    return Err(AppError::Unauthorized("Unauthorized".to_string()))
+                }
+            }
+        }
+        _ => Err(AppError::Unauthorized("Auth token is required".to_string())),
     }
 }

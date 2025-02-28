@@ -67,7 +67,7 @@
     >
       <div class="flex-1 flex justify-between sm:justify-end space-x-2">
         <PrimaryButton
-          type="primary"
+          buttonType="primary"
           size="sm"
           :disabled="currentPage === 1"
           @click="goToPage(currentPage - 1)"
@@ -76,7 +76,7 @@
         </PrimaryButton>
 
         <PrimaryButton
-          type="primary"
+          buttonType="primary"
           size="sm"
           :disabled="logs.length < pageSize"
           @click="goToPage(currentPage + 1)"
@@ -93,7 +93,8 @@
 import { format } from 'date-fns'
 
 definePageMeta({
-  layout: "logged-in"
+  layout: "logged-in",
+  middleware: ['auth']
 })
 
 const pageSize = 10 // items per page

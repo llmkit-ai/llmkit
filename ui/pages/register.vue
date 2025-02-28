@@ -8,7 +8,8 @@
         </svg>
         <p class="font-mono font-bold text-black dark:text-white">llmkit</p>
       </div>
-      <h2 class="mt-10 text-center text-2xl font-bold text-black dark:text-white">Create an account</h2>
+      <h2 class="mt-10 text-center text-2xl font-bold text-black dark:text-white">Create admin account</h2>
+      <p class="mt-3 text-center text-sm text-neutral-700 dark:text-neutral-300">This registration can only be done once for the system admin.</p>
     </div>
 
     <div class="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
@@ -83,12 +84,12 @@
 
         <div>
           <PrimaryButton 
-            type="primary" 
+            buttonType="primary" 
+            htmlType="submit"
             size="md"
             class="w-full justify-center"
             :outline="false"
             :disabled="isLoading"
-            @click="handleRegister"
           >
             {{ isLoading ? 'Registering...' : 'Register' }}
           </PrimaryButton>
@@ -158,7 +159,7 @@ const handleRegister = async () => {
     }
 
     // Registration success
-    successMessage.value = 'Registration successful! Your account is pending approval.';
+    successMessage.value = 'Registration successful! Redirecting to dashboard...';
     
     // Clear form
     name.value = '';
@@ -166,10 +167,10 @@ const handleRegister = async () => {
     password.value = '';
     confirmPassword.value = '';
     
-    // After a delay, redirect to login
+    // After a delay, redirect to dashboard (since they're already logged in)
     setTimeout(() => {
-      router.push('/login');
-    }, 3000);
+      router.push('/');
+    }, 2000);
   } catch (err) {
     console.error('Registration error:', err);
     errorMessage.value = err instanceof Error ? err.message : 'An unexpected error occurred';
@@ -179,6 +180,7 @@ const handleRegister = async () => {
 };
 
 definePageMeta({
-  layout: 'default'
+  layout: 'default',
+  middleware: ['auth'] // Auth middleware will check and skip for register page
 });
 </script>
