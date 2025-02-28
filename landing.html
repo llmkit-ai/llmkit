@@ -4,14 +4,34 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>llmkit - Prompt Management</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --border-color: #eaeaea;
-      --bg-color: #fff;
-      --text-color: #000;
-      --accent-bg: #fafafa;
-      --code-bg: #000;
-      --code-text: #fff;
+      --border-color: #000000;
+      --bg-color: #ffffff;
+      --text-color: #000000;
+      --accent-bg: #f5f5f5;
+      --code-bg: #000000;
+      --code-text: #ffffff;
+      --feature-bg: #f5f5f5;
+      --accent-text: #666666;
+      --button-bg: #000000;
+      --button-text: #ffffff;
+    }
+    
+    [data-theme="dark"] {
+      --border-color: #ffffff;
+      --bg-color: #171717;
+      --text-color: #ffffff;
+      --accent-bg: #262626;
+      --code-bg: #000000;
+      --code-text: #ffffff;
+      --feature-bg: #262626;
+      --accent-text: #a3a3a3;
+      --button-bg: #ffffff;
+      --button-text: #000000;
     }
     
     * {
@@ -24,10 +44,15 @@
       background-color: var(--bg-color);
       color: var(--text-color);
       line-height: 1.6;
-      font-family: 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
+      font-family: 'JetBrains Mono', 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
+      font-size: 15px;
+      font-weight: 400;
       max-width: 1200px;
       margin: 0 auto;
       padding: 0;
+      transition: background-color 0.3s, color 0.3s;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
     
     .container {
@@ -52,6 +77,14 @@
       text-decoration: none;
       color: var(--text-color);
       letter-spacing: -0.05em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .logo-icon {
+      width: 1.5rem;
+      height: 1.5rem;
     }
     
     nav {
@@ -72,10 +105,10 @@
     }
     
     nav a.btn {
-      background-color: var(--text-color);
-      color: var(--bg-color);
+      background-color: var(--button-bg);
+      color: var(--button-text);
       padding: 0.5rem 1rem;
-      border-radius: 4px;
+      border: 2px solid var(--border-color);
     }
     
     nav a.btn:hover {
@@ -90,8 +123,8 @@
     .hero h1 {
       font-size: 3.5rem;
       margin-bottom: 1.5rem;
-      font-weight: 800;
-      letter-spacing: -0.05em;
+      font-weight: 700;
+      letter-spacing: -0.03em;
       line-height: 1.1;
     }
     
@@ -99,19 +132,19 @@
       font-size: 1.25rem;
       max-width: 650px;
       margin: 0 auto 2.5rem;
-      color: #666;
+      color: var(--accent-text);
     }
     
     .btn {
-      background-color: var(--text-color);
-      color: var(--bg-color);
+      background-color: var(--button-bg);
+      color: var(--button-text);
       padding: 0.75rem 1.5rem;
       text-decoration: none;
-      border-radius: 4px;
       font-weight: 500;
       display: inline-block;
       font-size: 0.875rem;
       transition: opacity 0.2s;
+      border: 2px solid var(--border-color);
     }
     
     .btn:hover {
@@ -131,8 +164,8 @@
     .section-title {
       font-size: 2rem;
       margin-bottom: 3rem;
-      font-weight: 700;
-      letter-spacing: -0.05em;
+      font-weight: 600;
+      letter-spacing: -0.03em;
       text-align: center;
     }
     
@@ -145,9 +178,9 @@
     
     .feature {
       padding: 2rem;
-      background-color: var(--accent-bg);
-      border-radius: 4px;
+      background-color: var(--feature-bg);
       transition: transform 0.2s;
+      border: 2px solid var(--border-color);
     }
     
     .feature:hover {
@@ -169,11 +202,11 @@
       background-color: var(--code-bg);
       color: var(--code-text);
       padding: 1.5rem;
-      border-radius: 4px;
       overflow: hidden;
       margin: 2rem 0;
       position: relative;
       font-size: 0.875rem;
+      border: 2px solid var(--border-color);
     }
     
     .terminal pre {
@@ -199,8 +232,8 @@
     .open-source-banner h2 {
       margin-bottom: 1rem;
       font-size: 1.75rem;
-      font-weight: 700;
-      letter-spacing: -0.05em;
+      font-weight: 600;
+      letter-spacing: -0.03em;
     }
     
     .open-source-banner p {
@@ -208,6 +241,7 @@
       max-width: 650px;
       margin-left: auto;
       margin-right: auto;
+      color: var(--accent-text);
     }
     
     .providers {
@@ -220,8 +254,7 @@
     
     .provider {
       padding: 0.75rem 1.25rem;
-      border: 1px solid var(--border-color);
-      border-radius: 4px;
+      border: 2px solid var(--border-color);
       font-size: 0.875rem;
     }
     
@@ -239,8 +272,7 @@
     
     .plan {
       padding: 2.5rem;
-      border: 1px solid var(--border-color);
-      border-radius: 4px;
+      border: 2px solid var(--border-color);
       transition: transform 0.2s;
     }
     
@@ -291,8 +323,8 @@
     
     .consulting-service {
       padding: 2rem;
-      background-color: var(--accent-bg);
-      border-radius: 4px;
+      background-color: var(--feature-bg);
+      border: 2px solid var(--border-color);
     }
     
     .consulting-service h4 {
@@ -305,11 +337,11 @@
       text-align: center;
       padding: 4rem 1.5rem;
       font-size: 0.875rem;
-      color: #666;
+      color: var(--accent-text);
     }
     
     footer a {
-      color: #666;
+      color: var(--accent-text);
       text-decoration: none;
       margin: 0 0.75rem;
       transition: color 0.2s;
@@ -334,8 +366,8 @@
     .cta-section h2 {
       font-size: 2rem;
       margin-bottom: 1.5rem;
-      font-weight: 700;
-      letter-spacing: -0.05em;
+      font-weight: 600;
+      letter-spacing: -0.03em;
     }
     
     .cta-section p {
@@ -343,7 +375,28 @@
       max-width: 650px;
       margin-left: auto;
       margin-right: auto;
-      color: #666;
+      color: var(--accent-text);
+    }
+    
+    .theme-toggle {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      z-index: 100;
+      background-color: transparent;
+      color: var(--text-color);
+      border: none;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: color 0.3s;
+      opacity: 0.7;
+    }
+    
+    .theme-toggle:hover {
+      opacity: 1;
     }
     
     @media (max-width: 768px) {
@@ -373,9 +426,24 @@
   </style>
 </head>
 <body>
+  <button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode">
+    <svg id="moon-icon" style="display: block; width: 1.2rem; height: 1.2rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+    </svg>
+    <svg id="sun-icon" style="display: none; width: 1.2rem; height: 1.2rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+    </svg>
+  </button>
+
   <div class="container">
     <header>
-      <a href="#" class="logo">llmkit</a>
+      <a href="#" class="logo">
+        <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+          <path d="M20 4v5l-9 7l-4 4l-3 -3l4 -4l7 -9z"></path>
+          <path d="M6.5 11.5l6 6"></path>
+        </svg>
+        llmkit
+      </a>
       <nav>
         <a href="#features">Features</a>
         <a href="#how-it-works">How It Works</a>
@@ -506,14 +574,14 @@ Evaluating response...
         </div>
       </div>
     </div>
-    <p style="text-align: center; margin-top: 3rem; color: #666; max-width: 650px; margin-left: auto; margin-right: auto;">
+    <p style="text-align: center; margin-top: 3rem; color: var(--accent-text); max-width: 650px; margin-left: auto; margin-right: auto;">
       Need to self-host? Contact us for enterprise setup. We'll help you get your environment configured.
     </p>
   </div>
   
   <div class="container" id="consulting">
     <h2 class="section-title">Consulting Services</h2>
-    <p style="text-align: center; max-width: 650px; margin: 0 auto 3rem; color: #666;">
+    <p style="text-align: center; max-width: 650px; margin: 0 auto 3rem; color: var(--accent-text);">
       Our team offers specialized consulting services to help you get the most out of your LLM implementations
     </p>
     <div class="consulting-services">
@@ -553,5 +621,47 @@ Evaluating response...
       <a href="#">Contact</a>
     </p>
   </footer>
+
+  <script>
+    // Theme toggle functionality
+    document.addEventListener('DOMContentLoaded', () => {
+      const themeToggle = document.getElementById('theme-toggle');
+      const moonIcon = document.getElementById('moon-icon');
+      const sunIcon = document.getElementById('sun-icon');
+      
+      // Check for saved theme preference or respect OS theme settings
+      const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)');
+      
+      // Check if theme is already saved in localStorage
+      let currentTheme = localStorage.getItem('theme');
+      if (!currentTheme) {
+        // If no theme is saved, use the OS preference
+        currentTheme = prefersDarkScheme.matches ? 'dark' : 'light';
+      }
+      
+      // Set initial theme
+      document.documentElement.setAttribute('data-theme', currentTheme);
+      updateIcons(currentTheme);
+      
+      // Theme toggle click handler
+      themeToggle.addEventListener('click', () => {
+        let newTheme = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        updateIcons(newTheme);
+      });
+      
+      // Update icon visibility based on current theme
+      function updateIcons(theme) {
+        if (theme === 'dark') {
+          moonIcon.style.display = 'none';
+          sunIcon.style.display = 'block';
+        } else {
+          moonIcon.style.display = 'block';
+          sunIcon.style.display = 'none';
+        }
+      }
+    });
+  </script>
 </body>
 </html>
