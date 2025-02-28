@@ -23,9 +23,8 @@ use controllers::{
         get_eval_runs_by_prompt_version, update_eval_run_score,
     },
     prompts::{
-        create_prompt, delete_prompt, get_prompt, list_prompts, update_prompt,
-        api_completions, api_completions_stream,
-    },
+        api_completions, api_completions_stream, create_prompt, delete_prompt, get_prompt, list_prompts, update_prompt
+    }, user::{login, register},
 };
 
 use db::{init::DbData, types::prompt::PromptRowWithModel};
@@ -49,65 +48,102 @@ async fn main() -> Result<()> {
     let data = DbData::new(&database_url).await?;
     let app_state = AppState::new(data).await;
 
-    // Build the router with all routes directly in main
-    // Build the router with all routes directly in main
-    let router = Router::new()
-        .nest("/v1", Router::new()
-            // API routes (OpenAI compatible) with API key auth
-            .route("/chat/completions", post(api_completions))
-                .route_layer(axum_middleware::from_fn_with_state(app_state.clone(), auth::api_key_middleware))
-            .route("/chat/completions/stream", post(api_completions_stream))
-                .route_layer(axum_middleware::from_fn_with_state(app_state.clone(), auth::api_key_middleware))
+    // Build separate routers for different auth requirements
 
-            // version
-            .route("/", get(api_version_handler))
-            
-            // UI specific routes
-            // Prompt routes
-            .route("/ui/prompts", post(create_prompt).get(list_prompts))
-            .route(
-                "/ui/prompts/{id}",
-                get(get_prompt).put(update_prompt).delete(delete_prompt),
-            )
-            .route("/ui/prompts/{id}/prompt-evals", get(get_eval_test_by_prompt))
-            .route("/ui/prompts/{id}/performance", get(get_eval_performance_by_prompt_id))
-            
-            // Execute routes
-            .route("/ui/prompts/execute", post(api_completions))
-            .route("/ui/prompts/execute/stream", post(api_completions_stream))
-            .route("/ui/prompts/execute/chat", post(api_completions))
-            .route("/ui/prompts/execute/chat/stream", post(api_completions_stream))
-            
-            // Prompt evals routes
-            .route("/ui/prompt-evals", post(create_eval_test))
-            .route(
-                "/ui/prompt-evals/{id}",
-                get(get_eval_test_by_id)
-                    .put(update_eval_test)
-                    .delete(delete_eval_test),
-            )
-            
-            // Prompt eval runs routes
-            .route(
-                "/ui/prompt-eval-runs/{prompt_id}/version/{prompt_version_id}",
-                post(execute_eval_run).get(get_eval_runs_by_prompt_version),
-            )
-            .route("/ui/prompt-eval-runs/{id}", get(get_eval_run_by_id).put(update_eval_run_score))
-            
-            // Model routes
-            .route("/ui/models", get(list_models))
-            
-            // Logs routes
-            .route("/ui/logs", get(list_logs))
-            .route("/ui/logs/{trace_id}", get(get_log))
-            .route("/ui/logs/count", get(get_logs_count))
-            
-            // Settings routes
-            .route("/ui/settings/api-keys", get(list_api_keys).post(create_api_key))
-            .route("/ui/settings/api-keys/{id}", delete(delete_api_key))
+    // API routes that require API key auth
+    let api_routes = Router::new()
+        .route("/chat/completions", post(api_completions))
+        .route("/chat/completions/stream", post(api_completions_stream))
+        .layer(axum_middleware::from_fn_with_state(
+            app_state.clone(),
+            auth::api_key_middleware,
+        ));
+
+    // Public routes (no auth required)
+    let public_routes = Router::new()
+        .route("/", get(api_version_handler))
+        .route("/ui/auth/register", post(register))
+        .route("/ui/auth/login", post(login));
+
+    // Admin-only routes
+    // let admin_routes = Router::new()
+    //     .route("/ui/auth/users", get(list_users))
+    //     .route("/ui/auth/users/pending", get(list_pending_users))
+    //     .route("/ui/auth/users/{id}/role", put(update_role))
+    //     .route("/ui/auth/users/{id}/state", put(update_registration_state))
+    //     .route("/ui/auth/users/{id}/approve", post(approve_user))
+    //     .route("/ui/auth/users/{id}/reject", post(reject_user))
+    //     .route("/ui/auth/users/{id}", delete(delete_user))
+    //     .layer(axum_middleware::from_fn_with_state(
+    //         app_state.clone(),
+    //         admin_auth_middleware,
+    //     ));
+
+    // User authenticated routes
+    let user_routes = Router::new()
+        // .route("/ui/auth/current-user", get(get_current_user))
+        // .route("/ui/auth/users/{id}", get(get_user).put(update_user))
+        // .route("/ui/auth/users/{id}/password", put(update_password))
+        .route(
+            "/ui/settings/api-keys",
+            get(list_api_keys).post(create_api_key),
+        )
+        .route("/ui/settings/api-keys/{id}", delete(delete_api_key))
+        .route("/ui/prompts", post(create_prompt).get(list_prompts))
+        .route(
+            "/ui/prompts/{id}",
+            get(get_prompt).put(update_prompt).delete(delete_prompt),
+        )
+        .route(
+            "/ui/prompts/{id}/prompt-evals",
+            get(get_eval_test_by_prompt),
+        )
+        .route(
+            "/ui/prompts/{id}/performance",
+            get(get_eval_performance_by_prompt_id),
+        )
+        .route("/ui/prompts/execute", post(api_completions))
+        .route("/ui/prompts/execute/stream", post(api_completions_stream))
+        .route("/ui/prompts/execute/chat", post(api_completions))
+        .route(
+            "/ui/prompts/execute/chat/stream",
+            post(api_completions_stream),
+        )
+        .route("/ui/prompt-evals", post(create_eval_test))
+        .route(
+            "/ui/prompt-evals/{id}",
+            get(get_eval_test_by_id)
+                .put(update_eval_test)
+                .delete(delete_eval_test),
+        )
+        .route(
+            "/ui/prompt-eval-runs/{prompt_id}/version/{prompt_version_id}",
+            post(execute_eval_run).get(get_eval_runs_by_prompt_version),
+        )
+        .route(
+            "/ui/prompt-eval-runs/{id}",
+            get(get_eval_run_by_id).put(update_eval_run_score),
+        )
+        .route("/ui/models", get(list_models))
+        .route("/ui/logs", get(list_logs))
+        .route("/ui/logs/{trace_id}", get(get_log))
+        .route("/ui/logs/count", get(get_logs_count));
+        // .layer(axum_middleware::from_fn_with_state(
+        //     app_state.clone(),
+        //     user_auth_middleware,
+        // ));
+
+    // Combine all routes into the main router
+    let router = Router::new()
+        .nest(
+            "/v1",
+            Router::new()
+                .merge(api_routes)
+                .merge(public_routes)
+                // .merge(admin_routes)
+                .merge(user_routes),
         )
         .with_state(app_state);
-
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:8000").await?;
 

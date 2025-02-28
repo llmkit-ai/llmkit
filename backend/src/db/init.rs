@@ -5,7 +5,8 @@ use std::str::FromStr;
 
 use super::{
     api_keys::ApiKeyRepository, logs::LogRepository, models::ModelRepository, prompt_eval::PromptEvalTestRepository, 
-    prompt_eval_run::PromptEvalTestRunRepository, prompts::PromptRepository, providers::ProviderRepository
+    prompt_eval_run::PromptEvalTestRunRepository, prompts::PromptRepository, providers::ProviderRepository, 
+    users::UserRepository
 };
 
 
@@ -22,6 +23,7 @@ pub struct DbData {
     pub log: LogRepository,
     pub model: ModelRepository,
     pub api_key: ApiKeyRepository,
+    pub user: UserRepository,
 }
 
 impl DbData {
@@ -42,6 +44,7 @@ impl DbData {
         let log = LogRepository::new(pool.clone()).await?;
         let model = ModelRepository::new(pool.clone()).await?;
         let api_key = ApiKeyRepository::new(pool.clone()).await?;
+        let user = UserRepository::new(pool.clone()).await?;
 
         Ok(DbData {
             log,
@@ -50,7 +53,8 @@ impl DbData {
             prompt_eval_run,
             prompt_eval,
             provider,
-            api_key
+            api_key,
+            user
         })
     }
 }

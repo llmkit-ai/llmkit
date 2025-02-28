@@ -45,6 +45,10 @@
 <script setup lang="ts">
 import type { Prompt } from '~/types/response/prompts';
 
+definePageMeta({
+  layout: "logged-in"
+})
+
 const selectedPrompt = ref<Prompt | null>(null);
 const selectedPromptCache = ref<Prompt | null>(null);
 const promptMode = ref<'view' | 'edit' | 'new' | 'test'>('view');

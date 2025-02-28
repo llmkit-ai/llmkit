@@ -98,8 +98,11 @@
 <script setup lang="ts">
 import type { Prompt } from '~/types/response/prompts';
 import type { PromptCreateDTO, PromptUpdateDTO } from '~/types/components/prompt';
-import type PrimaryButton from '~/components/global/primary-button.vue';
 import PromptsChatTest from '~/components/prompts/chat-test.vue';
+
+definePageMeta({
+  layout: "logged-in"
+})
 
 const mode = ref<'view' | 'edit' | 'new' | 'test'>('view');
 

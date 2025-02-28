@@ -155,6 +155,10 @@
 import { ref, onMounted } from 'vue'
 import PrimaryButton from '~/components/global/primary-button.vue'
 
+definePageMeta({
+  layout: "logged-in"
+})
+
 const apiKeys = ref([])
 const isLoading = ref(true)
 const showNewKeyForm = ref(false)

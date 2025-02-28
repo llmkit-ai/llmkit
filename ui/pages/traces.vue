@@ -92,6 +92,10 @@
 <script setup lang="ts">
 import { format } from 'date-fns'
 
+definePageMeta({
+  layout: "logged-in"
+})
+
 const pageSize = 10 // items per page
 const currentPage = ref(1)
 

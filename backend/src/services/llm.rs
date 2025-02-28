@@ -4,20 +4,23 @@ use anyhow::Result;
 use reqwest::RequestBuilder;
 use reqwest_eventsource::{CannotCloneRequestError, EventSource, RequestBuilderExt};
 use tokio::{sync::mpsc::Sender, task::JoinError};
-use tokio_retry::{strategy::{jitter, ExponentialBackoff}, Retry};
+use tokio_retry::{
+    strategy::{jitter, ExponentialBackoff},
+    Retry,
+};
 use tracing;
 
-
-use crate::{common::types::models::LlmApiProvider, db::logs::LogRepository, services::types::parse_response::LlmApiRequestProps};
 use super::{
     providers::{
-        anthropic::AnthropicProvider, azure::AzureProvider, deepseek::DeepseekProvider, gemini::GeminiProvider, openai::OpenaiProvider
-    }, 
-    types::{
-        llm_props::LlmProps, parse_response::LlmApiResponseProps, stream::LlmStreamingError
-    }
+        anthropic::AnthropicProvider, azure::AzureProvider, deepseek::DeepseekProvider,
+        gemini::GeminiProvider, openai::OpenaiProvider,
+    },
+    types::{llm_props::LlmProps, parse_response::LlmApiResponseProps, stream::LlmStreamingError},
 };
-
+use crate::{
+    common::types::models::LlmApiProvider, db::logs::LogRepository,
+    services::types::parse_response::LlmApiRequestProps,
+};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -61,34 +64,34 @@ pub enum Error {
 
 pub struct ExecutionResponse {
     pub content: String,
-    pub log_id: i64
+    pub log_id: i64,
 }
 
 pub trait LlmProvider {
     fn build_request(&self) -> Result<(RequestBuilder, String), Error>;
     fn parse_response(json_text: &str) -> Result<LlmApiResponseProps, Error>;
-    async fn stream_eventsource(event_source: EventSource, tx: Sender<Result<String, LlmStreamingError>>) -> Result<LlmApiResponseProps, Error>;
+    async fn stream_eventsource(
+        event_source: EventSource,
+        tx: Sender<Result<String, LlmStreamingError>>,
+    ) -> Result<LlmApiResponseProps, Error>;
     fn create_body(&self) -> serde_json::Value;
 }
 
 pub struct Llm {
     props: LlmProps,
-    db_log: LogRepository
+    db_log: LogRepository,
 }
 
 impl Llm {
     pub fn new(props: LlmProps, db_log: LogRepository) -> Self {
-        Llm {
-            props,
-            db_log
-        } 
+        Llm { props, db_log }
     }
 
     fn retry_strategy(&self) -> impl Iterator<Item = Duration> {
         ExponentialBackoff::from_millis(100)
             .max_delay(Duration::from_secs(100))
             .map(jitter)
-            .take(1) 
+            .take(1)
     }
 
     pub async fn text(&self) -> Result<ExecutionResponse, Error> {
@@ -106,13 +109,20 @@ impl Llm {
             // it back into text and be on our way
             let _json: serde_json::Value = serde_json::from_str(&res.content)?;
             Ok(res)
-        }).await
+        })
+        .await
     }
 
-    pub async fn stream(&self, tx: Sender<Result<String, LlmStreamingError>>) -> Result<ExecutionResponse, Error> {
+    pub async fn stream(
+        &self,
+        tx: Sender<Result<String, LlmStreamingError>>,
+    ) -> Result<ExecutionResponse, Error> {
         if self.props.json_mode {
             tracing::info!("Json mode not supported in chat mode");
-            return Err(Error::UnsupportedMode("Json".to_string(), "Chat".to_string()));
+            return Err(Error::UnsupportedMode(
+                "Json".to_string(),
+                "Chat".to_string(),
+            ));
         }
 
         Ok(self.send_request_stream(tx).await?)
@@ -130,7 +140,7 @@ impl Llm {
             LlmApiProvider::Anthropic => anthropic_provider.build_request(),
             LlmApiProvider::Gemini => gemini_provider.build_request(),
             LlmApiProvider::Deepseek => deepseek_provider.build_request(),
-            LlmApiProvider::Azure => azure_provider.build_request()
+            LlmApiProvider::Azure => azure_provider.build_request(),
         }?;
 
         // Convert RequestBuilder to Request to capture details
@@ -145,23 +155,11 @@ impl Llm {
         let text = response.text().await?;
 
         // Create request props with captured details
-        let request = LlmApiRequestProps::new(
-            status.as_u16(),
-            body,
-            method,
-            url,
-            headers
-        );
+        let request = LlmApiRequestProps::new(status.as_u16(), body, method, url, headers);
 
         if !status.is_success() {
-            self.log_request(
-                None,
-                None,
-                None,
-                None,
-                None,
-                &request.body,
-            ).await?;
+            self.log_request(None, None, None, None, None, &request.body)
+                .await?;
 
             return Err(Error::Http(status));
         }
@@ -171,25 +169,30 @@ impl Llm {
             LlmApiProvider::Anthropic => AnthropicProvider::parse_response(&text)?,
             LlmApiProvider::Gemini => GeminiProvider::parse_response(&text)?,
             LlmApiProvider::Deepseek => DeepseekProvider::parse_response(&text)?,
-            LlmApiProvider::Azure => AzureProvider::parse_response(&text)?
+            LlmApiProvider::Azure => AzureProvider::parse_response(&text)?,
         };
 
-        let log_id = self.log_request(
-            Some(&parsed_response.raw_response),
-            Some(request.status as i64),
-            parsed_response.input_tokens,
-            parsed_response.output_tokens,
-            parsed_response.reasoning_tokens,
-            &request.body
-        ).await?;
+        let log_id = self
+            .log_request(
+                Some(&parsed_response.raw_response),
+                Some(request.status as i64),
+                parsed_response.input_tokens,
+                parsed_response.output_tokens,
+                parsed_response.reasoning_tokens,
+                &request.body,
+            )
+            .await?;
 
-        Ok(ExecutionResponse { content: parsed_response.response_content, log_id } )
+        Ok(ExecutionResponse {
+            content: parsed_response.response_content,
+            log_id,
+        })
     }
 
     async fn send_request_stream(
         &self,
-        tx: Sender<Result<String, LlmStreamingError>>
-    )  -> Result<ExecutionResponse, Error> {
+        tx: Sender<Result<String, LlmStreamingError>>,
+    ) -> Result<ExecutionResponse, Error> {
         let openai_provider = OpenaiProvider::new(&self.props, true);
         let anthropic_provider = AnthropicProvider::new(&self.props, true);
         let gemini_provider = GeminiProvider::new(&self.props, true);
@@ -208,23 +211,31 @@ impl Llm {
 
         let response = match &self.props.provider {
             LlmApiProvider::OpenAi => OpenaiProvider::stream_eventsource(event_source, tx).await?,
-            LlmApiProvider::Anthropic => AnthropicProvider::stream_eventsource(event_source, tx).await?,
+            LlmApiProvider::Anthropic => {
+                AnthropicProvider::stream_eventsource(event_source, tx).await?
+            }
             LlmApiProvider::Gemini => GeminiProvider::stream_eventsource(event_source, tx).await?,
-            LlmApiProvider::Deepseek => DeepseekProvider::stream_eventsource(event_source, tx).await?,
+            LlmApiProvider::Deepseek => {
+                DeepseekProvider::stream_eventsource(event_source, tx).await?
+            }
             LlmApiProvider::Azure => AzureProvider::stream_eventsource(event_source, tx).await?,
         };
 
-        let log_id = self.log_request(
-            Some(&response.raw_response),
-            None,
-            response.input_tokens,
-            response.output_tokens,
-            response.reasoning_tokens,
-            &body
-        ).await?;
+        let log_id = self
+            .log_request(
+                Some(&response.raw_response),
+                None,
+                response.input_tokens,
+                response.output_tokens,
+                response.reasoning_tokens,
+                &body,
+            )
+            .await?;
 
-
-        Ok(ExecutionResponse { content: response.response_content, log_id } )
+        Ok(ExecutionResponse {
+            content: response.response_content,
+            log_id,
+        })
     }
 
     /// Logs the request and returns a log ID.
@@ -253,13 +264,11 @@ impl Llm {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{
-        common::types::models::LlmApiProvider,
-        db::prompts::PromptRepository,
+        common::types::models::LlmApiProvider, db::prompts::PromptRepository,
         services::types::message::Message,
     };
     use dotenv::dotenv;
@@ -308,6 +317,8 @@ mod tests {
                 100,
                 0.5,
                 false,
+                "static", // prompt_type
+                false,    // is_chat
             )
             .await
             .unwrap();
@@ -324,8 +335,9 @@ mod tests {
                     content: "You must respond with valid JSON only".to_string(),
                 },
                 Message::User {
-                    content: "Return a JSON object with a 'message' field containing 'Hello in JSON'"
-                        .to_string(),
+                    content:
+                        "Return a JSON object with a 'message' field containing 'Hello in JSON'"
+                            .to_string(),
                 },
             ],
             prompt_id, // Use the seeded prompt_id here.
@@ -385,6 +397,8 @@ mod tests {
                 100,
                 0.5,
                 false,
+                "static", // prompt_type
+                false,    // is_chat
             )
             .await
             .unwrap();
@@ -434,6 +448,8 @@ mod tests {
                 100,
                 0.5,
                 false,
+                "static", // prompt_type
+                false,    // is_chat
             )
             .await
             .unwrap();
@@ -459,8 +475,9 @@ mod tests {
                     content: "You must respond with valid JSON only".to_string(),
                 },
                 Message::User {
-                    content: "Return a JSON object with a 'message' field containing 'Hello in JSON'"
-                        .to_string(),
+                    content:
+                        "Return a JSON object with a 'message' field containing 'Hello in JSON'"
+                            .to_string(),
                 },
             ],
             prompt_id: 1,
@@ -479,11 +496,7 @@ mod tests {
         dotenv().ok();
 
         // Test text response
-        let props = create_test_props(
-            LlmApiProvider::Deepseek,
-            "deepseek-chat".to_string(),
-        )
-        .await;
+        let props = create_test_props(LlmApiProvider::Deepseek, "deepseek-chat".to_string()).await;
 
         let pool = create_shared_in_memory_pool().await.unwrap();
         let prompt_repo = PromptRepository::in_memory(pool.clone()).await.unwrap();
@@ -499,6 +512,8 @@ mod tests {
                 100,
                 0.5,
                 false,
+                "static", // prompt_type
+                false,    // is_chat
             )
             .await
             .unwrap();
@@ -525,7 +540,8 @@ mod tests {
                     content: "Respond with JSON containing a 'content' field".to_string(),
                 },
                 Message::User {
-                    content: "Return JSON with format: {\"content\": \"Hello in JSON\"}".to_string(),
+                    content: "Return JSON with format: {\"content\": \"Hello in JSON\"}"
+                        .to_string(),
                 },
             ],
             prompt_id: 1,
@@ -544,11 +560,7 @@ mod tests {
         dotenv().ok();
 
         // Test text response
-        let props = create_test_props(
-            LlmApiProvider::Azure,
-            "gpt-4o-mini".to_string(),
-        )
-        .await;
+        let props = create_test_props(LlmApiProvider::Azure, "gpt-4o-mini".to_string()).await;
 
         let pool = create_shared_in_memory_pool().await.unwrap();
         let prompt_repo = PromptRepository::in_memory(pool.clone()).await.unwrap();
@@ -564,6 +576,8 @@ mod tests {
                 100,
                 0.5,
                 false,
+                "static", // prompt_type
+                false,    // is_chat
             )
             .await
             .unwrap();
@@ -590,7 +604,8 @@ mod tests {
                     content: "Respond with JSON containing a 'content' field".to_string(),
                 },
                 Message::User {
-                    content: "Return JSON with format: {\"content\": \"Hello in JSON\"}".to_string(),
+                    content: "Return JSON with format: {\"content\": \"Hello in JSON\"}"
+                        .to_string(),
                 },
             ],
             prompt_id: 1,
@@ -627,17 +642,19 @@ mod tests {
     #[ignore]
     async fn test_openai_stream() {
         dotenv().ok();
-        let props = create_stream_test_props(
-            LlmApiProvider::OpenAi,
-            "gpt-4o-mini-2024-07-18".to_string(),
-        ).await;
+        let props =
+            create_stream_test_props(LlmApiProvider::OpenAi, "gpt-4o-mini-2024-07-18".to_string())
+                .await;
 
         let pool = create_shared_in_memory_pool().await.unwrap();
         let prompt_repo = PromptRepository::in_memory(pool.clone()).await.unwrap();
         let log_repo = LogRepository::in_memory(pool.clone()).await.unwrap();
 
         // Seed your prompt.
-        prompt_repo.create_prompt("", "", "", 1, 100, 0.5, false ).await.unwrap();
+        prompt_repo
+            .create_prompt("", "", "", 1, 100, 0.5, false, "static", false)
+            .await
+            .unwrap();
 
         let llm = Llm::new(props, log_repo.clone());
         let (tx, mut rx) = mpsc::channel(10);
@@ -679,6 +696,8 @@ mod tests {
                 100,
                 0.5,
                 false,
+                "static", // prompt_type
+                false,    // is_chat
             )
             .await
             .unwrap();
@@ -703,11 +722,8 @@ mod tests {
     #[ignore]
     async fn test_gemini_stream() {
         dotenv().ok();
-        let props = create_stream_test_props(
-            LlmApiProvider::Gemini,
-            "gemini-1.5-flash".to_string(),
-        )
-        .await;
+        let props =
+            create_stream_test_props(LlmApiProvider::Gemini, "gemini-1.5-flash".to_string()).await;
 
         let pool = create_shared_in_memory_pool().await.unwrap();
         let prompt_repo = PromptRepository::in_memory(pool.clone()).await.unwrap();
@@ -723,6 +739,8 @@ mod tests {
                 100,
                 0.5,
                 false,
+                "static", // prompt_type
+                false,    // is_chat
             )
             .await
             .unwrap();
@@ -747,11 +765,8 @@ mod tests {
     #[ignore]
     async fn test_deepseek_stream() {
         dotenv().ok();
-        let props = create_stream_test_props(
-            LlmApiProvider::Deepseek,
-            "deepseek-chat".to_string(),
-        )
-        .await;
+        let props =
+            create_stream_test_props(LlmApiProvider::Deepseek, "deepseek-chat".to_string()).await;
         let pool = create_shared_in_memory_pool().await.unwrap();
         let prompt_repo = PromptRepository::in_memory(pool.clone()).await.unwrap();
         let log_repo = LogRepository::in_memory(pool.clone()).await.unwrap();
@@ -766,6 +781,8 @@ mod tests {
                 100,
                 0.5,
                 false,
+                "static", // prompt_type
+                false,    // is_chat
             )
             .await
             .unwrap();
@@ -790,11 +807,8 @@ mod tests {
     #[ignore]
     async fn test_azure_stream() {
         dotenv().ok();
-        let props = create_stream_test_props(
-            LlmApiProvider::Azure,
-            "gpt-4o-mini".to_string(),
-        )
-        .await;
+        let props =
+            create_stream_test_props(LlmApiProvider::Azure, "gpt-4o-mini".to_string()).await;
         let pool = create_shared_in_memory_pool().await.unwrap();
         let prompt_repo = PromptRepository::in_memory(pool.clone()).await.unwrap();
         let log_repo = LogRepository::in_memory(pool.clone()).await.unwrap();
@@ -809,6 +823,8 @@ mod tests {
                 100,
                 0.5,
                 false,
+                "static", // prompt_type
+                false,    // is_chat
             )
             .await
             .unwrap();
@@ -862,22 +878,13 @@ mod tests {
 
         // Test each model implementation
         let models = vec![
-            (
-                LlmApiProvider::OpenAi,
-                "gpt-4o-mini-2024-07-18".to_string(),
-            ),
+            (LlmApiProvider::OpenAi, "gpt-4o-mini-2024-07-18".to_string()),
             (
                 LlmApiProvider::Anthropic,
                 "claude-3-5-haiku-latest".to_string(),
             ),
-            (
-                LlmApiProvider::Gemini,
-                "gemini-1.5-flash".to_string(),
-            ),
-            (
-                LlmApiProvider::Deepseek,
-                "deepseek-chat".to_string(),
-            ),
+            (LlmApiProvider::Gemini, "gemini-1.5-flash".to_string()),
+            (LlmApiProvider::Deepseek, "deepseek-chat".to_string()),
         ];
 
         for (model, model_name) in models {
@@ -896,6 +903,8 @@ mod tests {
                     100,
                     0.5,
                     false,
+                    "static", // prompt_type
+                    false,    // is_chat
                 )
                 .await
                 .unwrap();
@@ -904,9 +913,7 @@ mod tests {
 
             // The response should continue the conversation naturally
             let response = llm.text().await.unwrap();
-            assert!(
-                response.content.contains("What's"),
-            );
+            assert!(response.content.contains("What's"),);
         }
     }
 
@@ -916,26 +923,14 @@ mod tests {
         dotenv().ok();
 
         let models = vec![
-            (
-                LlmApiProvider::OpenAi,
-                "gpt-4o-mini-2024-07-18".to_string(),
-            ),
+            (LlmApiProvider::OpenAi, "gpt-4o-mini-2024-07-18".to_string()),
             (
                 LlmApiProvider::Anthropic,
                 "claude-3-5-haiku-latest".to_string(),
             ),
-            (
-                LlmApiProvider::Gemini,
-                "gemini-1.5-flash".to_string(),
-            ),
-            (
-                LlmApiProvider::Deepseek,
-                "deepseek-chat".to_string(),
-            ),
-            (
-                LlmApiProvider::Azure,
-                "gpt-4o-mini".to_string(),
-            ),
+            (LlmApiProvider::Gemini, "gemini-1.5-flash".to_string()),
+            (LlmApiProvider::Deepseek, "deepseek-chat".to_string()),
+            (LlmApiProvider::Azure, "gpt-4o-mini".to_string()),
         ];
 
         for (model, model_name) in models {
@@ -954,6 +949,8 @@ mod tests {
                     100,
                     0.5,
                     false,
+                    "static", // prompt_type
+                    false,    // is_chat
                 )
                 .await
                 .unwrap();
@@ -975,10 +972,7 @@ mod tests {
                 model
             );
             let combined = received_chunks.join("");
-            assert!(
-                combined.contains("What's"),
-            );
+            assert!(combined.contains("What's"),);
         }
     }
 }
-
