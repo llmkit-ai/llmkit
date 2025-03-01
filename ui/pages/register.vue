@@ -63,7 +63,19 @@
               autocomplete="new-password" 
               required 
               class="block w-full rounded-none bg-white px-3 py-1.5 text-base text-black border-2 border-black dark:bg-neutral-800 dark:text-white dark:border-white focus:outline-none sm:text-sm"
+              @focus="showPasswordRequirements = true"
+              @blur="showPasswordRequirements = false"
             >
+          </div>
+          <div v-if="showPasswordRequirements || password" class="mt-2 text-xs text-neutral-700 dark:text-neutral-300 space-y-1">
+            <p>Password must:</p>
+            <ul class="list-disc pl-5 space-y-1">
+              <li :class="{ 'text-green-600 dark:text-green-400': password.length >= 8 }">Be at least 8 characters long</li>
+              <li :class="{ 'text-green-600 dark:text-green-400': /[A-Z]/.test(password) }">Contain at least one uppercase letter</li>
+              <li :class="{ 'text-green-600 dark:text-green-400': /[a-z]/.test(password) }">Contain at least one lowercase letter</li>
+              <li :class="{ 'text-green-600 dark:text-green-400': /[0-9]/.test(password) }">Contain at least one number</li>
+              <li :class="{ 'text-green-600 dark:text-green-400': /[^A-Za-z0-9]/.test(password) }">Contain at least one special character</li>
+            </ul>
           </div>
         </div>
 
@@ -115,6 +127,32 @@ const confirmPassword = ref('');
 const isLoading = ref(false);
 const errorMessage = ref('');
 const successMessage = ref('');
+const showPasswordRequirements = ref(false);
+
+// Password validation function
+const validatePassword = (password: string) => {
+  if (password.length < 8) {
+    return { valid: false, message: 'Password must be at least 8 characters long' };
+  }
+  
+  if (!/[A-Z]/.test(password)) {
+    return { valid: false, message: 'Password must contain at least one uppercase letter' };
+  }
+  
+  if (!/[a-z]/.test(password)) {
+    return { valid: false, message: 'Password must contain at least one lowercase letter' };
+  }
+  
+  if (!/[0-9]/.test(password)) {
+    return { valid: false, message: 'Password must contain at least one number' };
+  }
+  
+  if (!/[^A-Za-z0-9]/.test(password)) {
+    return { valid: false, message: 'Password must contain at least one special character' };
+  }
+  
+  return { valid: true, message: '' };
+};
 
 const handleRegister = async () => {
   // Reset messages
@@ -132,8 +170,10 @@ const handleRegister = async () => {
     return;
   }
   
-  if (password.value.length < 8) {
-    errorMessage.value = 'Password must be at least 8 characters long';
+  // Password validation
+  const passwordValidation = validatePassword(password.value);
+  if (!passwordValidation.valid) {
+    errorMessage.value = passwordValidation.message;
     return;
   }
 

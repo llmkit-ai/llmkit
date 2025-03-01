@@ -41,6 +41,9 @@ pub async fn register(
     if registration_completed {
         return Err(AppError::Forbidden("Registration is closed. System already has a user account.".to_string()));
     }
+    
+    // Validate password
+    validate_password(&payload.password)?;
 
     let password_hash = hash_password(&payload.password)
         .map_err(|e| {
@@ -80,13 +83,13 @@ pub async fn login(
     let user = state.db.user.find_by_email(&payload.email).await
         .map_err(|e| {
             tracing::error!("Failed to find user in DB: | {}", e);
-            AppError::Unauthorized("Failed to login".to_string())
+            AppError::Unauthorized("Invalid email or password".to_string())
         })?
-        .ok_or_else(|| AppError::Unauthorized("Failed to login".to_string()))?;
+        .ok_or_else(|| AppError::Unauthorized("Invalid email or password".to_string()))?;
 
     // Verify password
     match is_valid_password(&payload.password, &user.password_hash) {
-        false => return Err(AppError::Unauthorized("Failed to login".to_string())),
+        false => return Err(AppError::Unauthorized("Invalid email or password".to_string())),
         _ => ()
     }
 
@@ -165,4 +168,33 @@ fn generate_token(email: String, user_id: i64, secret: &str) -> Result<String, A
 
     encode(&Header::default(), &claims, &EncodingKey::from_secret(key))
         .map_err(|e| AppError::InternalServerError(e.to_string()))
+}
+
+fn validate_password(password: &str) -> Result<(), AppError> {
+    // Minimum length check
+    if password.len() < 8 {
+        return Err(AppError::BadRequest("Password must be at least 8 characters long".to_string()));
+    }
+    
+    // Check for at least one uppercase letter
+    if !password.chars().any(|c| c.is_ascii_uppercase()) {
+        return Err(AppError::BadRequest("Password must contain at least one uppercase letter".to_string()));
+    }
+    
+    // Check for at least one lowercase letter
+    if !password.chars().any(|c| c.is_ascii_lowercase()) {
+        return Err(AppError::BadRequest("Password must contain at least one lowercase letter".to_string()));
+    }
+    
+    // Check for at least one digit
+    if !password.chars().any(|c| c.is_ascii_digit()) {
+        return Err(AppError::BadRequest("Password must contain at least one number".to_string()));
+    }
+    
+    // Check for at least one special character
+    if !password.chars().any(|c| !c.is_alphanumeric()) {
+        return Err(AppError::BadRequest("Password must contain at least one special character".to_string()));
+    }
+    
+    Ok(())
 }
