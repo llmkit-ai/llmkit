@@ -6,14 +6,61 @@
     </div>
     <div v-if="props.prompt" class="mt-6">
       <dl class="grid grid-cols-1 sm:grid-cols-3">
+        <!-- Prompt Key -->
         <div class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-1 sm:px-0">
           <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">Prompt Key</dt>
           <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 sm:mt-2">{{ props.prompt.key }}</dd>
         </div>
+
+        <!-- Model -->
+        <div class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-1 sm:px-0">
+          <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">Model</dt>
+          <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 sm:mt-2">{{ props.prompt.model }} ({{ props.prompt.provider }})</dd>
+        </div>
+
+        <!-- Prompt Type -->
+        <div class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-1 sm:px-0">
+          <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">Prompt Type</dt>
+          <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 sm:mt-2">{{ formatPromptType(props.prompt.prompt_type) }}</dd>
+        </div>
+
+        <!-- JSON Mode -->
+        <div class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-1 sm:px-0">
+          <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">JSON Mode</dt>
+          <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 sm:mt-2">{{ props.prompt.json_mode ? 'Enabled' : 'Disabled' }}</dd>
+        </div>
+
+        <!-- Chat Mode -->
+        <div class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-1 sm:px-0">
+          <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">Chat Mode</dt>
+          <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 sm:mt-2">{{ props.prompt.is_chat ? 'Enabled' : 'Disabled' }}</dd>
+        </div>
+
+        <!-- Max Tokens -->
+        <div class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-1 sm:px-0">
+          <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">Max Tokens</dt>
+          <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 sm:mt-2">{{ props.prompt.max_tokens }}</dd>
+        </div>
+
+        <!-- Temperature -->
+        <div class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-1 sm:px-0">
+          <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">Temperature</dt>
+          <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 sm:mt-2">{{ props.prompt.temperature.toFixed(2) }}</dd>
+        </div>
+
+        <!-- JSON Schema -->
+        <div v-if="props.prompt.json_mode && props.prompt.json_schema" class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-3 sm:px-0">
+          <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">JSON Schema</dt>
+          <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 font-mono whitespace-pre-wrap bg-neutral-100 dark:bg-neutral-800 p-2">{{ formatJsonSchema(props.prompt.json_schema) }}</dd>
+        </div>
+
+        <!-- Version Info -->
         <div class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-1 sm:px-0">
           <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">Prompt Version</dt>
           <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 sm:mt-2"><b>{{ props.prompt.version_number }}</b> - <i>{{ formatDate(props.prompt.updated_at) }}</i></dd>
         </div>
+
+        <!-- Version Diff -->
         <div v-if="props.prompt.system_version_diff || props.prompt.user_version_diff" class="col-span-3 bg-neutral-100 dark:bg-neutral-800 p-4">
           <div class="flex items-center justify-between">
             <p class="text-xs text-neutral-900 dark:text-neutral-300">Prompt version diff</p>
@@ -34,36 +81,6 @@
               <p class="mt-1 text-xs text-neutral-900 dark:text-neutral-300">{{ props.prompt.user_version_diff }}</p>
             </div>
           </div>
-        </div>
-        <div class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-1 sm:px-0">
-          <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">Model</dt>
-          <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 sm:mt-2">{{ props.prompt.model }} ({{ props.prompt.provider }})</dd>
-        </div>
-        <div class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-1 sm:px-0">
-          <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">Max Tokens</dt>
-          <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 sm:mt-2">{{ props.prompt.max_tokens }}</dd>
-        </div>
-        <div class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-1 sm:px-0">
-          <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">Temperature</dt>
-          <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 sm:mt-2">{{ props.prompt.temperature.toFixed(2) }}</dd>
-        </div>
-        <div class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-1 sm:px-0">
-          <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">JSON Mode</dt>
-          <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 sm:mt-2">{{ props.prompt.json_mode ? 'Enabled' : 'Disabled' }}</dd>
-        </div>
-        
-        <!-- Only show JSON Schema if JSON Mode is enabled and schema exists -->
-        <div v-if="props.prompt.json_mode && props.prompt.json_schema" class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-3 sm:px-0">
-          <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">JSON Schema</dt>
-          <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 font-mono whitespace-pre-wrap bg-neutral-100 dark:bg-neutral-800 p-2">{{ formatJsonSchema(props.prompt.json_schema) }}</dd>
-        </div>
-        <div class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-1 sm:px-0">
-          <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">Prompt Type</dt>
-          <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 sm:mt-2">{{ formatPromptType(props.prompt.prompt_type) }}</dd>
-        </div>
-        <div class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-1 sm:px-0">
-          <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">Chat Mode</dt>
-          <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 sm:mt-2">{{ props.prompt.is_chat ? 'Enabled' : 'Disabled' }}</dd>
         </div>
         <div class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-3 sm:px-0">
           <div class="px-4 sm:px-0">
