@@ -1,5 +1,6 @@
 import type { PromptCreateDTO, PromptUpdateDTO } from '~/types/components/prompt'
-import type { Message, Prompt, PromptEvalVersionPerformanceResponse, PromptExecutionResponse } from '../types/response/prompts'
+import type { ApiCompletionResponse, Message, Prompt, PromptEvalVersionPerformanceResponse, PromptExecutionResponse } from '../types/response/prompts'
+import type { SchemaValidationResponse } from '../types/response/schema'
 
 export const usePrompts = () => {
   const prompts = ref<Prompt[]>([])
@@ -41,6 +42,7 @@ export const usePrompts = () => {
           max_tokens: prompt.max_tokens,
           temperature: prompt.temperature,
           json_mode: prompt.json_mode,
+          json_schema: prompt.json_schema,
           prompt_type: prompt.prompt_type,
           is_chat: prompt.is_chat
         }
@@ -65,6 +67,7 @@ export const usePrompts = () => {
           max_tokens: prompt.max_tokens,
           temperature: prompt.temperature,
           json_mode: prompt.json_mode,
+          json_schema: prompt.json_schema,
           prompt_type: prompt.prompt_type,
           is_chat: prompt.is_chat
         }
@@ -145,7 +148,7 @@ export const usePrompts = () => {
       }
       
       // Call the OpenAI compatible API
-      const response = await $fetch(`/v1/ui/prompts/execute/chat`, { 
+      const response = await $fetch<ApiCompletionResponse>(`/v1/ui/prompts/execute/chat`, { 
         method: 'POST',
         body: {
           model: prompt.key,
@@ -248,6 +251,29 @@ export const usePrompts = () => {
     }
   }
 
+  const validateJsonSchema = async (schema: string): Promise<SchemaValidationResponse> => {
+    try {
+      const parsedSchema = JSON.parse(schema)
+      const response = await $fetch<SchemaValidationResponse>('/v1/ui/schema/validate', {
+        method: 'POST',
+        body: {
+          schema: parsedSchema
+        }
+      })
+      return response
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        // JSON parse error
+        return {
+          valid: false,
+          errors: ['Invalid JSON: ' + err.message]
+        }
+      }
+      error.value = 'Failed to validate schema'
+      throw err
+    }
+  }
+
   return {
     prompts,
     promptPerformance,
@@ -262,6 +288,7 @@ export const usePrompts = () => {
     executePromptStream,
     executeChat,
     executeApiCompletion,
-    executeApiCompletionStream
+    executeApiCompletionStream,
+    validateJsonSchema
   }
 }

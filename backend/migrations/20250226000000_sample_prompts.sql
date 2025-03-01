@@ -20,6 +20,7 @@ INSERT INTO prompt_version (
     max_tokens,
     temperature,
     json_mode,
+    json_schema,
     prompt_type,
     is_chat
 )
@@ -34,6 +35,7 @@ SELECT
     2048,
     0.7,
     0,
+    NULL,
     'static',
     1
 FROM prompt p 
@@ -66,6 +68,7 @@ INSERT INTO prompt_version (
     max_tokens,
     temperature,
     json_mode,
+    json_schema,
     prompt_type,
     is_chat
 )
@@ -85,6 +88,7 @@ Here are some examples of good responses:
     2048,
     0.7,
     0,
+    NULL,
     'dynamic_system',
     1
 FROM prompt p 
@@ -117,6 +121,7 @@ INSERT INTO prompt_version (
     max_tokens,
     temperature,
     json_mode,
+    json_schema,
     prompt_type,
     is_chat
 )
@@ -137,6 +142,7 @@ Focus particularly on {{ focus_on }} in your summary.
     1024,
     0.5,
     0,
+    NULL,
     'dynamic_system',
     0
 FROM prompt p 
@@ -169,6 +175,7 @@ INSERT INTO prompt_version (
     max_tokens,
     temperature,
     json_mode,
+    json_schema,
     prompt_type,
     is_chat
 )
@@ -197,6 +204,7 @@ Provide specific, actionable feedback that will help improve the code.',
     2048,
     0.3,
     0,
+    NULL,
     'dynamic_both',
     0
 FROM prompt p 
@@ -229,6 +237,7 @@ INSERT INTO prompt_version (
     max_tokens,
     temperature,
     json_mode,
+    json_schema,
     prompt_type,
     is_chat
 )
@@ -265,6 +274,7 @@ Also include a "price_analysis" field with a price_to_value assessment.
     1536,
     0.2,
     1,
+    NULL,
     'dynamic_system',
     0
 FROM prompt p 

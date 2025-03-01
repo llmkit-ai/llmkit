@@ -31,6 +31,7 @@ pub async fn create_prompt(
         payload.max_tokens,
         payload.temperature,
         payload.json_mode,
+        payload.json_schema.as_deref(),
         &payload.prompt_type,
         payload.is_chat
     ).await?;
@@ -80,6 +81,7 @@ pub async fn update_prompt(
         payload.max_tokens,
         payload.temperature,
         payload.json_mode,
+        payload.json_schema.as_deref(),
         &payload.prompt_type,
         payload.is_chat
     ).await?;

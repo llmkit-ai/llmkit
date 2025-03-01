@@ -26,6 +26,7 @@ impl PromptRepository {
         max_tokens: i64,
         temperature: f64,
         json_mode: bool,
+        json_schema: Option<&str>,
         prompt_type: &str,
         is_chat: bool,
     ) -> Result<i64> {
@@ -61,10 +62,11 @@ impl PromptRepository {
                 max_tokens,
                 temperature,
                 json_mode,
+                json_schema,
                 prompt_type,
                 is_chat
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             "#,
             prompt_id,
             next_version,
@@ -76,6 +78,7 @@ impl PromptRepository {
             max_tokens,
             temperature,
             json_mode,
+            json_schema,
             prompt_type,
             is_chat
         )
@@ -112,6 +115,7 @@ impl PromptRepository {
                 pv.max_tokens,
                 pv.temperature,
                 pv.json_mode,
+                pv.json_schema,
                 pv.prompt_type,
                 pv.is_chat,
                 m.name as model_name,
@@ -148,6 +152,7 @@ impl PromptRepository {
                 pv.max_tokens,
                 pv.temperature,
                 pv.json_mode,
+                pv.json_schema,
                 pv.prompt_type,
                 pv.is_chat,
                 m.name as model_name,
@@ -180,6 +185,7 @@ impl PromptRepository {
         max_tokens: i64,
         temperature: f64,
         json_mode: bool,
+        json_schema: Option<&str>,
         prompt_type: &str,
         is_chat: bool,
     ) -> Result<bool> {
@@ -219,10 +225,11 @@ impl PromptRepository {
                 max_tokens,
                 temperature,
                 json_mode,
+                json_schema,
                 prompt_type,
                 is_chat
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             "#,
             id,
             next_version,
@@ -234,6 +241,7 @@ impl PromptRepository {
             max_tokens,
             temperature,
             json_mode,
+            json_schema,
             prompt_type,
             is_chat
         )
@@ -287,6 +295,7 @@ impl PromptRepository {
                 pv.max_tokens,
                 pv.temperature,
                 pv.json_mode,
+                pv.json_schema,
                 pv.prompt_type,
                 pv.is_chat,
                 m.name as model_name,

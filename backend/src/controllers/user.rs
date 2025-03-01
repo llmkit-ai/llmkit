@@ -69,7 +69,6 @@ pub async fn register(
     cookie.set_secure(true);
     cookie.set_path("/");
     cookie.set_max_age(Duration::days(7));
-
     cookies.add(cookie);
     
     Ok(StatusCode::OK)

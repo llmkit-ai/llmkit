@@ -51,6 +51,12 @@
           <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">JSON Mode</dt>
           <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 sm:mt-2">{{ props.prompt.json_mode ? 'Enabled' : 'Disabled' }}</dd>
         </div>
+        
+        <!-- Only show JSON Schema if JSON Mode is enabled and schema exists -->
+        <div v-if="props.prompt.json_mode && props.prompt.json_schema" class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-3 sm:px-0">
+          <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">JSON Schema</dt>
+          <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 font-mono whitespace-pre-wrap bg-neutral-100 dark:bg-neutral-800 p-2">{{ formatJsonSchema(props.prompt.json_schema) }}</dd>
+        </div>
         <div class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-1 sm:px-0">
           <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">Prompt Type</dt>
           <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 sm:mt-2">{{ formatPromptType(props.prompt.prompt_type) }}</dd>
@@ -126,6 +132,19 @@ function formatPromptType(type: string): string {
       return 'Dynamic System & User Prompts';
     default:
       return type;
+  }
+}
+
+function formatJsonSchema(schema: string | null): string {
+  if (!schema) return '';
+  
+  try {
+    // Parse and prettify the JSON schema
+    const parsed = JSON.parse(schema);
+    return JSON.stringify(parsed, null, 2);
+  } catch (e) {
+    // Return the original string if it's not valid JSON
+    return schema;
   }
 }
 </script>

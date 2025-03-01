@@ -25,7 +25,9 @@ use controllers::{
     },
     prompts::{
         api_completions, api_completions_stream, create_prompt, delete_prompt, get_prompt, list_prompts, update_prompt
-    }, user::{login, register, me},
+    }, 
+    schema::validate_schema,
+    user::{login, register, me},
 };
 
 use db::{init::DbData, types::prompt::PromptRowWithModel};
@@ -112,6 +114,7 @@ async fn main() -> Result<()> {
         .route("/ui/logs", get(list_logs))
         .route("/ui/logs/{trace_id}", get(get_log))
         .route("/ui/logs/count", get(get_logs_count))
+        .route("/ui/schema/validate", post(validate_schema))
         .layer(axum_middleware::from_fn_with_state(app_state.clone(), user_auth_middleware))
         .layer(CookieManagerLayer::new());
 

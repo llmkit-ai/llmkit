@@ -26,6 +26,7 @@ pub struct PromptRowWithModel {
     pub max_tokens: i64,
     pub temperature: f64,
     pub json_mode: bool,
+    pub json_schema: Option<String>,
     pub prompt_type: String,
     pub is_chat: bool,
     pub model_name: String,

@@ -11,7 +11,8 @@ export default defineNuxtConfig({
   },
   modules: [
     '@nuxtjs/tailwindcss',
-    '@nuxtjs/color-mode'
+    '@nuxtjs/color-mode',
+    '@vueuse/nuxt',
   ],
   nitro: {
     routeRules: {
