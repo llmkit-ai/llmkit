@@ -12,6 +12,7 @@
           <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 sm:mt-2">{{ props.prompt.key }}</dd>
         </div>
 
+
         <!-- Model -->
         <div class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-1 sm:px-0">
           <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">Model</dt>
