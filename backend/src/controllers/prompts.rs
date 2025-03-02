@@ -10,18 +10,17 @@ use std::convert::Infallible;
 use tokio::sync::mpsc;
 
 use crate::{
-    services::{
-        llm_v2::Llm,
+    common::types::message::{ChatCompletionRequest, ChatCompletionRequestMessage}, services::{
+        llm::Llm,
         types::{
-            chat_request::{LlmServiceRequest, Message},
+            chat_request::LlmServiceRequest,
             chat_response::LlmServiceChatCompletionResponse,
         },
-    },
-    AppError, AppState,
+    }, AppError, AppState
 };
 
 use super::types::{
-    request::prompts::{ApiCompletionRequest, CreatePromptRequest, UpdatePromptRequest},
+    request::prompts::{CreatePromptRequest, UpdatePromptRequest},
     response::prompts::PromptResponse,
 };
 
@@ -139,7 +138,7 @@ pub async fn delete_prompt(
 #[axum::debug_handler]
 pub async fn api_completions(
     State(state): State<AppState>,
-    Json(payload): Json<ApiCompletionRequest>,
+    Json(payload): Json<ChatCompletionRequest>,
 ) -> Result<Json<LlmServiceChatCompletionResponse>, AppError> {
     // Look up the prompt by key (model field in the request)
     let prompt_key = &payload.model;
@@ -148,7 +147,7 @@ pub async fn api_completions(
         .prompt
         .get_prompt_by_key(prompt_key)
         .await
-        .map_err(|_| AppError::NotFound(format!("Prompt with key '{}' not found", prompt_key)))?;
+        .map_err(|_| AppError::NotFound(format!("`Model` input with `Prompt Key` '{}' not found", prompt_key)))?;
 
     // Insert into cache
     state.prompt_cache.insert(prompt.id, prompt.clone()).await;
@@ -167,14 +166,9 @@ pub async fn api_completions(
         let context = payload
             .messages
             .iter()
-            .find(|msg| matches!(msg, Message::System { .. }))
+            .find(|msg| matches!(msg, ChatCompletionRequestMessage::System { .. }))
             .and_then(|msg| {
-                if let Message::System { content } = msg {
-                    // Try to parse content as JSON, or use empty object if it fails
-                    serde_json::from_str::<serde_json::Value>(content).ok()
-                } else {
-                    None
-                }
+                serde_json::from_str::<serde_json::Value>(&msg.content()).ok()
             })
             .unwrap_or(json!({}));
 
@@ -191,28 +185,18 @@ pub async fn api_completions(
         let system_context = payload
             .messages
             .iter()
-            .find(|msg| matches!(msg, Message::System { .. }))
+            .find(|msg| matches!(msg, ChatCompletionRequestMessage::System { .. }))
             .and_then(|msg| {
-                if let Message::System { content } = msg {
-                    // Try to parse content as JSON, or use empty object if it fails
-                    serde_json::from_str::<serde_json::Value>(content).ok()
-                } else {
-                    None
-                }
+                serde_json::from_str::<serde_json::Value>(&msg.content()).ok()
             })
             .unwrap_or(json!({}));
 
         let user_context = payload
             .messages
             .iter()
-            .find(|msg| matches!(msg, Message::User { .. }))
+            .find(|msg| matches!(msg, ChatCompletionRequestMessage::User { .. }))
             .and_then(|msg| {
-                if let Message::User { content } = msg {
-                    // Try to parse content as JSON, or use empty object if it fails
-                    serde_json::from_str::<serde_json::Value>(content).ok()
-                } else {
-                    None
-                }
+                serde_json::from_str::<serde_json::Value>(&msg.content()).ok()
             })
             .unwrap_or(json!({}));
 
