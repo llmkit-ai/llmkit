@@ -41,13 +41,15 @@ pub async fn execute_eval_run(
             .await
             .map_err(|_| AppError::InternalServerError("Something went wrong".to_string()))?;
 
-        let eval_run = state
-            .db
-            .prompt_eval_run
-            .create(&run_id, prompt_version_id, e.id, None, &res.content)
-            .await?;
+        if let Some(c) = res.0.choices.first() {
+            let eval_run = state
+                .db
+                .prompt_eval_run
+                .create(&run_id, prompt_version_id, e.id, None, &c.message.content)
+                .await?;
 
-        eval_runs.push(eval_run);
+            eval_runs.push(eval_run);
+        }
     }
 
     Ok(Json(eval_runs.into()))

@@ -11,6 +11,7 @@ pub struct LogRow {
     pub reasoning_tokens: Option<i64>,
     pub response_data: Option<String>,
     pub request_body: Option<String>,
+    pub provider_response_id: String,
     pub created_at: Option<chrono::NaiveDateTime>,
 }
 
@@ -27,5 +28,6 @@ pub struct LogRowModel {
     pub reasoning_tokens: Option<i64>,
     pub response_data: Option<String>,
     pub request_body: Option<String>,
+    pub provider_response_id: String,
     pub created_at: Option<chrono::NaiveDateTime>,
 }

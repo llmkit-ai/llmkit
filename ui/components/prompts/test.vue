@@ -18,6 +18,19 @@
           <dd class="text-sm/6 text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap bg-neutral-100 dark:bg-neutral-800 p-2">{{ userPrompt }}</dd>
         </div>
       </dl>
+      
+      <!-- Show rendered prompts with variables filled in -->
+      <dl v-if="Object.keys(jsonContext).length > 0" class="grid grid-cols-1 sm:grid-cols-2 mt-4">
+        <div class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-2 sm:px-0">
+          <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">Rendered System Prompt</dt>
+          <dd class="text-sm/6 text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap bg-neutral-100 dark:bg-neutral-800 p-2">{{ renderedSystemPrompt }}</dd>
+        </div>
+        
+        <div v-if="props.prompt.prompt_type === 'dynamic_both'" class="dark:border-neutral-700 px-4 sm:col-span-2 sm:px-0">
+          <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">Rendered User Prompt</dt>
+          <dd class="text-sm/6 text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap bg-neutral-100 dark:bg-neutral-800 p-2">{{ renderedUserPrompt }}</dd>
+        </div>
+      </dl>
     </div>
     <div class="mt-6">
       <div class="px-4 sm:px-0">
@@ -26,7 +39,10 @@
       </div>
       <form @submit.prevent="execute">
         <div class="mt-4 grid grid-cols-4 gap-x-2">
-          <div v-for="f in templateFields">
+          <!-- Add debugging info to see what fields are found -->
+          <p v-if="templateFields.length === 0" class="col-span-4 text-red-500">No dynamic fields found in templates</p>
+          
+          <div v-for="f in templateFields" :key="f" class="mb-4">
             <label :for="f" class="block text-sm/6 font-medium text-neutral-900 dark:text-white">{{ f }}</label>
             <div class="mt-0.5">
               <input 
@@ -157,7 +173,8 @@ const emit = defineEmits(["handle-edit", "handle-cancel"])
 
 const { 
   log,
-  fetchLogById
+  fetchLogById,
+  fetchLogByProviderId
 } = useLogs();
 
 
@@ -172,10 +189,44 @@ const showResponse = ref(true)
 const executeLoading = ref(false)
 
 
-const templateFields = computed<string[]>(() => {
-  if (!props.prompt || !props.prompt.system || !props.prompt.user) return [];
+// Computed property for rendered system prompt with variables replaced
+const renderedSystemPrompt = computed(() => {
+  if (!systemPrompt.value) return '';
+  
+  let rendered = systemPrompt.value;
+  // Replace all handlebars variables with their values from jsonContext
+  Object.entries(jsonContext.value).forEach(([key, value]) => {
+    const regex = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, 'g');
+    rendered = rendered.replace(regex, value as string);
+  });
+  
+  return rendered;
+});
 
-  const template = `${props.prompt.system}\n${props.prompt.user}`;
+// Computed property for rendered user prompt with variables replaced
+const renderedUserPrompt = computed(() => {
+  if (!userPrompt.value) return '';
+  
+  let rendered = userPrompt.value;
+  // Replace all handlebars variables with their values from jsonContext
+  Object.entries(jsonContext.value).forEach(([key, value]) => {
+    const regex = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, 'g');
+    rendered = rendered.replace(regex, value as string);
+  });
+  
+  return rendered;
+});
+
+const templateFields = computed<string[]>(() => {
+  // Only require system prompt to be present
+  if (!props.prompt || !props.prompt.system) return [];
+
+  // Use user prompt only if it exists
+  let template = props.prompt.system;
+  if (props.prompt.user) {
+    template += '\n' + props.prompt.user;
+  }
+  
   const uniqueFields = new Set<string>();
 
   // Regex to find variables in {{ ... }} (Handlebars style)
@@ -219,10 +270,8 @@ function templateFieldInput(event: any) {
   const key = event.target.id
   const value = event.target.value
 
-  // @ts-ignore
+  // Update the context object with the new value
   jsonContext.value[key] = value
-
-  systemPrompt.value.replace(`{{ name }}`, value)
 }
 
 async function execute() {
@@ -268,10 +317,9 @@ async function execute() {
     if (response.choices && response.choices.length > 0) {
       testResponse.value = response.choices[0].message.content;
       
-      // Try to get the log ID from the response ID
-      const logId = parseInt(response.id.split('-')[1]);
-      if (logId) {
-        await getLogRecord(logId);
+      // Get log by provider response ID
+      if (response.id) {
+        await getLogByProviderId(response.id);
       }
     }
   } catch (err) {
@@ -326,29 +374,27 @@ const executeStream = async () => {
     async (chunk) => {
       // Handle each chunk of the stream
       
-      // Check if this is the [DONE] message
-      if (chunk === "[DONE]") {
-        executeLoading.value = false
-        return;
-      }
-      
       try {
-        // Try to parse as JSON (new OpenAI format)
+        // Parse chunk as JSON
         const parsed = JSON.parse(chunk);
         
-        // Check if it has choices and delta content
+        // Check if this is the [DONE] sentinel
+        if (parsed.choices && 
+            parsed.choices.length > 0 && 
+            parsed.choices[0].delta && 
+            parsed.choices[0].delta.content === "[DONE]") {
+          
+          // Get log using the provider response ID
+          if (parsed.id) {
+            await getLogByProviderId(parsed.id);
+          }
+          executeLoading.value = false;
+          return;
+        }
+        
+        // Process regular content delta
         if (parsed.choices && parsed.choices.length > 0) {
           const choice = parsed.choices[0];
-          
-          // If it has a finish_reason, the stream is complete
-          if (choice.finish_reason) {
-            // Try to get the log ID from the response ID
-            const logId = parseInt(parsed.id.split('-')[1]);
-            if (logId) {
-              await getLogRecord(logId);
-            }
-            return;
-          }
           
           // Add delta content if available
           if (choice.delta && choice.delta.content) {
@@ -356,20 +402,7 @@ const executeStream = async () => {
           }
         }
       } catch (err) {
-        // Fallback to old format handling
-        if (chunk.includes("log_id")) {
-          try {
-            const logChunk = JSON.parse(chunk);
-            const logId = logChunk["log_id"];
-            await getLogRecord(logId);
-          } catch (parseErr) {
-            console.error("Error parsing log_id chunk:", parseErr);
-          }
-          return;
-        }
-        
-        // If not JSON or doesn't match expected format, just append it
-        testResponse.value += chunk;
+        console.error("Error parsing streaming response:", err);
       }
     },
     (err) => {
@@ -380,6 +413,11 @@ const executeStream = async () => {
 
 async function getLogRecord(log_id: number) {
   await fetchLogById(log_id)
+  logResponse.value = log.value
+}
+
+async function getLogByProviderId(provider_id: string) {
+  await fetchLogByProviderId(provider_id)
   logResponse.value = log.value
 }
 </script>

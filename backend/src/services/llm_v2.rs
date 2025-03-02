@@ -10,14 +10,13 @@ use tracing;
 
 use super::{
     providers::openrouter::OpenrouterProvider,
-    types::{chat_request::LlmServiceRequest, llm_error::LlmError, llm_error::LlmStreamingError},
+    types::{
+        chat_request::LlmServiceRequest,
+        chat_response::{LlmServiceChatCompletionChunk, LlmServiceChatCompletionResponse},
+        llm_error::{LlmError, LlmStreamingError},
+    },
 };
 use crate::{common::types::models::LlmApiProvider, db::logs::LogRepository};
-
-pub struct ExecutionResponse {
-    pub content: String,
-    pub log_id: i64,
-}
 
 pub struct Llm {
     props: LlmServiceRequest,
@@ -36,12 +35,12 @@ impl Llm {
             .take(1)
     }
 
-    pub async fn text(&self) -> Result<ExecutionResponse, LlmError> {
+    pub async fn text(&self) -> Result<(LlmServiceChatCompletionResponse, i64), LlmError> {
         let retry_strategy = self.retry_strategy();
         Retry::spawn(retry_strategy, || self.send_request()).await
     }
 
-    pub async fn json(&self) -> Result<ExecutionResponse, LlmError> {
+    pub async fn json(&self) -> Result<(LlmServiceChatCompletionResponse, i64), LlmError> {
         let retry_strategy = self.retry_strategy();
         Retry::spawn(retry_strategy, || async {
             let res = self.send_request().await?;
@@ -49,7 +48,10 @@ impl Llm {
             // we can't strongly enforce the shape of the JSON, therefore we just
             // need to make sure it is a valid JSON (hence Value) and then convert
             // it back into text and be on our way
-            let _json: serde_json::Value = serde_json::from_str(&res.content)?;
+            if let Some(c) = res.0.choices.first() {
+                let _json: serde_json::Value = serde_json::from_str(&c.message.content)?;
+            }
+
             Ok(res)
         })
         .await
@@ -57,8 +59,8 @@ impl Llm {
 
     pub async fn stream(
         &self,
-        tx: Sender<Result<String, LlmStreamingError>>,
-    ) -> Result<ExecutionResponse, LlmError> {
+        tx: Sender<Result<LlmServiceChatCompletionChunk, LlmStreamingError>>,
+    ) -> Result<(LlmServiceChatCompletionResponse, i64), LlmError> {
         if self.props.json_mode {
             tracing::info!("Json mode not supported in chat mode");
             return Err(LlmError::UnsupportedMode(
@@ -70,19 +72,18 @@ impl Llm {
         Ok(self.send_request_stream(tx).await?)
     }
 
-    async fn send_request(&self) -> Result<ExecutionResponse, LlmError> {
+    async fn send_request(&self) -> Result<(LlmServiceChatCompletionResponse, i64), LlmError> {
         // Initialize variables to capture data even in error cases
         let mut input_tokens = None;
         let mut output_tokens = None;
-        let mut reasoning_tokens = None;
+        let reasoning_tokens = None;
         let mut raw_response: Option<String> = None;
         let mut status = Some(500); // Default to error status
-        let mut content = String::new();
-        
+
         // Serialize the request for logging
         let request_body = serde_json::to_string(&self.props)
             .map_err(|e| LlmError::SerializationError(e.to_string()))?;
-        
+
         // Execute request and capture result
         let result = match &self.props.provider {
             LlmApiProvider::Openrouter => {
@@ -90,42 +91,43 @@ impl Llm {
                 provider.execute_chat().await
             }
         };
-        
+
         // Process the result or prepare error
-        let exec_result = match result {
+        let (exec_result, provider_response_id) = match result {
             Ok(provider_response) => {
                 // Update status for successful request
                 status = Some(200);
-                
+
                 // Extract tokens and usage information
                 input_tokens = provider_response
                     .usage
                     .as_ref()
                     .map(|usage| usage.prompt_tokens as i64);
-                    
+
                 output_tokens = provider_response
                     .usage
                     .as_ref()
                     .map(|usage| usage.completion_tokens as i64);
-                    
+
                 // Save raw response for logging
                 raw_response = serde_json::to_string(&provider_response).ok();
-                
+
                 // Extract content from the response
-                if let Some(choice) = provider_response.choices.first() {
-                    content = choice.message.content.clone();
-                    Ok(ExecutionResponse { content: content.clone(), log_id: 0 }) // Placeholder log_id
+                if provider_response.choices.len() > 0 {
+                    // Save response ID for logging
+                    let id = provider_response.id.clone();
+                    (Ok(provider_response), id)
                 } else {
-                    Err(LlmError::EmptyResponse)
+                    (Err(LlmError::EmptyResponse), uuid::Uuid::new_v4().to_string())
                 }
-            },
+            }
             Err(e) => {
                 // For errors, prepare as much information as possible for logging
                 raw_response = Some(format!("{{\"error\": \"{}\"}}", e));
-                Err(e)
+                (Err(e), uuid::Uuid::new_v4().to_string())
             }
         };
-        
+
         // Always log the request, regardless of success or failure
         let log_id = self
             .log_request(
@@ -135,20 +137,21 @@ impl Llm {
                 output_tokens,
                 reasoning_tokens,
                 &request_body,
+                &provider_response_id,
             )
             .await?;
-        
+
         // Return the original result but with the correct log_id
         match exec_result {
-            Ok(_) => Ok(ExecutionResponse { content, log_id }),
+            Ok(r) => Ok((r, log_id)),
             Err(e) => Err(e),
         }
     }
 
     async fn send_request_stream(
         &self,
-        tx: Sender<Result<String, LlmStreamingError>>,
-    ) -> Result<ExecutionResponse, LlmError> {
+        tx: Sender<Result<LlmServiceChatCompletionChunk, LlmStreamingError>>,
+    ) -> Result<(LlmServiceChatCompletionResponse, i64), LlmError> {
         // Initialize variables to capture data even in error cases
         let mut input_tokens = None;
         let mut output_tokens = None;
@@ -156,34 +159,35 @@ impl Llm {
         let mut raw_response: Option<String> = None;
         let mut status = Some(500); // Default to error status
         let mut content = String::new();
-        
+
         // Serialize the request for logging
         let request_body = serde_json::to_string(&self.props)
             .map_err(|e| LlmError::SerializationError(e.to_string()))?;
-        
+
         // Check json mode before making the request
         if self.props.json_mode {
             tracing::info!("Json mode not supported in chat mode");
             let error = LlmError::UnsupportedMode("Json".to_string(), "Chat".to_string());
-            
+
             // Log the error
             let raw_response = Some(format!("{{\"error\": \"{}\"}}", error));
-            
+            let provider_response_id = uuid::Uuid::new_v4().to_string();
+
             // Log the failed request
-            self
-                .log_request(
-                    raw_response.as_deref(),
-                    status,
-                    input_tokens,
-                    output_tokens,
-                    reasoning_tokens,
-                    &request_body,
-                )
-                .await?;
-                
+            self.log_request(
+                raw_response.as_deref(),
+                status,
+                input_tokens,
+                output_tokens,
+                reasoning_tokens,
+                &request_body,
+                &provider_response_id
+            )
+            .await?;
+
             return Err(error);
         }
-        
+
         // Execute request and capture result
         let result = match &self.props.provider {
             LlmApiProvider::Openrouter => {
@@ -191,42 +195,42 @@ impl Llm {
                 provider.execute_chat_stream(tx).await
             }
         };
-        
+
         // Process the result or prepare error
-        let exec_result = match result {
+        let (exec_result, provider_response_id) = match result {
             Ok(response) => {
                 // Update status for successful request
                 status = Some(200);
-                
+
                 // Extract tokens and usage information
                 input_tokens = response
                     .usage
                     .as_ref()
                     .map(|usage| usage.prompt_tokens as i64);
-                    
+
                 output_tokens = response
                     .usage
                     .as_ref()
                     .map(|usage| usage.completion_tokens as i64);
-                    
+
                 // Save raw response for logging
                 raw_response = serde_json::to_string(&response).ok();
-                
+
                 // Extract content from the response
-                if let Some(choice) = response.choices.first() {
-                    content = choice.message.content.clone();
-                    Ok(ExecutionResponse { content: content.clone(), log_id: 0 }) // Placeholder log_id
+                if response.choices.len() > 0 {
+                    let id = response.id.clone();
+                    (Ok(response), id)
                 } else {
-                    Err(LlmError::EmptyResponse)
+                    (Err(LlmError::EmptyResponse), uuid::Uuid::new_v4().to_string())
                 }
-            },
+            }
             Err(e) => {
                 // For errors, prepare as much information as possible for logging
                 raw_response = Some(format!("{{\"error\": \"{}\"}}", e));
-                Err(e)
+                (Err(e), uuid::Uuid::new_v4().to_string())
             }
         };
-        
+
         // Always log the request, regardless of success or failure
         let log_id = self
             .log_request(
@@ -236,12 +240,13 @@ impl Llm {
                 output_tokens,
                 reasoning_tokens,
                 &request_body,
+                &provider_response_id
             )
             .await?;
-        
+
         // Return the original result but with the correct log_id
         match exec_result {
-            Ok(_) => Ok(ExecutionResponse { content, log_id }),
+            Ok(r) => Ok((r, log_id)),
             Err(e) => Err(e),
         }
     }
@@ -255,6 +260,7 @@ impl Llm {
         output_tokens: Option<i64>,
         reasoning_tokens: Option<i64>,
         request_body: &str,
+        provider_response_id: &str,
     ) -> Result<i64, LlmError> {
         self.db_log
             .create_log(
@@ -266,6 +272,7 @@ impl Llm {
                 output_tokens,
                 reasoning_tokens,
                 Some(request_body),
+                provider_response_id,
             )
             .await
             .map_err(|e| LlmError::DbLoggingError(e.to_string()))

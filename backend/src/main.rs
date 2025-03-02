@@ -13,7 +13,7 @@ use tracing_subscriber;
 use anyhow::Result;
 use controllers::{
     api_keys::{create_api_key, delete_api_key, list_api_keys},
-    logs::{get_log, get_logs_count, list_logs},
+    logs::{get_log, get_log_by_provider_id, get_logs_count, list_logs},
     models::list_models,
     prompt_eval::{
         create_eval_test, delete_eval_test, get_eval_test_by_id, get_eval_test_by_prompt,
@@ -112,8 +112,9 @@ async fn main() -> Result<()> {
         )
         .route("/ui/models", get(list_models))
         .route("/ui/logs", get(list_logs))
-        .route("/ui/logs/{trace_id}", get(get_log))
         .route("/ui/logs/count", get(get_logs_count))
+        .route("/ui/logs/provider/{provider_id}", get(get_log_by_provider_id))
+        .route("/ui/logs/{trace_id}", get(get_log))
         .route("/ui/schema/validate", post(validate_schema))
         .layer(axum_middleware::from_fn_with_state(app_state.clone(), user_auth_middleware))
         .layer(CookieManagerLayer::new());

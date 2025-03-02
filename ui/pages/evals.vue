@@ -36,7 +36,8 @@
       <Evals 
         v-if="selectedPrompt"
         :prompt="selectedPrompt" 
-        :mode="promptMode" 
+        :mode="promptMode"
+        :key="selectedPrompt.id"
       /> 
     </div>
   </div>

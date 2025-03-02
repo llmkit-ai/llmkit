@@ -25,7 +25,8 @@ impl LogRepository {
         input_tokens: Option<i64>,
         output_tokens: Option<i64>,
         reasoning_tokens: Option<i64>,
-        request_body: Option<&str>
+        request_body: Option<&str>,
+        provider_response_id: &str
     ) -> Result<i64> {
         let mut conn = self.pool.acquire().await?;
         let id = sqlx::query!(
@@ -39,8 +40,9 @@ impl LogRepository {
                 output_tokens,
                 reasoning_tokens,
                 request_body,
+                provider_response_id,
                 created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             "#,
             prompt_id,
             model_id,
@@ -50,6 +52,7 @@ impl LogRepository {
             output_tokens,
             reasoning_tokens,
             request_body,
+            provider_response_id,
         )
         .execute(&mut *conn)
         .await?
@@ -64,6 +67,7 @@ impl LogRepository {
         status_code: i32,
         input_tokens: i32,
         output_tokens: i32,
+        provider_response_id: &str,
     ) -> Result<bool> {
         let rows_affected = sqlx::query!(
             r#"
@@ -72,13 +76,15 @@ impl LogRepository {
                 response_data = ?,
                 status_code = ?,
                 input_tokens = ?,
-                output_tokens = ?
+                output_tokens = ?,
+                provider_response_id = ?
             WHERE id = ?
             "#,
             response_data,
             status_code,
             input_tokens,
             output_tokens,
+            provider_response_id,
             id
         )
         .execute(&self.pool)
@@ -103,7 +109,8 @@ impl LogRepository {
                 l.output_tokens,
                 l.reasoning_tokens,
                 l.created_at,
-                l.request_body
+                l.request_body,
+                l.provider_response_id
             FROM log l
             JOIN model m ON m.id = l.model_id
             JOIN provider p ON m.provider_id = p.id
@@ -134,7 +141,8 @@ impl LogRepository {
                     l.output_tokens,
                     l.reasoning_tokens,
                     l.created_at,
-                    l.request_body
+                    l.request_body,
+                    l.provider_response_id
                 FROM log l
                 INNER JOIN model m ON m.id = l.model_id
                 INNER JOIN provider p ON m.provider_id = p.id
@@ -164,7 +172,8 @@ impl LogRepository {
                 output_tokens,
                 reasoning_tokens,
                 created_at,
-                request_body
+                request_body,
+                provider_response_id
             FROM log
             WHERE prompt_id = ?
             ORDER BY created_at DESC
@@ -185,6 +194,36 @@ impl LogRepository {
         .fetch_one(&self.pool)
         .await?;
         Ok(count)
+    }
+
+    pub async fn get_log_by_provider_response_id(&self, provider_response_id: &str) -> Result<Option<LogRowModel>> {
+        let log = sqlx::query_as!(
+            LogRowModel,
+            r#"
+            SELECT 
+                l.id,
+                l.prompt_id,
+                l.model_id,
+                m.name as model_name,
+                p.name as provider_name,
+                l.response_data,
+                l.status_code,
+                l.input_tokens,
+                l.output_tokens,
+                l.reasoning_tokens,
+                l.created_at,
+                l.request_body,
+                l.provider_response_id
+            FROM log l
+            JOIN model m ON m.id = l.model_id
+            JOIN provider p ON m.provider_id = p.id
+            WHERE l.provider_response_id = ?
+            "#,
+            provider_response_id
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+        Ok(log)
     }
 }
 

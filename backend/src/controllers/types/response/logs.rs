@@ -12,6 +12,7 @@ pub struct ApiLogResponse {
     pub input_tokens: Option<i64>,
     pub output_tokens: Option<i64>,
     pub request_body: Option<String>,
+    pub provider_response_id: String,
     pub created_at: String
 }
 
@@ -27,6 +28,7 @@ impl From<LogRowModel> for ApiLogResponse {
             input_tokens: log.input_tokens,
             output_tokens: log.output_tokens,
             request_body: log.request_body,
+            provider_response_id: log.provider_response_id,
             created_at: log.created_at.map(|v| v.to_string()).unwrap_or_default()
         }
     }

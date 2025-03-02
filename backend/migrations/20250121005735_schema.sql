@@ -81,6 +81,7 @@ CREATE TABLE log (
     status_code INTEGER,
     request_body TEXT,
     response_data TEXT,
+    provider_response_id TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(prompt_id) REFERENCES prompt(id),
     FOREIGN KEY(model_id) REFERENCES model(id)
@@ -90,3 +91,4 @@ CREATE INDEX idx_traces_prompt ON log(prompt_id);
 CREATE INDEX idx_traces_model ON log(model_id);
 CREATE INDEX idx_traces_created ON log(created_at);
 CREATE INDEX idx_traces_status ON log(status_code);
+CREATE INDEX idx_traces_provider_response_id ON log(provider_response_id);

@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use openrouter_api::types::chat::ChatCompletionResponse;
+use openrouter_api::{types::chat::ChatCompletionResponse, ChatCompletionChunk};
 
 /// Chat completion response.
 #[derive(Debug, Deserialize, Serialize)]
@@ -136,6 +136,88 @@ impl From<ChatCompletionResponse> for LlmServiceChatCompletionResponse {
             model: value.model,
             usage: value.usage.map(|usage| {
                 LlmServiceChatCompletionResponseUsage {
+                    prompt_tokens: usage.prompt_tokens,
+                    completion_tokens: usage.completion_tokens,
+                    total_tokens: usage.total_tokens,
+                }
+            }),
+        }
+    }
+}
+
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct LlmServiceChatCompletionChunk {
+    pub id: String,
+    pub choices: Vec<LlmServiceChoiceStream>,
+    pub usage: Option<LlmServiceUsage>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct LlmServiceChoiceStream {
+    pub index: u32,
+    pub delta: LlmServiceStreamDelta,
+    pub finish_reason: Option<String>,
+    pub native_finish_reason: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct LlmServiceStreamDelta {
+    pub role: String,
+    pub content: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct LlmServiceUsage {
+    pub prompt_tokens: u32,
+    pub completion_tokens: u32,
+    pub total_tokens: u32,
+}
+
+impl LlmServiceChatCompletionChunk {
+    /// Creates a special "DONE" sentinel chunk to signify that the stream is complete.
+    pub fn done_sentinel(id: String) -> Self {
+        LlmServiceChatCompletionChunk {
+            id,
+            choices: vec![LlmServiceChoiceStream {
+                index: 0,
+                delta: LlmServiceStreamDelta {
+                    role: "assistant".to_string(),
+                    content: "[DONE]".to_string(),
+                },
+                finish_reason: Some("stop".to_string()),
+                native_finish_reason: Some("stop".to_string()),
+            }],
+            usage: None,
+        }
+    }
+    
+    /// Checks if this chunk is a "DONE" sentinel.
+    pub fn is_done_sentinel(&self) -> bool {
+        self.choices.iter().any(|choice| 
+            choice.delta.content == "[DONE]" && 
+            choice.finish_reason.as_deref() == Some("stop")
+        )
+    }
+}
+
+impl From<ChatCompletionChunk> for LlmServiceChatCompletionChunk {
+    fn from(chunk: ChatCompletionChunk) -> Self {
+        LlmServiceChatCompletionChunk {
+            id: chunk.id,
+            choices: chunk.choices.into_iter().map(|choice| {
+                LlmServiceChoiceStream {
+                    index: choice.index,
+                    delta: LlmServiceStreamDelta {
+                        role: choice.delta.role,
+                        content: choice.delta.content,
+                    },
+                    finish_reason: choice.finish_reason,
+                    native_finish_reason: choice.native_finish_reason,
+                }
+            }).collect(),
+            usage: chunk.usage.map(|usage| {
+                LlmServiceUsage {
                     prompt_tokens: usage.prompt_tokens,
                     completion_tokens: usage.completion_tokens,
                     total_tokens: usage.total_tokens,

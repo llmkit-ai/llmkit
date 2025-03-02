@@ -113,9 +113,14 @@ const jsonContext = ref<Record<string, string>>({});
 const sampleInputName = ref<string>("");
 
 const templateFields = computed<string[]>(() => {
-  if (!props.prompt?.system || !props.prompt?.user) return [];
+  if (!props.prompt?.system) return [];
 
-  const template = `${props.prompt.system}\n${props.prompt.user}`;
+  // Use user prompt only if it exists
+  let template = props.prompt.system;
+  if (props.prompt?.user) {
+    template += '\n' + props.prompt.user;
+  }
+  
   const uniqueFields = new Set<string>();
 
   // Regex patterns

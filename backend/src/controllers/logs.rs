@@ -40,3 +40,12 @@ pub async fn get_logs_count(
     let count = state.db.log.get_logs_count().await?;
     Ok(Json(ApiLogCountResponse { count }))
 }
+
+pub async fn get_log_by_provider_id(
+    Path(provider_id): Path<String>,
+    State(state): State<AppState>,
+) -> Result<Json<ApiLogResponse>, AppError> {
+    let trace = state.db.log.get_log_by_provider_response_id(&provider_id).await?
+        .ok_or(AppError::NotFound(format!("Log with provider ID '{}' not found", provider_id)))?;
+    Ok(Json(trace.into()))
+}

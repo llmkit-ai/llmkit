@@ -286,47 +286,16 @@ async function sendMessage() {
     source.addEventListener('message', function(e: any) {
       const data = e.data;
       
-      // Check if this is the done message
-      if (data === "[DONE]") {
-        isStreaming.value = false;
-        
-        // Add assistant message to chat history
-        if (streamingResponse.value) {
-          chatMessages.value.push({
-            role: 'assistant',
-            content: streamingResponse.value
-          });
-        }
-        source.close();
-        return;
-      }
-      
       try {
         // Parse the JSON chunk
         const chunk = JSON.parse(data);
         
-        // Extract the content from the delta
-        if (chunk.choices && chunk.choices.length > 0) {
-          const choice = chunk.choices[0];
+        // Check if this is the [DONE] sentinel
+        if (chunk.choices && 
+            chunk.choices.length > 0 && 
+            chunk.choices[0].delta && 
+            chunk.choices[0].delta.content === "[DONE]") {
           
-          // Check for finish reason
-          if (choice.finish_reason) {
-            // Do nothing, we'll handle completion when we receive the [DONE] message
-            return;
-          }
-          
-          // Handle the actual content delta
-          if (choice.delta && choice.delta.content) {
-            // Append the content to our streaming response
-            streamingResponse.value += choice.delta.content;
-            scrollToBottom();
-          }
-        }
-      } catch (err) {
-        console.error("Error parsing streaming response:", err);
-        
-        // Fallback to the old format if JSON parsing fails
-        if (data.includes('log_id')) {
           isStreaming.value = false;
           
           // Add assistant message to chat history
@@ -340,9 +309,19 @@ async function sendMessage() {
           return;
         }
         
-        // Just append the data directly as fallback
-        streamingResponse.value += data;
-        scrollToBottom();
+        // Check if this is a regular content delta
+        if (chunk.choices && chunk.choices.length > 0) {
+          const choice = chunk.choices[0];
+          
+          // Handle the actual content delta
+          if (choice.delta && choice.delta.content) {
+            // Append the content to our streaming response
+            streamingResponse.value += choice.delta.content;
+            scrollToBottom();
+          }
+        }
+      } catch (err) {
+        console.error("Error parsing streaming response:", err);
       }
     });
     

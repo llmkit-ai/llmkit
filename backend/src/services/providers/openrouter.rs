@@ -1,4 +1,4 @@
-use crate::services::types::chat_response::LlmServiceChatCompletionResponse;
+use crate::services::types::chat_response::{LlmServiceChatCompletionChunk, LlmServiceChatCompletionResponse};
 use crate::services::types::chat_request::Message;
 use crate::services::types::{
     llm_error::LlmError, llm_error::LlmStreamingError, chat_request::LlmServiceRequest
@@ -9,7 +9,6 @@ use openrouter_api::models::tool::ToolCall;
 use openrouter_api::{OpenRouterClient, Ready};
 use openrouter_api::types::chat::ChatCompletionRequest;
 use tokio::sync::mpsc::Sender;
-use uuid::Uuid;
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -80,7 +79,7 @@ impl<'a> OpenrouterProvider<'a> {
 
     pub async fn execute_chat_stream(
         &self,
-        tx: Sender<Result<String, LlmStreamingError>>,
+        tx: Sender<Result<LlmServiceChatCompletionChunk, LlmStreamingError>>,
     ) -> Result<LlmServiceChatCompletionResponse, LlmError> {
         let messages: Vec<openrouter_api::types::chat::Message> = self.props.messages.iter().map(|msg| {
             openrouter_api::types::chat::Message {
@@ -107,8 +106,6 @@ impl<'a> OpenrouterProvider<'a> {
             }
         }).collect();
 
-        // let prompt_tokens = messages.iter().map(|m| estimate_tokens(&m.content)).sum();
-
         let request = ChatCompletionRequest {
             model: self.props.model_name.clone(),
             messages,
@@ -131,26 +128,27 @@ impl<'a> OpenrouterProvider<'a> {
             tracing::info!("chunk: {:?}", chunk);
             match chunk {
                 Ok(c) => {
-                    if let Some(m) = c.choices.first() {
-                        content += &m.delta.content.clone();
-                        if let Err(_) = tx.send(Ok(m.delta.content.clone())).await {
-                            break;
-                        }
-                    }
+                    id = c.id.clone();
 
-                    if let Some(u) = c.usage {
+                    if let Some(u) = &c.usage {
                         completion_tokens = u.completion_tokens;         
                         prompt_tokens = u.prompt_tokens;
                         total_tokens = u.total_tokens;
                     }
 
-                    id = c.id;
+                    if let Some(c) = &c.choices.first() {
+                        content += &c.delta.content;
+                    }
+
+                    if let Err(_) = tx.send(Ok(c.into())).await {
+                        break;
+                    }
                 }
                 Err(e) => eprintln!("Error during streaming: {}", e),
             }
         }
 
-        let _ = tx.send(Ok("[DONE]".to_string())).await;
+        let _ = tx.send(Ok(LlmServiceChatCompletionChunk::done_sentinel(id.clone()))).await;
     
         let created = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -167,9 +165,4 @@ impl<'a> OpenrouterProvider<'a> {
             Some(total_tokens)
         ))
     }
-}
-
-fn estimate_tokens(text: &str) -> u32 {
-    // Rough approximation: ~4 chars ≈ 1 token for English text
-    (text.chars().count() as f32 / 4.0).ceil() as u32
 }

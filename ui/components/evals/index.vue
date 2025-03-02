@@ -57,6 +57,7 @@
       <EvalsCreatePromptEvalInput
         class="mt-6"
         :prompt="props.prompt"
+        :key="props.prompt.id"
         @cancel="handlePromptEvalCancel()"
         @created="handleSampleCreated()"
       />
@@ -73,6 +74,7 @@
         class="mt-6"
         :prompt="props.prompt"
         :sample="editingSample"
+        :key="`${props.prompt.id}-edit-${editingSample?.id}`"
       />
     </div>
 
@@ -101,8 +103,10 @@ const editingSampleId = ref<number | null>(null)
 
 const { fetchEvalByPrompt, evals, loading: evalTestsLoading } = usePromptEvals();
 
+// Fetch evals on component mount
 await fetchEvalByPrompt(props.prompt.id)
 
+// Set initial view based on whether evals exist
 if (evals.value.length === 0) {
   view.value = "empty"
 }

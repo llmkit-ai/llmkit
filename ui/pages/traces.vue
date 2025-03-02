@@ -41,6 +41,9 @@
                 <span class="text-neutral-500 dark:text-neutral-400">prompt:</span>
                 <span class="text-neutral-900 dark:text-neutral-300">{{ log.prompt_id || 'n/a' }}</span>
                 
+                <span class="text-neutral-500 dark:text-neutral-400">provider id:</span>
+                <span class="text-neutral-900 dark:text-neutral-300">{{ log.provider_response_id }}</span>
+                
                 <span class="text-neutral-500 dark:text-neutral-400">tokens:</span>
                 <span class="text-neutral-900 dark:text-neutral-300">
                   [in:{{ log.input_tokens }} out:{{ log.output_tokens }} rt:{{ log.reasoning_tokens }}]

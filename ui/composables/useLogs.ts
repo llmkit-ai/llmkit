@@ -35,6 +35,18 @@ export const useLogs = () => {
       loading.value = false
     }
   }
+  
+  const fetchLogByProviderId = async (providerId: string) => {
+    try {
+      loading.value = true
+      log.value = await $fetch<ApiLogReponse>(`/v1/ui/logs/provider/${providerId}`)
+    } catch (err) {
+      console.error(err)
+      error.value = `failed to fetch log with provider id ${providerId}`
+    } finally {
+      loading.value = false
+    }
+  }
 
   const fetchLogsCount = async () => {
     try {
@@ -56,6 +68,7 @@ export const useLogs = () => {
     error,
     fetchLogs,
     fetchLogById,
+    fetchLogByProviderId,
     fetchLogsCount,
     totalLogs,
   }

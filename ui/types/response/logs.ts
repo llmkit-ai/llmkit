@@ -10,6 +10,7 @@ export interface ApiLogReponse {
   reasoning_tokens: number | null;
   request_body: string | null;
   response_data: string | null;
+  provider_response_id: string;
   created_at: string
 }
 

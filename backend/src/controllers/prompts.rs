@@ -3,19 +3,17 @@ use axum::{
     response::sse::{Event, KeepAlive, Sse},
     Json
 };
-use chrono::Utc;
 use futures::Stream;
 use hyper::StatusCode;
-use serde_json::{json, Value};
+use serde_json::json;
 use std::convert::Infallible;
 use tokio::sync::mpsc;
-use uuid;
 
-use crate::{services::{llm_v2::Llm, types::chat_request::{LlmServiceRequest, Message}}, AppError, AppState};
+use crate::{services::{llm_v2::Llm, types::{chat_request::{LlmServiceRequest, Message}, chat_response::LlmServiceChatCompletionResponse}}, AppError, AppState};
 
 use super::types::{
     request::prompts::{CreatePromptRequest, UpdatePromptRequest, ApiCompletionRequest}, 
-    response::prompts::{PromptExecutionResponse, PromptResponse, ApiCompletionResponse, ApiCompletionChunk, ApiChunkChoice, ApiDelta}
+    response::prompts::PromptResponse
 };
 
 
@@ -118,7 +116,7 @@ pub async fn delete_prompt(
 pub async fn api_completions(
     State(state): State<AppState>,
     Json(payload): Json<ApiCompletionRequest>,
-) -> Result<Json<ApiCompletionResponse>, AppError> {
+) -> Result<Json<LlmServiceChatCompletionResponse>, AppError> {
     // Look up the prompt by key (model field in the request)
     let prompt_key = &payload.model;
     let prompt = state.db.prompt.get_prompt_by_key(prompt_key).await
@@ -236,15 +234,7 @@ pub async fn api_completions(
             })?
     };
     
-    let log = state.db.log.get_log_by_id(res.log_id).await?
-        .ok_or_else(|| AppError::NotFound("Log not found".to_string()))?;
-    
-    let execution_response = PromptExecutionResponse::from_log_row(res.content, log);
-    
-    // Convert to OpenAI-compatible response
-    let api_response = execution_response.to_api_response(prompt_key);
-    
-    Ok(Json(api_response))
+    Ok(Json(res.0))
 }
 
 #[axum::debug_handler]
@@ -332,9 +322,6 @@ pub async fn api_completions_stream(
         return Err(StatusCode::BAD_REQUEST);
     };
 
-    tracing::info!("messages: {:?}", payload.messages);
-    tracing::info!("llm_props: {:?}", llm_props);
-    
     // Apply request overrides if specified
     let llm_props = if let Some(max_tokens) = payload.max_tokens {
         LlmServiceRequest { max_tokens, ..llm_props }
@@ -361,114 +348,28 @@ pub async fn api_completions_stream(
     };
     
     let (tx, mut rx) = mpsc::channel(100);
-    // Create oneshot channel for log ID
-    let (stream_res_tx, stream_res_rx) = tokio::sync::oneshot::channel();
-    
     let llm = Llm::new(llm_props.clone(), state.db.log);
     
-    // Generate a unique ID for this streaming session
-    let stream_id = format!("chatcmpl-{}", uuid::Uuid::new_v4().to_string().replace("-", ""));
-    let prompt_key_string = prompt_key.to_string();
-    let prompt_key_for_stream = prompt_key_string.clone();
-    
     tokio::spawn(async move {
-        let result = llm.stream(tx).await;
-        
-        if let Ok(llm_stream_response) = result {
-            let _ = stream_res_tx.send((llm_stream_response.log_id, prompt_key_for_stream));
-        }
+        let _ = llm.stream(tx).await;
     });
     
     let stream = async_stream::stream! {
-        let created_time = Utc::now().timestamp();
-        let mut is_first_chunk = true;
-        let mut content_buffer = String::new();
-        
         // Process regular stream messages
         while let Some(result) = rx.recv().await {
             match result {
                 Ok(content) => {
-                    if content.contains("[DONE]") || content.contains("Done:") {
-                        // Send final chunk with finish_reason
-                        let final_chunk = ApiCompletionChunk {
-                            id: stream_id.clone(),
-                            object: "chat.completion.chunk".to_string(),
-                            created: created_time,
-                            model: prompt_key_string.clone(),
-                            choices: vec![
-                                ApiChunkChoice {
-                                    index: 0,
-                                    delta: ApiDelta {
-                                        content: None,
-                                        role: None,
-                                    },
-                                    finish_reason: Some("stop".to_string()),
-                                }
-                            ],
-                        };
-                        
-                        yield Ok(Event::default().data(serde_json::to_string(&final_chunk).unwrap()));
-                        yield Ok(Event::default().data("[DONE]"));
+                    if content.is_done_sentinel() {
+                        yield Ok(Event::default().data(serde_json::to_string(&content).unwrap()));
                         break;
                     }
-                    
-                    // For first chunk, include the role
-                    if is_first_chunk {
-                        let first_chunk = ApiCompletionChunk {
-                            id: stream_id.clone(),
-                            object: "chat.completion.chunk".to_string(),
-                            created: created_time,
-                            model: prompt_key_string.clone(),
-                            choices: vec![
-                                ApiChunkChoice {
-                                    index: 0,
-                                    delta: ApiDelta {
-                                        content: None,
-                                        role: Some("assistant".to_string()),
-                                    },
-                                    finish_reason: None,
-                                }
-                            ],
-                        };
-                        
-                        yield Ok(Event::default().data(serde_json::to_string(&first_chunk).unwrap()));
-                        is_first_chunk = false;
-                    }
-                    
-                    // Regular content chunk
-                    content_buffer.push_str(&content);
-                    
-                    let content_chunk = ApiCompletionChunk {
-                        id: stream_id.clone(),
-                        object: "chat.completion.chunk".to_string(),
-                        created: created_time,
-                        model: prompt_key_string.clone(),
-                        choices: vec![
-                            ApiChunkChoice {
-                                index: 0,
-                                delta: ApiDelta {
-                                    content: Some(content),
-                                    role: None,
-                                },
-                                finish_reason: None,
-                            }
-                        ],
-                    };
-                    
-                    yield Ok(Event::default().data(serde_json::to_string(&content_chunk).unwrap()));
+
+                    yield Ok(Event::default().data(serde_json::to_string(&content).expect("Failed to turn chunk into string")));
                 }
                 Err(e) => {
                     tracing::error!("error in stream: {:?}", e);
                 }
             }
-        }
-        
-        // Wait for and send log ID after stream completes
-        match stream_res_rx.await {
-            Ok((_log_id, _prompt_key)) => {
-                // Already sent the [DONE] event above
-            },
-            Err(_) => tracing::error!("Failed to receive log ID"),
         }
     };
     
