@@ -1,8 +1,12 @@
 use serde::Serialize;
 use tera::{Context, Tera};
+use serde_json::Value;
 
 use crate::{
-    common::types::{message::ChatCompletionRequest, models::LlmApiProvider}, 
+    common::types::{
+        message::{ChatCompletionRequest, ChatCompletionRequestMessage, ChatCompletionRequestTool}, 
+        models::LlmApiProvider
+    }, 
     db::types::prompt::PromptRowWithModel
 };
 
@@ -22,139 +26,127 @@ pub enum LlmServiceRequestError {
 pub struct LlmServiceRequest {
     pub provider: LlmApiProvider,
     pub base_url: String,
-    pub chat_request: ChatCompletionRequest
+    pub model_name: String,
+    pub max_tokens: i64,
+    pub temperature: f64,
+    pub json_mode: bool,
+    pub messages: Vec<ChatCompletionRequestMessage>,
+    pub prompt_id: i64,
+    pub model_id: i64,
+    pub stream: Option<bool>,
+    pub tools: Option<Vec<ChatCompletionRequestTool>>,
+    pub fallback_models: Option<Vec<String>>,
+    pub transforms: Option<Vec<String>>,
 }
 
 impl LlmServiceRequest {
-    pub fn new(prompt: PromptRowWithModel, context: serde_json::Value) -> Result<Self, LlmServiceRequestError> {
+    pub fn new(prompt: PromptRowWithModel, request: ChatCompletionRequest) -> Result<Self, LlmServiceRequestError> {
         let mut tera = Tera::default();
         tera.add_raw_template("system_prompt", &prompt.system)?;
         tera.add_raw_template("user_prompt", &prompt.user)?;
-
-        let mut tera_ctx = Context::new();
-        if let serde_json::Value::Object(context) = context {
-            for (k, v) in context {
-                tera_ctx.insert(k, &v);
-            }
-        }
-
-        let rendered_system_prompt = tera.render("system_prompt", &tera_ctx)
-            .map_err(|e| LlmServiceRequestError::TeraRenderError(e))?;
-        let rendered_user_prompt = tera.render("user_prompt", &tera_ctx)
-            .map_err(|e| LlmServiceRequestError::TeraRenderError(e))?;
-
-        let messages = vec![ Message::System { content: rendered_system_prompt }, Message::User { content: rendered_user_prompt } ];
-
-        Ok(LlmServiceRequest {
-            provider: prompt.provider_name.into(),
-            base_url: prompt.provider_base_url,
-            model_name: prompt.model_name,
-            max_tokens: prompt.max_tokens,
-            temperature: prompt.temperature,
-            json_mode: prompt.json_mode,
-            messages,
-            prompt_id: prompt.id,
-            model_id: prompt.model_id,
-            stream: None,
-            tools: None,
-            fallback_models: None,
-            transforms: None,
-        })
-    }
-
-    pub fn new_split_context(prompt: PromptRowWithModel, system_context: serde_json::Value, user_context: serde_json::Value) -> Result<Self, LlmServiceRequestError> {
-        let mut tera = Tera::default();
-        tera.add_raw_template("system_prompt", &prompt.system)?;
-        tera.add_raw_template("user_prompt", &prompt.user)?;
-
+        
+        // Always extract context from system message if available
+        let system_context = request.messages.iter()
+            .find(|msg| msg.is_system())
+            .and_then(|msg| serde_json::from_str::<Value>(&msg.content()).ok())
+            .unwrap_or(Value::Object(serde_json::Map::new()));
+        
+        // Render system prompt with context
         let mut system_ctx = Context::new();
-        if let serde_json::Value::Object(context) = system_context {
+        if let Value::Object(context) = system_context {
             for (k, v) in context {
                 system_ctx.insert(k, &v);
             }
         }
-
-        let mut user_ctx = Context::new();
-        if let serde_json::Value::Object(context) = user_context {
-            for (k, v) in context {
-                user_ctx.insert(k, &v);
-            }
-        }
-
+        
         let rendered_system_prompt = tera.render("system_prompt", &system_ctx)
             .map_err(|e| LlmServiceRequestError::TeraRenderError(e))?;
-        let rendered_user_prompt = tera.render("user_prompt", &user_ctx)
-            .map_err(|e| LlmServiceRequestError::TeraRenderError(e))?;
 
-        let messages = vec![ Message::System { content: rendered_system_prompt }, Message::User { content: rendered_user_prompt } ];
-
-        Ok(LlmServiceRequest {
-            provider: prompt.provider_name.into(),
-            base_url: prompt.provider_base_url,
-            model_name: prompt.model_name,
+        // Determine messages based on request
+        let messages = if request.messages.len() > 2 {
+            // Chat mode - keep existing messages but replace/insert system message
+            let mut new_messages = request.messages.clone();
+            
+            // Replace or add system message
+            if let Some(pos) = new_messages.iter().position(|msg| msg.is_system()) {
+                new_messages[pos] = ChatCompletionRequestMessage::System { 
+                    content: rendered_system_prompt,
+                    name: None 
+                };
+            } else {
+                new_messages.insert(0, ChatCompletionRequestMessage::System { 
+                    content: rendered_system_prompt,
+                    name: None 
+                });
+            }
+            
+            new_messages
+        } else {
+            // Simple mode - system + user message with template
+            // For dynamic_both, we need to extract user context separately
+            let user_ctx = if prompt.prompt_type == "dynamic_both" {
+                let user_context = request.messages.iter()
+                    .find(|msg| msg.is_user())
+                    .and_then(|msg| serde_json::from_str::<Value>(&msg.content()).ok())
+                    .unwrap_or(Value::Object(serde_json::Map::new()));
+                
+                let mut ctx = Context::new();
+                if let Value::Object(context) = user_context {
+                    for (k, v) in context {
+                        ctx.insert(k, &v);
+                    }
+                }
+                ctx
+            } else {
+                // For other types, use the same context as system
+                system_ctx.clone()
+            };
+            
+            let rendered_user_prompt = tera.render("user_prompt", &user_ctx)
+                .map_err(|e| LlmServiceRequestError::TeraRenderError(e))?;
+            
+            vec![
+                ChatCompletionRequestMessage::System { content: rendered_system_prompt, name: None },
+                ChatCompletionRequestMessage::User { content: rendered_user_prompt, name: None }
+            ]
+        };
+        
+        // Create request with all properties and overrides
+        let mut service_request = LlmServiceRequest {
+            provider: prompt.provider_name.clone().into(),
+            base_url: prompt.provider_base_url.clone(),
+            model_name: prompt.model_name.clone(),
             max_tokens: prompt.max_tokens,
             temperature: prompt.temperature,
-            json_mode: prompt.json_mode,
+            json_mode: prompt.json_mode, 
             messages,
             prompt_id: prompt.id,
             model_id: prompt.model_id,
-            stream: None,
-            tools: None,
-            fallback_models: None,
-            transforms: None,
-        })
-    }
-
-    pub fn new_chat(
-        prompt: PromptRowWithModel, 
-        context: serde_json::Value, 
-        messages: Vec<Message>
-    ) -> Result<Self, LlmServiceRequestError> {
-        // Always render the system prompt with context
-        let mut tera = Tera::default();
-        tera.add_raw_template("system_prompt", &prompt.system)?;
+            stream: request.stream,
+            tools: request.tools.clone(),
+            fallback_models: request.models.clone(),
+            transforms: request.transforms.clone(),
+        };
         
-        let mut tera_ctx = Context::new();
-        if let serde_json::Value::Object(context) = context {
-            for (k, v) in context {
-                tera_ctx.insert(k, &v);
+        // Apply request overrides if specified
+        if let Some(max_tokens) = request.max_tokens {
+            service_request.max_tokens = max_tokens;
+        }
+        
+        if let Some(temperature) = request.temperature {
+            service_request.temperature = temperature;
+        }
+        
+        // Set JSON mode if specified in request format
+        if let Some(ref response_format) = request.response_format {
+            if response_format == "json_object" {
+                service_request.json_mode = true;
             }
         }
-
-        let rendered_system_prompt = tera.render("system_prompt", &tera_ctx)
-            .map_err(|e| LlmServiceRequestError::TeraRenderError(e))?;
         
-        let mut messages = messages;
-        
-        // Check if there's already a system message in the input
-        let has_system_message = messages.iter().any(|msg| matches!(msg, Message::System { .. }));
-        
-        if has_system_message {
-            // Replace the first system message with our rendered one
-            let system_index = messages.iter().position(|msg| matches!(msg, Message::System { .. })).unwrap();
-            messages[system_index] = Message::System { content: rendered_system_prompt };
-        } else {
-            // No system message found, add one at the beginning
-            messages.insert(0, Message::System { content: rendered_system_prompt });
-        }
-
-        Ok(LlmServiceRequest {
-            provider: prompt.provider_name.into(),
-            base_url: prompt.provider_base_url,
-            model_name: prompt.model_name,
-            max_tokens: prompt.max_tokens,
-            temperature: prompt.temperature,
-            json_mode: prompt.json_mode,
-            messages: messages.to_vec(),
-            prompt_id: prompt.id,
-            model_id: prompt.model_id,
-            stream: None,
-            tools: None,
-            fallback_models: None,
-            transforms: None,
-        })
+        Ok(service_request)
     }
-    
+
     // Function to enable streaming
     pub fn with_stream(mut self, enable: bool) -> Self {
         self.stream = Some(enable);
@@ -162,7 +154,7 @@ impl LlmServiceRequest {
     }
     
     // Function to add tools
-    pub fn with_tools(mut self, tools: Vec<LlmServiceRequestTool>) -> Self {
+    pub fn with_tools(mut self, tools: Vec<ChatCompletionRequestTool>) -> Self {
         self.tools = Some(tools);
         self
     }

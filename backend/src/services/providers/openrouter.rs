@@ -1,5 +1,5 @@
 use crate::services::types::chat_response::{LlmServiceChatCompletionChunk, LlmServiceChatCompletionResponse};
-use crate::services::types::chat_request::Message;
+use crate::common::types::message::ChatCompletionRequestMessage;
 use crate::services::types::{
     llm_error::LlmError, llm_error::LlmStreamingError, chat_request::LlmServiceRequest
 };
@@ -38,20 +38,14 @@ impl<'a> OpenrouterProvider<'a> {
     pub async fn execute_chat(&self) -> Result<LlmServiceChatCompletionResponse, LlmError> {
         let messages = self.props.messages.iter().map(|msg| {
             openrouter_api::types::chat::Message {
-                role: match msg {
-                    Message::System { .. } => "system".to_string(),
-                    Message::User { .. } => "user".to_string(),
-                    Message::Assistant { .. } => "assistant".to_string(),
-                },
-                content: match msg {
-                    Message::System { content } | Message::User { content } | Message::Assistant { content, .. } => content.clone(),
-                },
-                name: None,
+                role: msg.role().to_string(),
+                content: msg.content().to_string(),
+                name: msg.name().map(|n| n.to_string()),
                 tool_calls: match msg {
-                    Message::Assistant { tool_calls, .. } => {
+                    ChatCompletionRequestMessage::Assistant { tool_calls, .. } => {
                         match tool_calls {
                             Some(tcs) => {
-                                Some(tcs.iter().map(|tc| tc.to_owned().into()).collect::<Vec<ToolCall>>())
+                                Some(tcs.iter().map(|tc| tc.clone().into()).collect::<Vec<openrouter_api::models::tool::ToolCall>>())
                             },
                             None => None
                         }
@@ -82,20 +76,14 @@ impl<'a> OpenrouterProvider<'a> {
     ) -> Result<LlmServiceChatCompletionResponse, LlmError> {
         let messages: Vec<openrouter_api::types::chat::Message> = self.props.messages.iter().map(|msg| {
             openrouter_api::types::chat::Message {
-                role: match msg {
-                    Message::System { .. } => "system".to_string(),
-                    Message::User { .. } => "user".to_string(),
-                    Message::Assistant { .. } => "assistant".to_string(),
-                },
-                content: match msg {
-                    Message::System { content } | Message::User { content } | Message::Assistant { content, .. } => content.clone(),
-                },
-                name: None,
+                role: msg.role().to_string(),
+                content: msg.content().to_string(),
+                name: msg.name().map(|n| n.to_string()),
                 tool_calls: match msg {
-                    Message::Assistant { tool_calls, .. } => {
+                    ChatCompletionRequestMessage::Assistant { tool_calls, .. } => {
                         match tool_calls {
                             Some(tcs) => {
-                                Some(tcs.iter().map(|tc| tc.to_owned().into()).collect::<Vec<ToolCall>>())
+                                Some(tcs.iter().map(|tc| tc.clone().into()).collect::<Vec<openrouter_api::models::tool::ToolCall>>())
                             },
                             None => None
                         }

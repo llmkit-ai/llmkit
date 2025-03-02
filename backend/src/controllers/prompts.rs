@@ -140,7 +140,12 @@ pub async fn api_completions(
     State(state): State<AppState>,
     Json(payload): Json<ChatCompletionRequest>,
 ) -> Result<Json<LlmServiceChatCompletionResponse>, AppError> {
-    // Look up the prompt by key (model field in the request)
+    if payload.messages.is_empty() {
+        return Err(AppError::BadRequest(
+            "Messages array cannot be empty".into(),
+        ));
+    }
+
     let prompt_key = &payload.model;
     let prompt = state
         .db
@@ -152,99 +157,12 @@ pub async fn api_completions(
     // Insert into cache
     state.prompt_cache.insert(prompt.id, prompt.clone()).await;
 
-    // Handle template rendering differently based on prompt type and payload
-    let llm_props = if prompt.prompt_type == "static" || prompt.prompt_type == "dynamic_system" {
-        // For static or dynamic_system, we render the system prompt with context
-        // and use the messages array
-        if payload.messages.is_empty() {
-            return Err(AppError::BadRequest(
-                "Messages array cannot be empty".into(),
-            ));
-        }
-
-        // Extract context from the system message if it exists
-        let context = payload
-            .messages
-            .iter()
-            .find(|msg| matches!(msg, ChatCompletionRequestMessage::System { .. }))
-            .and_then(|msg| {
-                serde_json::from_str::<serde_json::Value>(&msg.content()).ok()
-            })
-            .unwrap_or(json!({}));
-
-        LlmServiceRequest::new_chat(prompt.clone(), context, payload.messages.clone()).map_err(
-            |e| {
-                tracing::error!("{}", e);
-                AppError::InternalServerError(
-                    "An error occurred processing chat prompt".to_string(),
-                )
-            },
-        )?
-    } else if prompt.prompt_type == "dynamic_both" {
-        // For dynamic_both, we pass the entire request as context
-        let system_context = payload
-            .messages
-            .iter()
-            .find(|msg| matches!(msg, ChatCompletionRequestMessage::System { .. }))
-            .and_then(|msg| {
-                serde_json::from_str::<serde_json::Value>(&msg.content()).ok()
-            })
-            .unwrap_or(json!({}));
-
-        let user_context = payload
-            .messages
-            .iter()
-            .find(|msg| matches!(msg, ChatCompletionRequestMessage::User { .. }))
-            .and_then(|msg| {
-                serde_json::from_str::<serde_json::Value>(&msg.content()).ok()
-            })
-            .unwrap_or(json!({}));
-
-        LlmServiceRequest::new_split_context(prompt.clone(), system_context, user_context).map_err(
-            |e| {
-                tracing::error!("{}", e);
-                AppError::InternalServerError(
-                    "An error occurred processing prompt template".to_string(),
-                )
-            },
-        )?
-    } else {
-        return Err(AppError::BadRequest(format!(
-            "Unsupported prompt type: {}",
-            prompt.prompt_type
-        )));
-    };
-
-    // Apply request overrides if specified
-    let llm_props = if let Some(max_tokens) = payload.max_tokens {
-        LlmServiceRequest {
-            max_tokens,
-            ..llm_props
-        }
-    } else {
-        llm_props
-    };
-
-    let llm_props = if let Some(temperature) = payload.temperature {
-        LlmServiceRequest {
-            temperature,
-            ..llm_props
-        }
-    } else {
-        llm_props
-    };
-
-    // Set JSON mode if specified in request format
-    let json_mode = if let Some(ref format) = payload.response_format {
-        format.r#type == "json_object"
-    } else {
-        false
-    };
-
-    let llm_props = LlmServiceRequest {
-        json_mode,
-        ..llm_props
-    };
+    // Create LlmServiceRequest with our new unified method
+    let llm_props = LlmServiceRequest::new(prompt, payload.clone())
+        .map_err(|e| {
+            tracing::error!("Error creating LlmServiceRequest: {}", e);
+            AppError::InternalServerError("Failed to process request".into())
+        })?;
 
     let llm = Llm::new(llm_props.clone(), state.db.log.clone());
 
@@ -268,8 +186,12 @@ pub async fn api_completions(
 #[axum::debug_handler]
 pub async fn api_completions_stream(
     State(state): State<AppState>,
-    Json(payload): Json<ApiCompletionRequest>,
+    Json(payload): Json<ChatCompletionRequest>,
 ) -> Result<Sse<impl Stream<Item = Result<Event, Infallible>>>, StatusCode> {
+    if payload.messages.is_empty() {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
     // Look up the prompt by key (model field in the request)
     let prompt_key = &payload.model;
     let prompt = match state.db.prompt.get_prompt_by_key(prompt_key).await {
@@ -280,111 +202,21 @@ pub async fn api_completions_stream(
     // Insert into cache
     state.prompt_cache.insert(prompt.id, prompt.clone()).await;
 
-    // Handle template rendering differently based on prompt type and payload
-    let llm_props = if prompt.prompt_type == "static" || prompt.prompt_type == "dynamic_system" {
-        // For static or dynamic_system, we render the system prompt with context
-        // and use the messages array for chat history
-        if payload.messages.is_empty() {
-            return Err(StatusCode::BAD_REQUEST);
+    // Create LlmServiceRequest with streaming enabled
+    let mut request_payload = payload.clone();
+    request_payload.stream = Some(true);
+    
+    // Use our unified new() method
+    let llm_props = match LlmServiceRequest::new(prompt, request_payload) {
+        Ok(props) => props,
+        Err(e) => {
+            tracing::error!("Error creating LlmServiceRequest: {}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
-
-        // Extract context from the system message if it exists
-        let context = payload
-            .messages
-            .iter()
-            .find(|msg| matches!(msg, Message::System { .. }))
-            .and_then(|msg| {
-                if let Message::System { content } = msg {
-                    // Try to parse content as JSON, or use empty object if it fails
-                    serde_json::from_str::<serde_json::Value>(content).ok()
-                } else {
-                    None
-                }
-            })
-            .unwrap_or(json!({}));
-
-        match LlmServiceRequest::new_chat(prompt.clone(), context, payload.messages.clone()) {
-            Ok(props) => props,
-            Err(e) => {
-                tracing::error!("{}", e);
-                return Err(StatusCode::INTERNAL_SERVER_ERROR);
-            }
-        }
-    } else if prompt.prompt_type == "dynamic_both" {
-        // For dynamic_both, we pass the entire request as context
-        // Extract context from the system message if it exists
-        let system_context = payload
-            .messages
-            .iter()
-            .find(|msg| matches!(msg, Message::System { .. }))
-            .and_then(|msg| {
-                if let Message::System { content } = msg {
-                    // Try to parse content as JSON, or use empty object if it fails
-                    serde_json::from_str::<serde_json::Value>(content).ok()
-                } else {
-                    None
-                }
-            })
-            .unwrap_or(json!({}));
-
-        let user_context = payload
-            .messages
-            .iter()
-            .find(|msg| matches!(msg, Message::User { .. }))
-            .and_then(|msg| {
-                if let Message::User { content } = msg {
-                    // Try to parse content as JSON, or use empty object if it fails
-                    serde_json::from_str::<serde_json::Value>(content).ok()
-                } else {
-                    None
-                }
-            })
-            .unwrap_or(json!({}));
-
-        match LlmServiceRequest::new_split_context(prompt.clone(), system_context, user_context) {
-            Ok(props) => props,
-            Err(e) => {
-                tracing::error!("{}", e);
-                return Err(StatusCode::INTERNAL_SERVER_ERROR);
-            }
-        }
-    } else {
-        return Err(StatusCode::BAD_REQUEST);
-    };
-
-    // Apply request overrides if specified
-    let llm_props = if let Some(max_tokens) = payload.max_tokens {
-        LlmServiceRequest {
-            max_tokens,
-            ..llm_props
-        }
-    } else {
-        llm_props
-    };
-
-    let llm_props = if let Some(temperature) = payload.temperature {
-        LlmServiceRequest {
-            temperature,
-            ..llm_props
-        }
-    } else {
-        llm_props
-    };
-
-    // Set JSON mode if specified in request format
-    let json_mode = if let Some(ref format) = payload.response_format {
-        format.r#type == "json_object"
-    } else {
-        false
-    };
-
-    let llm_props = LlmServiceRequest {
-        json_mode,
-        ..llm_props
     };
 
     let (tx, mut rx) = mpsc::channel(100);
-    let llm = Llm::new(llm_props.clone(), state.db.log);
+    let llm = Llm::new(llm_props, state.db.log);
 
     tokio::spawn(async move {
         let _ = llm.stream(tx).await;
