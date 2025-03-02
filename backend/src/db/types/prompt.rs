@@ -31,6 +31,7 @@ pub struct PromptRowWithModel {
     pub is_chat: bool,
     pub model_name: String,
     pub provider_name: String,
+    pub provider_base_url: String,
     pub version_number: i64,
     pub version_id: i64,
     pub system_diff: Option<String>,

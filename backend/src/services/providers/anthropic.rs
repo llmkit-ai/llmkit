@@ -115,7 +115,7 @@ impl<'a> LlmProvider for AnthropicProvider<'a> {
         let body_string = body.to_string();
 
         let request = client
-            .post("https://api.anthropic.com/v1/messages")
+            .post(format!("{}/messages", &self.props.base_url))
             .header("x-api-key", api_key)
             .header("anthropic-version", "2023-06-01")
             .json(&body);

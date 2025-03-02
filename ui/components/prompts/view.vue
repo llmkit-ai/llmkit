@@ -12,6 +12,12 @@
           <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 sm:mt-2">{{ props.prompt.key }}</dd>
         </div>
 
+        <!-- Version Info -->
+        <div class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-1 sm:px-0">
+          <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">Prompt Version</dt>
+          <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 sm:mt-2"><b>{{ props.prompt.version_number }}</b> - <i>{{ formatDate(props.prompt.updated_at) }}</i></dd>
+        </div>
+
 
         <!-- Model -->
         <div class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-1 sm:px-0">
@@ -55,11 +61,6 @@
           <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 font-mono whitespace-pre-wrap bg-neutral-100 dark:bg-neutral-800 p-2">{{ formatJsonSchema(props.prompt.json_schema) }}</dd>
         </div>
 
-        <!-- Version Info -->
-        <div class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-1 sm:px-0">
-          <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">Prompt Version</dt>
-          <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 sm:mt-2"><b>{{ props.prompt.version_number }}</b> - <i>{{ formatDate(props.prompt.updated_at) }}</i></dd>
-        </div>
 
         <!-- Version Diff -->
         <div v-if="props.prompt.system_version_diff || props.prompt.user_version_diff" class="col-span-3 bg-neutral-100 dark:bg-neutral-800 p-4">

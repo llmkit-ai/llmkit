@@ -1,8 +1,7 @@
 use serde::{Deserialize, Serialize};
 use chrono::Utc;
 
-use crate::db::types::{log::LogRowModel, prompt::PromptRowWithModel};
-use crate::services::types::message::Message;
+use crate::{db::types::{log::LogRowModel, prompt::PromptRowWithModel}, services::types::chat_request::Message};
 
 
 // GET PROMPT RESPONSE
@@ -167,7 +166,7 @@ impl PromptExecutionResponse {
             choices: vec![
                 ApiChoice {
                     index: 0,
-                    message: Message::Assistant { content: self.content.clone() },
+                    message: Message::Assistant { content: self.content.clone(), tool_calls: None },
                     finish_reason: "stop".to_string(),
                 }
             ],

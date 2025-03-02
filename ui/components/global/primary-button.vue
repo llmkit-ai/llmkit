@@ -4,10 +4,9 @@
       :type="htmlType"
       :disabled="disabled"
       :class="[
-        'font-mono transition-colors border-2', // 👈 Added 'border' here
+        'font-mono transition-colors border-2',
         sizeClasses[size],
         typeClasses[buttonType],
-        outline ? 'bg-transparent' : 'border-transparent',
         disabled ? 'opacity-50 cursor-not-allowed' : '',
         $attrs.class
       ]"
@@ -30,14 +29,13 @@ defineProps({
     default: 'md'
   },
   buttonType: {
-    type: String as () => 'default' | 'primary' | 'secondary' | 'success' | 'error',
+    type: String as () => 'default' | 'primary' | 'primary-inverse' | 'secondary' | 'success' | 'error',
     default: 'default'
   },
   htmlType: {
     type: String as () => 'button' | 'submit' | 'reset',
     default: 'button'
   },
-  outline: { type: Boolean, default: true },
   disabled: { type: Boolean, default: false }
 })
 
@@ -49,10 +47,11 @@ const sizeClasses = {
 };
 
 const typeClasses = {
-  'default': 'border-neutral-900 text-neutral-900 hover:bg-neutral-100 dark:border-neutral-300 dark:text-neutral-300 dark:hover:bg-neutral-800',
-  'primary': 'border-black bg-black text-neutral-100 dark:text-neutral-900 hover:text-neutral-100 hover:bg-neutral-800 dark:border-neutral-200 dark:bg-neutral-200 dark:text-black dark:hover:bg-neutral-300',
-  'secondary': 'border-neutral-300 text-neutral-700 hover:bg-neutral-50 dark:border-neutral-600 dark:text-neutral-300 dark:hover:bg-neutral-800',
-  'success': 'border-green-600 text-green-600 hover:bg-green-50 dark:border-green-400 dark:text-green-400 dark:hover:bg-green-900/30',
-  'error': 'border-red-600 text-red-600 hover:bg-red-50 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-900/30'
+  'default': 'border-neutral-900 text-neutral-900 bg-transparent hover:bg-neutral-100 dark:border-neutral-300 dark:text-neutral-300 dark:hover:bg-neutral-800',
+  'primary': 'border-black bg-black text-white hover:bg-neutral-800 dark:border-neutral-200 dark:bg-neutral-200 dark:text-black dark:hover:bg-neutral-300',
+  'primary-inverse': 'border-black bg-transparent text-black hover:bg-neutral-100 dark:border-white dark:text-white dark:hover:bg-neutral-800',
+  'secondary': 'border-neutral-300 bg-transparent text-neutral-700 hover:bg-neutral-50 dark:border-neutral-600 dark:text-neutral-300 dark:hover:bg-neutral-800',
+  'success': 'border-green-600 bg-transparent text-green-600 hover:bg-green-50 dark:border-green-400 dark:text-green-400 dark:hover:bg-green-900/30',
+  'error': 'border-red-600 bg-transparent text-red-600 hover:bg-red-50 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-900/30'
 };
 </script>

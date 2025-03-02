@@ -13,7 +13,7 @@ use tracing;
 use super::{
     providers::{
         anthropic::AnthropicProvider, azure::AzureProvider, deepseek::DeepseekProvider,
-        gemini::GeminiProvider, openai::OpenaiProvider,
+        gemini::GeminiProvider, openai::OpenaiProvider, openrouter::OpenrouterProvider,
     },
     types::{llm_props::LlmProps, parse_response::LlmApiResponseProps, stream::LlmStreamingError},
 };
@@ -134,6 +134,7 @@ impl Llm {
         let gemini_provider = GeminiProvider::new(&self.props, false);
         let deepseek_provider = DeepseekProvider::new(&self.props, false);
         let azure_provider = AzureProvider::new(&self.props, false);
+        let or_provider = OpenrouterProvider::new(&self.props, false);
 
         let (request_builder, body) = match &self.props.provider {
             LlmApiProvider::OpenAi => openai_provider.build_request(),
@@ -141,6 +142,7 @@ impl Llm {
             LlmApiProvider::Gemini => gemini_provider.build_request(),
             LlmApiProvider::Deepseek => deepseek_provider.build_request(),
             LlmApiProvider::Azure => azure_provider.build_request(),
+            LlmApiProvider::Openrouter => or_provider.build_request(),
         }?;
 
         // Convert RequestBuilder to Request to capture details
@@ -170,6 +172,7 @@ impl Llm {
             LlmApiProvider::Gemini => GeminiProvider::parse_response(&text)?,
             LlmApiProvider::Deepseek => DeepseekProvider::parse_response(&text)?,
             LlmApiProvider::Azure => AzureProvider::parse_response(&text)?,
+            LlmApiProvider::Openrouter => OpenrouterProvider::parse_response(&text)?,
         };
 
         let log_id = self
@@ -198,6 +201,7 @@ impl Llm {
         let gemini_provider = GeminiProvider::new(&self.props, true);
         let deepseek_provider = DeepseekProvider::new(&self.props, true);
         let azure_provider = AzureProvider::new(&self.props, true);
+        let or_provider = OpenrouterProvider::new(&self.props, false);
 
         let (request, body) = match &self.props.provider {
             LlmApiProvider::OpenAi => openai_provider.build_request(),
@@ -205,20 +209,18 @@ impl Llm {
             LlmApiProvider::Gemini => gemini_provider.build_request(),
             LlmApiProvider::Deepseek => deepseek_provider.build_request(),
             LlmApiProvider::Azure => azure_provider.build_request(),
+            LlmApiProvider::Openrouter => or_provider.build_request(),
         }?;
 
         let event_source = request.eventsource()?;
 
         let response = match &self.props.provider {
             LlmApiProvider::OpenAi => OpenaiProvider::stream_eventsource(event_source, tx).await?,
-            LlmApiProvider::Anthropic => {
-                AnthropicProvider::stream_eventsource(event_source, tx).await?
-            }
+            LlmApiProvider::Anthropic => AnthropicProvider::stream_eventsource(event_source, tx).await?,
             LlmApiProvider::Gemini => GeminiProvider::stream_eventsource(event_source, tx).await?,
-            LlmApiProvider::Deepseek => {
-                DeepseekProvider::stream_eventsource(event_source, tx).await?
-            }
+            LlmApiProvider::Deepseek => DeepseekProvider::stream_eventsource(event_source, tx).await?, 
             LlmApiProvider::Azure => AzureProvider::stream_eventsource(event_source, tx).await?,
+            LlmApiProvider::Openrouter => OpenrouterProvider::stream_eventsource(event_source, tx).await?,
         };
 
         let log_id = self
@@ -317,8 +319,9 @@ mod tests {
                 100,
                 0.5,
                 false,
+                None,
                 "static", // prompt_type
-                false,    // is_chat
+                false    // is_chat
             )
             .await
             .unwrap();
@@ -397,6 +400,7 @@ mod tests {
                 100,
                 0.5,
                 false,
+                None,
                 "static", // prompt_type
                 false,    // is_chat
             )
@@ -448,6 +452,7 @@ mod tests {
                 100,
                 0.5,
                 false,
+                None,
                 "static", // prompt_type
                 false,    // is_chat
             )
@@ -512,6 +517,7 @@ mod tests {
                 100,
                 0.5,
                 false,
+                None,
                 "static", // prompt_type
                 false,    // is_chat
             )
@@ -576,6 +582,7 @@ mod tests {
                 100,
                 0.5,
                 false,
+                None,
                 "static", // prompt_type
                 false,    // is_chat
             )
@@ -652,7 +659,7 @@ mod tests {
 
         // Seed your prompt.
         prompt_repo
-            .create_prompt("", "", "", 1, 100, 0.5, false, "static", false)
+            .create_prompt("", "", "", 1, 100, 0.5, false, None, "static", false)
             .await
             .unwrap();
 
@@ -696,6 +703,7 @@ mod tests {
                 100,
                 0.5,
                 false,
+                None,
                 "static", // prompt_type
                 false,    // is_chat
             )
@@ -739,6 +747,7 @@ mod tests {
                 100,
                 0.5,
                 false,
+                None,
                 "static", // prompt_type
                 false,    // is_chat
             )
@@ -781,6 +790,7 @@ mod tests {
                 100,
                 0.5,
                 false,
+                None,
                 "static", // prompt_type
                 false,    // is_chat
             )
@@ -823,6 +833,7 @@ mod tests {
                 100,
                 0.5,
                 false,
+                None,
                 "static", // prompt_type
                 false,    // is_chat
             )
@@ -903,6 +914,7 @@ mod tests {
                     100,
                     0.5,
                     false,
+                    None,
                     "static", // prompt_type
                     false,    // is_chat
                 )
@@ -949,6 +961,7 @@ mod tests {
                     100,
                     0.5,
                     false,
+                    None,
                     "static", // prompt_type
                     false,    // is_chat
                 )

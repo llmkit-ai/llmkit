@@ -5,9 +5,14 @@ use axum::{
 use serde_json::Value;
 use uuid::Uuid;
 
-use super::types::{request::prompt_eval_run::UpdateEvalRunRequest, response::prompt_eval_run::{PromptEvalExecutionRunResponse, PromptEvalRunResponse, PromptEvalVersionPerformanceResponse}};
+use super::types::{
+    request::prompt_eval_run::UpdateEvalRunRequest,
+    response::prompt_eval_run::{
+        PromptEvalExecutionRunResponse, PromptEvalRunResponse, PromptEvalVersionPerformanceResponse,
+    },
+};
 use crate::{
-    services::{llm::Llm, types::llm_props::LlmProps},
+    services::{llm_v2::Llm, types::chat_request::LlmServiceRequest},
     AppError, AppState,
 };
 
@@ -25,7 +30,7 @@ pub async fn execute_eval_run(
             AppError::InternalServerError("Something went parsing input data".to_string())
         })?;
 
-        let llm_props = LlmProps::new(prompt.clone(), payload).map_err(|e| {
+        let llm_props = LlmServiceRequest::new(prompt.clone(), payload).map_err(|e| {
             tracing::error!("{}", e);
             AppError::InternalServerError("An error occured processing prompt template".to_string())
         })?;
@@ -48,7 +53,6 @@ pub async fn execute_eval_run(
     Ok(Json(eval_runs.into()))
 }
 
-
 pub async fn get_eval_run_by_id(
     Path(id): Path<i64>,
     State(state): State<AppState>,
@@ -61,7 +65,11 @@ pub async fn get_eval_performance_by_prompt_id(
     Path(id): Path<i64>,
     State(state): State<AppState>,
 ) -> Result<Json<Vec<PromptEvalVersionPerformanceResponse>>, AppError> {
-    let performance = state.db.prompt_eval_run.get_prompt_version_performance(id).await?;
+    let performance = state
+        .db
+        .prompt_eval_run
+        .get_prompt_version_performance(id)
+        .await?;
 
     tracing::info!("performance: {:?}", performance);
 
@@ -72,7 +80,11 @@ pub async fn get_eval_runs_by_prompt_version(
     Path((_prompt_id, prompt_version_id)): Path<(i64, i64)>,
     State(state): State<AppState>,
 ) -> Result<Json<Vec<PromptEvalRunResponse>>, AppError> {
-    let eval_runs = state.db.prompt_eval_run.get_by_prompt_version(prompt_version_id).await?;
+    let eval_runs = state
+        .db
+        .prompt_eval_run
+        .get_by_prompt_version(prompt_version_id)
+        .await?;
     Ok(Json(eval_runs.into_iter().map(|run| run.into()).collect()))
 }
 
@@ -81,10 +93,11 @@ pub async fn update_eval_run_score(
     State(state): State<AppState>,
     Json(request): Json<UpdateEvalRunRequest>,
 ) -> Result<Json<PromptEvalRunResponse>, AppError> {
-    let updated_eval_run = state.db.prompt_eval_run.update_score(
-        id,
-        request.score
-    ).await?;
+    let updated_eval_run = state
+        .db
+        .prompt_eval_run
+        .update_score(id, request.score)
+        .await?;
 
     Ok(Json(updated_eval_run.into()))
 }

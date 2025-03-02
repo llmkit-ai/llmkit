@@ -155,7 +155,8 @@ impl<'a> LlmProvider for GeminiProvider<'a> {
         let body_string = body.to_string();
 
         let url = format!(
-            "https://generativelanguage.googleapis.com/v1beta/models/{}:{}",
+            "{}/models/{}:{}",
+            &self.props.base_url,
             self.props.model_name,
             if self.streaming { "streamGenerateContent" } else { "generateContent" }
         );

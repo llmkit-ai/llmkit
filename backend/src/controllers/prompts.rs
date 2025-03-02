@@ -11,7 +11,7 @@ use std::convert::Infallible;
 use tokio::sync::mpsc;
 use uuid;
 
-use crate::{services::{llm::Llm, types::{llm_props::LlmProps, message::Message}}, AppError, AppState};
+use crate::{services::{llm_v2::Llm, types::chat_request::{LlmServiceRequest, Message}}, AppError, AppState};
 
 use super::types::{
     request::prompts::{CreatePromptRequest, UpdatePromptRequest, ApiCompletionRequest}, 
@@ -149,7 +149,7 @@ pub async fn api_completions(
             .unwrap_or(json!({}));
 
         
-        LlmProps::new_chat(
+        LlmServiceRequest::new_chat(
             prompt.clone(), 
             context, 
             payload.messages.clone()
@@ -183,7 +183,7 @@ pub async fn api_completions(
             })
             .unwrap_or(json!({}));
 
-        LlmProps::new_split_context(prompt.clone(), system_context, user_context).map_err(|e| {
+        LlmServiceRequest::new_split_context(prompt.clone(), system_context, user_context).map_err(|e| {
             tracing::error!("{}", e);
             AppError::InternalServerError("An error occurred processing prompt template".to_string())
         })?
@@ -195,13 +195,13 @@ pub async fn api_completions(
     
     // Apply request overrides if specified
     let llm_props = if let Some(max_tokens) = payload.max_tokens {
-        LlmProps { max_tokens, ..llm_props }
+        LlmServiceRequest { max_tokens, ..llm_props }
     } else {
         llm_props
     };
     
     let llm_props = if let Some(temperature) = payload.temperature {
-        LlmProps { temperature, ..llm_props }
+        LlmServiceRequest { temperature, ..llm_props }
     } else {
         llm_props
     };
@@ -213,7 +213,7 @@ pub async fn api_completions(
         false
     };
     
-    let llm_props = LlmProps {
+    let llm_props = LlmServiceRequest {
         json_mode,
         ..llm_props
     };
@@ -283,7 +283,7 @@ pub async fn api_completions_stream(
             })
             .unwrap_or(json!({}));
         
-        match LlmProps::new_chat(
+        match LlmServiceRequest::new_chat(
             prompt.clone(), 
             context, 
             payload.messages.clone()
@@ -321,7 +321,7 @@ pub async fn api_completions_stream(
             })
             .unwrap_or(json!({}));
 
-        match LlmProps::new_split_context(prompt.clone(), system_context, user_context) {
+        match LlmServiceRequest::new_split_context(prompt.clone(), system_context, user_context) {
             Ok(props) => props,
             Err(e) => {
                 tracing::error!("{}", e);
@@ -337,13 +337,13 @@ pub async fn api_completions_stream(
     
     // Apply request overrides if specified
     let llm_props = if let Some(max_tokens) = payload.max_tokens {
-        LlmProps { max_tokens, ..llm_props }
+        LlmServiceRequest { max_tokens, ..llm_props }
     } else {
         llm_props
     };
     
     let llm_props = if let Some(temperature) = payload.temperature {
-        LlmProps { temperature, ..llm_props }
+        LlmServiceRequest { temperature, ..llm_props }
     } else {
         llm_props
     };
@@ -355,7 +355,7 @@ pub async fn api_completions_stream(
         false
     };
     
-    let llm_props = LlmProps {
+    let llm_props = LlmServiceRequest {
         json_mode,
         ..llm_props
     };

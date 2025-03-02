@@ -117,7 +117,7 @@ impl<'a> LlmProvider for OpenaiProvider<'a> {
         println!("body: {}", body);
 
         let request = client
-            .post("https://api.openai.com/v1/chat/completions")
+            .post(format!("{}/chat/completions", &self.props.base_url))
             .header("Authorization", format!("Bearer {}", api_key))
             .json(&body);
 

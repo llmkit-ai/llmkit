@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
-use crate::services::types::message::Message;
+
+use crate::services::types::chat_request::Message;
 
 
 #[derive(Debug, Deserialize)]
@@ -30,7 +31,7 @@ pub struct UpdatePromptRequest {
     pub is_chat: bool
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize)]
 pub struct ChatExecuteRequest {
     /// Context for template variables (for the first message)
     #[serde(default)]

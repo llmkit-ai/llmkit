@@ -103,7 +103,7 @@ impl<'a> LlmProvider for DeepseekProvider<'a> {
         let body_string = body.to_string();
 
         let request = client
-            .post("https://api.deepseek.com/v1/chat/completions")
+            .post(format!("{}/chat/completions", &self.props.base_url))
             .header("Authorization", format!("Bearer {}", api_key))
             .json(&body);
 
