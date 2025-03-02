@@ -94,11 +94,28 @@ pub enum LlmError {
     #[error("Serialization error: {0}")]
     SerializationError(String),
     #[error("Deserialization error: {0}")]
-    DeserializationError(String),
+    DeserializationError(String)
+}
 
-    // Openrouter API Error
-    #[error("An error occured in the OpenrouterApi: {0}")]
-    OpenrouterApiError(#[from] openrouter_api::Error),
+impl From<openrouter_api::Error> for LlmError {
+    fn from(err: openrouter_api::Error) -> Self {
+        match err {
+            openrouter_api::Error::HttpError(e) => LlmError::Network(e),
+            openrouter_api::Error::ApiError { code, message, metadata: _ } => {
+                // Map based on status code
+                match code {
+                    401 | 403 => LlmError::Auth(message),
+                    404 => LlmError::NotFound(message),
+                    429 => LlmError::RateLimit(message),
+                    _ => LlmError::Provider(format!("API error ({}): {}", code, message))
+                }
+            },
+            openrouter_api::Error::ConfigError(msg) => LlmError::InvalidConfig(msg),
+            openrouter_api::Error::StructuredOutputNotSupported => LlmError::NotImplemented("Structured output not supported".to_string()),
+            openrouter_api::Error::SchemaValidationError(msg) => LlmError::DeserializationError(msg),
+            openrouter_api::Error::Unknown => LlmError::Internal("Unknown OpenRouter API error".to_string()),
+        }
+    }
 }
 
 #[derive(Debug)]

@@ -7,6 +7,7 @@ use axum::{
 use axum::middleware as axum_middleware;
 
 use middleware::auth::{self, user_auth_middleware};
+use services::types::llm_error::LlmError;
 use tower_cookies::CookieManagerLayer;
 use tracing_subscriber;
 
@@ -226,5 +227,50 @@ impl IntoResponse for AppError {
 impl From<anyhow::Error> for AppError {
     fn from(err: anyhow::Error) -> Self {
         AppError::Other(err)
+    }
+}
+
+impl From<LlmError> for AppError {
+    fn from(err: LlmError) -> Self {
+        match err {
+            // Auth errors
+            LlmError::Auth(msg) => AppError::Unauthorized(msg),
+            LlmError::InvalidApiKey => AppError::Unauthorized("API key invalid or expired".to_string()),
+            LlmError::InsufficientPermissions => AppError::Forbidden("Insufficient permissions".to_string()),
+            
+            // Rate limits
+            LlmError::RateLimit(msg) => AppError::TooManyRequests(msg),
+            LlmError::ProviderQuotaExceeded => AppError::TooManyRequests("Provider quota exceeded".to_string()),
+            
+            // Not found errors
+            LlmError::ModelNotFound(msg) => AppError::NotFound(msg),
+            LlmError::NotFound(msg) => AppError::NotFound(msg),
+            
+            // Bad request errors
+            LlmError::MissingField(msg) => AppError::BadRequest(format!("Missing field: {}", msg)),
+            LlmError::InvalidRole(msg) => AppError::BadRequest(format!("Invalid role: {}", msg)),
+            LlmError::UnsupportedMode(mode, context) => AppError::BadRequest(format!("{} not supported in {}", mode, context)),
+            LlmError::MissingSystemMessage => AppError::BadRequest("Missing system message".to_string()),
+            LlmError::MissingUserMessage => AppError::BadRequest("Missing user message".to_string()),
+            LlmError::PromptTooLong(current, limit) => AppError::BadRequest(format!("Prompt exceeds token limit: {}/{}", current, limit)),
+            LlmError::ContentPolicy(msg) => AppError::BadRequest(format!("Content policy violation: {}", msg)),
+            LlmError::InvalidConfig(msg) => AppError::BadRequest(format!("Invalid configuration: {}", msg)),
+            
+            // All network/http errors map to internal server error
+            LlmError::Http(status) => {
+                if status.as_u16() == 429 {
+                    AppError::TooManyRequests(format!("HTTP status {}", status))
+                } else if status.as_u16() == 404 {
+                    AppError::NotFound(format!("Resource not found (HTTP {})", status))
+                } else if status.as_u16() >= 400 && status.as_u16() < 500 {
+                    AppError::BadRequest(format!("HTTP error: {}", status))
+                } else {
+                    AppError::InternalServerError(format!("HTTP error: {}", status))
+                }
+            },
+            
+            // All other errors map to internal server error
+            _ => AppError::InternalServerError(format!("{}", err)),
+        }
     }
 }

@@ -73,7 +73,6 @@ impl<'a> OpenrouterProvider<'a> {
         };
 
         let response = self.client.chat_completion(request).await?;
-
         Ok(response.into())
     }
 

@@ -1,7 +1,6 @@
-use serde::{Deserialize, Serialize};
-use chrono::Utc;
+use serde::Serialize;
 
-use crate::{db::types::{log::LogRowModel, prompt::PromptRowWithModel}, services::types::chat_request::Message};
+use crate::db::types::prompt::PromptRowWithModel;
 
 
 // GET PROMPT RESPONSE

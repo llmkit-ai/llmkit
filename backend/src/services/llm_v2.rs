@@ -158,7 +158,6 @@ impl Llm {
         let reasoning_tokens = None;
         let mut raw_response: Option<String> = None;
         let mut status = Some(500); // Default to error status
-        let mut content = String::new();
 
         // Serialize the request for logging
         let request_body = serde_json::to_string(&self.props)
@@ -170,7 +169,7 @@ impl Llm {
             let error = LlmError::UnsupportedMode("Json".to_string(), "Chat".to_string());
 
             // Log the error
-            let raw_response = Some(format!("{{\"error\": \"{}\"}}", error));
+            raw_response = Some(format!("{{\"error\": \"{}\"}}", error));
             let provider_response_id = uuid::Uuid::new_v4().to_string();
 
             // Log the failed request

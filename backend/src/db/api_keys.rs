@@ -1,17 +1,16 @@
 use anyhow::Result;
 use rand::{distr::Alphanumeric, Rng};
-use ring::pbkdf2;
-use std::num::NonZeroU32;
+use argon2::{
+    password_hash::{
+        rand_core::OsRng,
+        PasswordHasher, SaltString
+    },
+    Argon2, PasswordHash, PasswordVerifier
+};
 
 use crate::db::types::api_key::ApiKeyRow;
 
 const API_KEY_PREFIX: &str = "llmkit_";
-static PBKDF2_ALG: pbkdf2::Algorithm = pbkdf2::PBKDF2_HMAC_SHA256;
-const CREDENTIAL_LEN: usize = 32;
-const SALT: &[u8] = b"llmkitsalt"; // In a real app, use a unique salt per key
-const PBKDF2_ITERATIONS: NonZeroU32 = unsafe { NonZeroU32::new_unchecked(100_000) };
-
-type Credential = [u8; CREDENTIAL_LEN];
 
 #[derive(Clone, Debug)]
 pub struct ApiKeyRepository {
@@ -33,44 +32,37 @@ impl ApiKeyRepository {
         format!("{}{}", API_KEY_PREFIX, key_part)
     }
 
-    fn hash_api_key(api_key: &str) -> String {
-        let mut credential = [0u8; CREDENTIAL_LEN];
+    fn hash_api_key(api_key: &str) -> Result<String, password_hash::Error> {
+        let salt = SaltString::generate(&mut OsRng);
+        let argon2 = Argon2::default();
         
-        pbkdf2::derive(
-            PBKDF2_ALG,
-            PBKDF2_ITERATIONS,
-            SALT,
-            api_key.as_bytes(),
-            &mut credential,
-        );
+        // Hash the API key
+        let api_key_hash = argon2
+            .hash_password(api_key.as_bytes(), &salt)?
+            .to_string();
         
-        hex::encode(credential)
+        Ok(api_key_hash)
     }
 
     pub fn verify_api_key(provided_key: &str, stored_hash: &str) -> bool {
-        let decoded_hash = match hex::decode(stored_hash) {
+        let parsed_hash = match PasswordHash::new(stored_hash) {
             Ok(h) => h,
-            Err(_) => return false,
+            Err(_) => return false
         };
-        
-        let credential: Credential = match decoded_hash.try_into() {
-            Ok(c) => c,
-            Err(_) => return false,
-        };
-        
-        pbkdf2::verify(
-            PBKDF2_ALG,
-            PBKDF2_ITERATIONS,
-            SALT,
-            provided_key.as_bytes(),
-            &credential,
-        )
-        .is_ok()
+
+        match Argon2::default().verify_password(provided_key.as_bytes(), &parsed_hash) {
+            Ok(()) => true,
+            Err(e) => {
+                tracing::error!("Failed to verify API key | {}", e);
+                false
+            }
+        }
     }
 
     pub async fn create_api_key(&self, name: &str) -> Result<(i64, String)> {
         let key = Self::generate_api_key();
-        let key_hash = Self::hash_api_key(&key);
+        let key_hash = Self::hash_api_key(&key)
+            .map_err(|e| anyhow::anyhow!("Failed to hash API key: {}", e))?;
         
         let id = sqlx::query!(
             r#"
@@ -122,21 +114,36 @@ impl ApiKeyRepository {
         Ok(rows_affected > 0)
     }
 
-    pub async fn verify_any_api_key(&self, api_key: &str) -> Result<bool> {
-        let keys = sqlx::query!(
+    pub async fn find_api_key_by_key(&self, api_key: &str) -> Result<Option<ApiKeyRow>> {
+        // We need to query and check each API key since we need to verify
+        // the plaintext API key against the stored hash using Argon2
+        let keys = sqlx::query_as!(
+            ApiKeyRow,
             r#"
-            SELECT key_hash FROM api_key
+            SELECT 
+                id, 
+                name,
+                key_hash,
+                created_at,
+                updated_at
+            FROM api_key
             "#
         )
         .fetch_all(&self.pool)
         .await?;
         
+        // Find the first key that verifies
         for key in keys {
             if Self::verify_api_key(api_key, &key.key_hash) {
-                return Ok(true);
+                return Ok(Some(key));
             }
         }
         
-        Ok(false)
+        Ok(None)
+    }
+
+    pub async fn verify_any_api_key(&self, api_key: &str) -> Result<bool> {
+        let key = self.find_api_key_by_key(api_key).await?;
+        Ok(key.is_some())
     }
 }
