@@ -12,7 +12,7 @@ use super::types::{
     },
 };
 use crate::{
-    services::{llm_v2::Llm, types::chat_request::LlmServiceRequest},
+    services::{llm::Llm, types::chat_request::LlmServiceRequest},
     AppError, AppState,
 };
 

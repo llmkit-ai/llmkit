@@ -1,4 +1,4 @@
-pub mod llm_v2;
+pub mod llm;
 pub mod providers;
 pub mod types;
 pub mod utils;
