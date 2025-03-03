@@ -30,10 +30,17 @@ pub async fn create_eval_test(
     State(state): State<AppState>,
     Json(request): Json<CreateEvalTestRequest>,
 ) -> Result<Json<PromptEvalResponse>, AppError> {
+    // For system input, serialize the JSON Value to a string if present
+    let system_input = request.system_prompt_input.map(|val| val.to_string());
+    
+    // For user input, either use it as JSON or as plain text depending on the prompt type
+    let user_input = request.user_prompt_input.to_string();
+    
     let sample = state.db.prompt_eval
         .create(
             request.prompt_id,
-            sqlx::types::Json(request.input_data),
+            system_input,
+            user_input,
             "human",
             request.name,
         )
@@ -49,9 +56,14 @@ pub async fn update_eval_test(
 ) -> Result<Json<PromptEvalResponse>, AppError> {
     let existing = state.db.prompt_eval.get_by_id(id).await?;
     
+    // For system input, serialize the JSON Value to a string if present
+    let system_input = request.system_prompt_input.map(|val| val.to_string());
+    let user_input = request.user_prompt_input;
+    
     let result = state.db.prompt_eval.update(
         existing.id,
-        request.input_data.to_string(),
+        system_input,
+        user_input,
         request.name
     ).await?;
 

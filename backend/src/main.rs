@@ -77,40 +77,17 @@ async fn main() -> Result<()> {
         .route("/ui/settings/api-keys", get(list_api_keys).post(create_api_key))
         .route("/ui/settings/api-keys/{id}", delete(delete_api_key))
         .route("/ui/prompts", post(create_prompt).get(list_prompts))
-        .route(
-            "/ui/prompts/{id}",
-            get(get_prompt).put(update_prompt).delete(delete_prompt),
-        )
-        .route(
-            "/ui/prompts/{id}/prompt-evals",
-            get(get_eval_test_by_prompt),
-        )
-        .route(
-            "/ui/prompts/{id}/performance",
-            get(get_eval_performance_by_prompt_id),
-        )
+        .route("/ui/prompts/{id}", get(get_prompt).put(update_prompt).delete(delete_prompt))
+        .route("/ui/prompts/{id}/prompt-evals", get(get_eval_test_by_prompt))
+        .route("/ui/prompts/{id}/performance", get(get_eval_performance_by_prompt_id))
         .route("/ui/prompts/execute", post(api_completions))
         .route("/ui/prompts/execute/stream", post(api_completions_stream))
         .route("/ui/prompts/execute/chat", post(api_completions))
-        .route(
-            "/ui/prompts/execute/chat/stream",
-            post(api_completions_stream),
-        )
+        .route("/ui/prompts/execute/chat/stream", post(api_completions_stream))
         .route("/ui/prompt-evals", post(create_eval_test))
-        .route(
-            "/ui/prompt-evals/{id}",
-            get(get_eval_test_by_id)
-                .put(update_eval_test)
-                .delete(delete_eval_test),
-        )
-        .route(
-            "/ui/prompt-eval-runs/{prompt_id}/version/{prompt_version_id}",
-            post(execute_eval_run).get(get_eval_runs_by_prompt_version),
-        )
-        .route(
-            "/ui/prompt-eval-runs/{id}",
-            get(get_eval_run_by_id).put(update_eval_run_score),
-        )
+        .route("/ui/prompt-evals/{id}", get(get_eval_test_by_id).put(update_eval_test).delete(delete_eval_test))
+        .route("/ui/prompt-eval-runs/{prompt_id}/version/{prompt_version_id}", post(execute_eval_run).get(get_eval_runs_by_prompt_version))
+        .route("/ui/prompt-eval-runs/{id}",get(get_eval_run_by_id).put(update_eval_run_score))
         .route("/ui/models", get(list_models))
         .route("/ui/logs", get(list_logs))
         .route("/ui/logs/count", get(get_logs_count))

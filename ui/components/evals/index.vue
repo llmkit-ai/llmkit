@@ -73,8 +73,10 @@
       <EvalsCreatePromptEvalInput
         class="mt-6"
         :prompt="props.prompt"
-        :sample="editingSample"
+        :eval="editingSample"
         :key="`${props.prompt.id}-edit-${editingSample?.id}`"
+        @cancel="view = 'view'"
+        @updated="view = 'view'"
       />
     </div>
 

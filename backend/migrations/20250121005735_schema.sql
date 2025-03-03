@@ -64,7 +64,8 @@ CREATE TABLE prompt_eval (
     prompt_id INTEGER NOT NULL,
     evaluation_type TEXT NOT NULL CHECK(evaluation_type IN ('human', 'automated')) DEFAULT 'human',
     name TEXT NOT NULL,
-    input_data TEXT NOT NULL,
+    system_prompt_input TEXT,
+    user_prompt_input TEXT NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (prompt_id) REFERENCES prompt(id)
