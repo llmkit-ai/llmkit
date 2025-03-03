@@ -82,33 +82,37 @@ impl LlmServiceRequest {
             
             new_messages
         } else {
+            let user_content = request.messages.iter()
+                .find(|msg| msg.is_user())
+                .map(|msg| msg.content().to_string())
+                .unwrap_or("".to_string());
+
             // Simple mode - system + user message with template
             // For dynamic_both, we need to extract user context separately
-            let user_ctx = if prompt.prompt_type == "dynamic_both" {
-                let user_context = request.messages.iter()
-                    .find(|msg| msg.is_user())
-                    .and_then(|msg| serde_json::from_str::<Value>(&msg.content()).ok())
-                    .unwrap_or(Value::Object(serde_json::Map::new()));
+            if prompt.prompt_type == "dynamic_both" {
+                let user_context = serde_json::from_str::<Value>(&user_content)
+                    .map_err(|_| LlmServiceRequestError::ChatMessagesInputError)?;
                 
-                let mut ctx = Context::new();
+                let mut user_ctx = Context::new();
                 if let Value::Object(context) = user_context {
                     for (k, v) in context {
-                        ctx.insert(k, &v);
+                        user_ctx.insert(k, &v);
                     }
                 }
-                ctx
+                
+                let rendered_user_prompt = tera.render("user_prompt", &user_ctx)
+                    .map_err(|e| LlmServiceRequestError::TeraRenderError(e))?;
+                
+                vec![
+                    ChatCompletionRequestMessage::System { content: rendered_system_prompt, name: None },
+                    ChatCompletionRequestMessage::User { content: rendered_user_prompt, name: None }
+                ]
             } else {
-                // For other types, use the same context as system
-                system_ctx.clone()
-            };
-            
-            let rendered_user_prompt = tera.render("user_prompt", &user_ctx)
-                .map_err(|e| LlmServiceRequestError::TeraRenderError(e))?;
-            
-            vec![
-                ChatCompletionRequestMessage::System { content: rendered_system_prompt, name: None },
-                ChatCompletionRequestMessage::User { content: rendered_user_prompt, name: None }
-            ]
+                vec![
+                    ChatCompletionRequestMessage::System { content: rendered_system_prompt, name: None },
+                    ChatCompletionRequestMessage::User { content: user_content, name: None }
+                ]
+            }
         };
         
         // Create request with all properties and overrides

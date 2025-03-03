@@ -2,7 +2,6 @@ use axum::{
     extract::{Path, State},
     Json,
 };
-use serde_json::Value;
 use uuid::Uuid;
 
 use super::types::{
@@ -12,6 +11,7 @@ use super::types::{
     },
 };
 use crate::{
+    common::types::message::ChatCompletionRequest,
     services::{llm::Llm, types::chat_request::LlmServiceRequest},
     AppError, AppState,
 };
@@ -26,11 +26,41 @@ pub async fn execute_eval_run(
     let mut eval_runs = vec![];
 
     for e in evals.iter() {
-        let payload: Value = serde_json::from_str(&e.input_data).map_err(|_| {
-            AppError::InternalServerError("Something went parsing input data".to_string())
-        })?;
+        // Parse system_prompt_input if present
+        let system_content = match &e.system_prompt_input {
+            Some(system_json_str) => system_json_str.clone(),
+            None => "{}".to_string() // Empty object if no system input
+        };
+        
+        // Always use user_prompt_input
+        let user_content = e.user_prompt_input.clone();
+        
+        // Create a ChatCompletionRequest with the inputs
+        let chat_request = ChatCompletionRequest {
+            model: prompt.key.clone(),
+            messages: vec![
+                // System message with context
+                crate::common::types::message::ChatCompletionRequestMessage::System {
+                    content: system_content,
+                    name: None
+                },
+                // User message with content
+                crate::common::types::message::ChatCompletionRequestMessage::User {
+                    content: user_content,
+                    name: None
+                }
+            ],
+            stream: None,
+            response_format: None,
+            tools: None,
+            provider: None,
+            models: None,
+            transforms: None,
+            max_tokens: None,
+            temperature: None,
+        };
 
-        let llm_props = LlmServiceRequest::new(prompt.clone(), payload).map_err(|e| {
+        let llm_props = LlmServiceRequest::new(prompt.clone(), chat_request).map_err(|e| {
             tracing::error!("{}", e);
             AppError::InternalServerError("An error occured processing prompt template".to_string())
         })?;

@@ -46,19 +46,21 @@ impl PromptEvalTestRepository {
     pub async fn create(
         &self,
         prompt_id: i64,
-        input_data: sqlx::types::Json<Value>,
+        system_prompt_input: Option<String>,
+        user_prompt_input: String,
         evaluation_type: &str,
         name: Option<String>,
     ) -> Result<PromptEval> {
         sqlx::query_as!(
             PromptEval,
             r#"
-            INSERT INTO prompt_eval (prompt_id, input_data, name, evaluation_type)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO prompt_eval (prompt_id, system_prompt_input, user_prompt_input, name, evaluation_type)
+            VALUES (?, ?, ?, ?, ?)
             RETURNING *
             "#,
             prompt_id,
-            input_data,
+            system_prompt_input,
+            user_prompt_input,
             name,
             evaluation_type
         )
@@ -67,19 +69,21 @@ impl PromptEvalTestRepository {
         .map_err(Into::into)
     }
 
-    pub async fn update(&self, id: i64, input_data: String, name: String) -> Result<PromptEval> {
+    pub async fn update(&self, id: i64, system_prompt_input: Option<String>, user_prompt_input: String, name: String) -> Result<PromptEval> {
         sqlx::query_as!(
             PromptEval,
             r#"
             UPDATE prompt_eval
             SET 
-                input_data = ?,
+                system_prompt_input = ?,
+                user_prompt_input = ?,
                 name = ?,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
             RETURNING *
             "#,
-            input_data,
+            system_prompt_input,
+            user_prompt_input,
             name,
             id
         )

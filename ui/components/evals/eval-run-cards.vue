@@ -45,9 +45,15 @@
             </div>
           </dl>
           <dl v-if="currentEval" class="grid grid-cols-1 sm:grid-cols-2">
+            <div v-if="currentEval.system_prompt_input" class="px-4 pb-4 sm:col-span-2 sm:px-0">
+              <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">System input data</dt>
+              <dd class="text-sm/6 text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap bg-neutral-100 dark:bg-neutral-800 p-2">{{ JSON.parse(currentEval.system_prompt_input) }}</dd>
+            </div>
             <div class="px-4 pb-4 sm:col-span-2 sm:px-0">
-              <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">Input data</dt>
-              <dd class="text-sm/6 text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap bg-neutral-100 dark:bg-neutral-800 p-2">{{ JSON.parse(currentEval.input_data) }}</dd>
+              <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">User input data</dt>
+              <dd class="text-sm/6 text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap bg-neutral-100 dark:bg-neutral-800 p-2">
+                {{ isJson(currentEval.user_prompt_input) ? JSON.parse(currentEval.user_prompt_input) : currentEval.user_prompt_input }}
+              </dd>
             </div>
           </dl>
           <dl class="grid grid-cols-1 sm:grid-cols-2">
@@ -101,6 +107,16 @@ const currentEval = computed(() => {
   return props.evals.find(e => e.id === evalId)
 })
 
+
+// Helper function to check if a string is valid JSON
+function isJson(str: string): boolean {
+  try {
+    JSON.parse(str);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
 
 async function executeUpdateEvalRunScore(score: number) {
   try {
