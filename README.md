@@ -38,19 +38,17 @@ LLMKit is a comprehensive toolkit for managing, testing, and deploying LLM promp
 
 ## Overview
 
-LLMKit provides a unified interface for working with various LLM providers (OpenAI, Anthropic, Google Gemini, etc.) through a consistent API. It solves several key challenges in LLM prompt engineering:
+Llmkit provides the best way to dynamically craft prompts with modern template syntax, manage, version, test, and run evals on your prompts across any provider and any model. 
 
-- **Prompt Versioning**: Track changes to prompts over time
-- **Template Management**: Use powerful templating for dynamic prompts
-- **Performance Evaluation**: Test and measure prompt effectiveness
-- **Provider Abstraction**: Switch between different LLM providers seamlessly
-- **API Compatibility**: Drop-in replacement for OpenAI's API
+## Mission
+
+Our mission is to make prompt crafting dynamic, prompt management safe, and prompt evaluations simple.
 
 ## Key Features
 
-- **Prompt Versioning**: Track changes and improvements to prompts over time
 - **Template Variables**: Dynamic system and user prompts with Liquid templating
 - **Prompt Evaluation**: Create test sets and measure prompt performance
+- **Prompt Versioning**: Track changes to prompts over time
 - **OpenAI Compatible API**: Use with existing OpenAI client libraries
 - **Provider Integration**: Support for multiple LLM providers with a unified API
 
@@ -76,7 +74,7 @@ LLMKit supports three types of prompts:
 
 ### Template Variables
 
-LLMKit uses a powerful templating system based on Liquid syntax:
+LLMKit uses a jinja style templating system syntax:
 
 #### Variable Substitution
 ```
@@ -101,24 +99,6 @@ Here are the topics to discuss:
 {% endfor %}
 ```
 
-### JSON-based Input
-
-To populate template variables, you pass a JSON object as the system or user message:
-
-```javascript
-// System message with context variables
-const systemMessage = {
-  "role": "system",
-  "content": JSON.stringify({
-    "assistant_name": "Alex",
-    "user_name": "Jordan",
-    "formal_tone": true,
-    "topics": ["AI", "Machine Learning", "Natural Language Processing"]
-  })
-}
-```
-
-This JSON is automatically parsed and applied to the template, making your prompts dynamic and adaptable.
 
 ### OpenAI Compatibility
 
