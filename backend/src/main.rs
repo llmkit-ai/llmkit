@@ -53,8 +53,6 @@ async fn main() -> Result<()> {
     let data = DbData::new(&database_url).await?;
     let app_state = AppState::new(data).await;
 
-    // Build separate routers for different auth requirements
-
     // API routes that require API key auth
     let api_routes = Router::new()
         .route("/chat/completions", post(api_completions))

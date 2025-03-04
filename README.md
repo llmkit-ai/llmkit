@@ -164,49 +164,76 @@ LLMKit's evaluation system allows you to:
 - **Styling**: Tailwind CSS
 - **State Management**: Vue Composables
 
+## Requirements
+
+### Required
+
+- **Rust Toolchain**: Latest stable version of Rust and Cargo
+- **OpenRouter API Key**: You must have an OpenRouter API key to use LLMKit
+- **SQLite**: For database functionality
+
+### Optional Dependencies
+
+- **Node.js 16+** or **Bun**: For frontend development
+- **Docker & Docker Compose**: For containerized deployment
+
 ## Setup and Installation
 
-### Backend Setup
+### Quick Start (Recommended)
 
-#### Prerequisites
+The easiest way to get started with LLMKit is using the `llmkit` command:
 
-- Rust toolchain (latest stable)
-- SQLx CLI for database management
-- SQLite
-
-#### Installation
-
-1. Install SQLx CLI:
+1. Install the command:
 ```bash
-cargo install sqlx-cli
+./install.sh
 ```
 
-2. Set the database URL:
+2. Start the application:
 ```bash
-export DATABASE_URL="sqlite:llmkit.db"
+llmkit start
 ```
 
-3. Create the database and run migrations:
+3. **IMPORTANT**: Set your OpenRouter API Key
+   - Edit the `.env` file in the `backend` directory
+   - Add your OpenRouter API key: `OPENROUTER_API_KEY=your_key_here`
+   - Restart LLMKit if it's already running
+
+This command will:
+- Create the SQLite database if it doesn't exist
+- Run all necessary migrations
+- Set up the .env file if it doesn't exist
+- Start both the backend and frontend servers
+
+The backend will be available at `http://localhost:8000` and the UI at `http://localhost:3000`.
+
+### Manual Setup
+
+If you prefer to set things up manually, follow these steps:
+
+#### Backend Setup
+
+1. Create a `.env` file in the backend directory:
+```bash
+cp .env.example backend/.env
+```
+
+2. Edit the `.env` file with your OpenRouter API key and other settings:
+```bash
+RUST_LOG=info
+DATABASE_URL="sqlite:absolute/path/to/backend/llmkit.db"
+OPENROUTER_API_KEY=your_openrouter_key_here
+JWT_SECRET=your_secure_random_string
+```
+
+3. Start the server:
 ```bash
 cd backend
-sqlx database create
-sqlx migrate run
-```
-
-4. Start the server:
-```bash
 cargo run
 ```
 
 The server will start on `http://localhost:8000`.
 
-### Frontend Setup
-
-#### Prerequisites
-
-- Node.js 16+ or Bun
-
-#### Installation
+#### Frontend Setup
 
 1. Install dependencies:
 ```bash
@@ -223,17 +250,12 @@ The UI will be available at `http://localhost:3000`.
 
 ### Docker Deployment
 
-#### Prerequisites
-
-- Docker
-- Docker Compose
-
 #### Installation
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/llmkit-rs.git
-cd llmkit-rs
+git clone https://github.com/yourusername/llmkit.git
+cd llmkit
 ```
 
 2. Create a `.env` file in the root directory:
@@ -244,10 +266,10 @@ cp .env.example .env
 3. Edit the `.env` file with your API keys and a secure JWT secret:
 ```bash
 # Required
+OPENROUTER_API_KEY=your_openrouter_key_here
 JWT_SECRET=your_secure_random_string
 
 # Optional - add only the providers you need
-OPENAI_API_KEY=your_openai_key
 ANTHROPIC_API_KEY=your_anthropic_key
 # etc.
 ```
@@ -258,6 +280,23 @@ docker-compose up -d
 ```
 
 The backend will be available at `http://localhost:8000` and the UI at `http://localhost:3000`.
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Red Warning About OpenRouter API Key**
+   - This means you need to add your OpenRouter API key to the `.env` file in the backend directory
+   - Get an API key from [OpenRouter](https://openrouter.ai)
+   - Add it to your `.env` file and restart LLMKit
+
+2. **Database Issues**
+   - Make sure the directory for your database is writable
+   - Check that the `DATABASE_URL` in your `.env` points to a valid location
+
+3. **Connection Refused Errors**
+   - Ensure both backend and frontend servers are running
+   - Check that ports 8000 and 3000 are available and not blocked by firewall
 
 ## Usage
 
