@@ -2,28 +2,39 @@
 
 LLMKit is a comprehensive toolkit for managing, testing, and deploying LLM prompts with a focus on versioning, evaluation, and developer-friendly workflows.
 
-![LLMKit Banner](docs/images/banner.png) <!-- [SCREENSHOT PLACEHOLDER] -->
+![LLMKit Banner](assets/banner.png) <!-- [SCREENSHOT PLACEHOLDER] -->
 
 ## Table of Contents
 
-- [Overview](#overview)
-- [Key Features](#key-features)
-- [How It Works](#how-it-works)
-  - [Prompt Architecture](#prompt-architecture)
-  - [Template Variables](#template-variables)
-  - [OpenAI Compatibility](#openai-compatibility)
-  - [Prompt Evaluation](#prompt-evaluation)
-- [Technical Stack](#technical-stack)
-- [Setup and Installation](#setup-and-installation)
-  - [Backend Setup](#backend-setup)
-  - [Frontend Setup](#frontend-setup)
-  - [Docker Deployment](#docker-deployment)
-- [Usage](#usage)
-  - [Managing Prompts](#managing-prompts)
-  - [Testing Prompts](#testing-prompts)
-  - [API Integration](#api-integration)
-- [Contributing](#contributing)
-- [License](#license)
+- [LLMKit](#llmkit)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Key Features](#key-features)
+  - [How It Works](#how-it-works)
+    - [Prompt Architecture](#prompt-architecture)
+    - [Template Variables](#template-variables)
+      - [Variable Substitution](#variable-substitution)
+      - [Conditional Logic](#conditional-logic)
+      - [Loops](#loops)
+    - [JSON-based Input](#json-based-input)
+    - [OpenAI Compatibility](#openai-compatibility)
+    - [Prompt Evaluation](#prompt-evaluation)
+    - [Prompt Testing](#prompt-testing)
+  - [Technical Stack](#technical-stack)
+    - [Backend](#backend)
+    - [Frontend](#frontend)
+  - [Requirements](#requirements)
+    - [Required](#required)
+    - [Optional Dependencies](#optional-dependencies)
+  - [Setup and Installation](#setup-and-installation)
+    - [Quick Start (Recommended)](#quick-start-recommended)
+    - [Manual Setup](#manual-setup)
+      - [Backend Setup](#backend-setup)
+      - [Frontend Setup](#frontend-setup)
+    - [Docker Deployment](#docker-deployment)
+      - [Installation](#installation)
+  - [Contributing](#contributing)
+  - [License](#license)
 
 ## Overview
 
@@ -62,7 +73,7 @@ LLMKit supports three types of prompts:
    - Both system and user prompts can contain variables
    - Ideal for structured inputs with consistent format
 
-![Prompt Architecture](docs/images/prompt-types.png) <!-- [SCREENSHOT PLACEHOLDER] -->
+![Prompt Architecture](assets/prompt_syntax.png) <!-- [SCREENSHOT PLACEHOLDER] -->
 
 ### Template Variables
 
@@ -143,11 +154,25 @@ response = client.chat.completions.create(
 LLMKit's evaluation system allows you to:
 
 1. Create evaluation test sets with specific inputs
+![Evaluation Creation](assets/eval_create.png)
+2. Run those inputs against different prompt versions
+3. Score and compare performance
+![Evaluation Scoring](assets/eval_score.png)
+4. Track improvements over time
+![Evaluation Dashboard](assets/eval_dashboard.png)
+
+
+### Prompt Testing
+
+LLMKit's evaluation system allows you to:
+
+1. Create evaluation test sets with specific inputs
 2. Run those inputs against different prompt versions
 3. Score and compare performance
 4. Track improvements over time
 
-![Evaluation Dashboard](docs/images/eval-dashboard.png) <!-- [SCREENSHOT PLACEHOLDER] -->
+![Evaluation Dashboard](assets/testing-1.png)
+![Evaluation Dashboard](assets/testing-chat.png)
 
 ## Technical Stack
 
@@ -175,6 +200,7 @@ LLMKit's evaluation system allows you to:
 ### Optional Dependencies
 
 - **Node.js 16+** or **Bun**: For frontend development
+- **sqlx-cli**: you can install this with `cargo install sqlx-cli`
 - **Docker & Docker Compose**: For containerized deployment
 
 ## Setup and Installation
@@ -281,79 +307,10 @@ docker-compose up -d
 
 The backend will be available at `http://localhost:8000` and the UI at `http://localhost:3000`.
 
-## Troubleshooting
-
-### Common Issues
-
-1. **Red Warning About OpenRouter API Key**
-   - This means you need to add your OpenRouter API key to the `.env` file in the backend directory
-   - Get an API key from [OpenRouter](https://openrouter.ai)
-   - Add it to your `.env` file and restart LLMKit
-
-2. **Database Issues**
-   - Make sure the directory for your database is writable
-   - Check that the `DATABASE_URL` in your `.env` points to a valid location
-
-3. **Connection Refused Errors**
-   - Ensure both backend and frontend servers are running
-   - Check that ports 8000 and 3000 are available and not blocked by firewall
-
-## Usage
-
-### Managing Prompts
-
-![Prompt Management](docs/images/prompt-management.png) <!-- [SCREENSHOT PLACEHOLDER] -->
-
-1. Create a new prompt from the Prompts page
-2. Select a prompt type (static, dynamic system, or dynamic both)
-3. Enter your prompt template with variables as needed
-4. Choose the LLM provider and model
-5. Configure parameters like temperature and max tokens
-6. Save and test your prompt
-
-### Testing Prompts
-
-![Prompt Testing](docs/images/prompt-testing.png) <!-- [SCREENSHOT PLACEHOLDER] -->
-
-For chat prompts:
-1. Open the prompt testing interface
-2. Enter user messages and see the responses
-3. For dynamic prompts, provide JSON for variable substitution
-
-For one-shot prompts:
-1. Enter the input text or JSON structure
-2. Submit the test request
-3. View the response and performance metrics
-
-### API Integration
-
-Use your prompts in external applications:
-
-1. Generate an API key from the Settings page
-2. Use the OpenAI client library for your programming language
-3. Point the client to your LLMKit server
-4. Use your prompt keys as model names
-
-Example (Python):
-```python
-from openai import OpenAI
-
-client = OpenAI(
-    api_key="llmkit_your_api_key",
-    base_url="http://your_llmkit_server:8000/v1",
-)
-
-response = client.chat.completions.create(
-    model="YOUR-PROMPT-KEY",
-    messages=[
-        {"role": "user", "content": "Hello!"}
-    ]
-)
-```
 
 ## Contributing
 
-Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+Feel free to fork and open a PR for any changes you want to see. Feel free to create an issue first to see if it's something we are interesting in supporting or working if you have a feature request or idea.
 
 ## License
 
