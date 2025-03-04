@@ -1,14 +1,15 @@
-# LLMKit
+# Llmkit
 
-LLMKit is a comprehensive toolkit for managing, testing, and deploying LLM prompts with a focus on versioning, evaluation, and developer-friendly workflows.
+Llmkit is a comprehensive toolkit for managing, testing, and deploying LLM prompts with a focus on versioning, evaluation, and developer-friendly workflows.
 
-![LLMKit Banner](assets/banner.png) <!-- [SCREENSHOT PLACEHOLDER] -->
+![Llmkit Banner](assets/banner.png) <!-- [SCREENSHOT PLACEHOLDER] -->
 
 ## Table of Contents
 
-- [LLMKit](#llmkit)
+- [Llmkit](#llmkit)
   - [Table of Contents](#table-of-contents)
   - [Overview](#overview)
+  - [Mission](#mission)
   - [Key Features](#key-features)
   - [How It Works](#how-it-works)
     - [Prompt Architecture](#prompt-architecture)
@@ -16,10 +17,10 @@ LLMKit is a comprehensive toolkit for managing, testing, and deploying LLM promp
       - [Variable Substitution](#variable-substitution)
       - [Conditional Logic](#conditional-logic)
       - [Loops](#loops)
-    - [JSON-based Input](#json-based-input)
     - [OpenAI Compatibility](#openai-compatibility)
     - [Prompt Evaluation](#prompt-evaluation)
     - [Prompt Testing](#prompt-testing)
+    - [Detailed Tracing](#detailed-tracing)
   - [Technical Stack](#technical-stack)
     - [Backend](#backend)
     - [Frontend](#frontend)
@@ -56,7 +57,7 @@ Our mission is to make prompt crafting dynamic, prompt management safe, and prom
 
 ### Prompt Architecture
 
-LLMKit supports three types of prompts:
+Llmkit supports three types of prompts:
 
 1. **Static System Prompt**: Basic prompt with fixed system instructions
    - Great for simple chat interfaces
@@ -74,7 +75,7 @@ LLMKit supports three types of prompts:
 
 ### Template Variables
 
-LLMKit uses a jinja style templating system syntax:
+Llmkit uses a jinja style templating system syntax:
 
 #### Variable Substitution
 ```
@@ -102,17 +103,17 @@ Here are the topics to discuss:
 
 ### OpenAI Compatibility
 
-LLMKit provides 100% compatible API endpoints matching OpenAI's API:
+Llmkit provides 100% compatible API endpoints matching OpenAI's API:
 
 - **Standard API**: `/v1/chat/completions`
 - **Streaming API**: `/v1/chat/completions/stream`
 
-This means you can use any OpenAI client library with LLMKit:
+This means you can use any OpenAI client library with Llmkit:
 
 ```python
 from openai import OpenAI
 
-# Point to LLMKit server
+# Point to Llmkit server
 client = OpenAI(
     api_key="llmkit_yourkey",
     base_url="http://localhost:8000/v1",
@@ -120,7 +121,7 @@ client = OpenAI(
 
 # Use like normal OpenAI client
 response = client.chat.completions.create(
-    model="YOUR-PROMPT-KEY",  # Use your LLMKit prompt key as the model name
+    model="YOUR-PROMPT-KEY",  # Use your Llmkit prompt key as the model name
     messages=[
         {"role": "system", "content": '{"name": "Alex", "expertise": "AI"}'},
         {"role": "user", "content": "Tell me about machine learning"}
@@ -130,7 +131,7 @@ response = client.chat.completions.create(
 
 ### Prompt Evaluation
 
-LLMKit's evaluation system allows you to:
+Llmkit's evaluation system allows you to:
 
 1. Create evaluation test sets with specific inputs
 ![Evaluation Creation](assets/eval_create.png)
@@ -143,15 +144,20 @@ LLMKit's evaluation system allows you to:
 
 ### Prompt Testing
 
-LLMKit's evaluation system allows you to:
+Llmkit's prompt testing system allows you to:
 
-1. Create evaluation test sets with specific inputs
-2. Run those inputs against different prompt versions
-3. Score and compare performance
-4. Track improvements over time
+1. Easily create any type of prompt (simple, dynamic)
+2. Test in chat or completion mode
+3. Input dynamic variables when needed
 
-![Evaluation Dashboard](assets/testing-1.png)
-![Evaluation Dashboard](assets/testing-chat.png)
+![Evaluation Dashboard](assets/testing_1.png)
+![Evaluation Dashboard](assets/testing_chat.png)
+
+### Detailed Tracing
+
+Every LLM call has a detailed trace that you can view. directly in the llmkit UI.
+
+![Evaluation Dashboard](assets/trace.png)
 
 ## Technical Stack
 
@@ -173,7 +179,7 @@ LLMKit's evaluation system allows you to:
 ### Required
 
 - **Rust Toolchain**: Latest stable version of Rust and Cargo
-- **OpenRouter API Key**: You must have an OpenRouter API key to use LLMKit
+- **OpenRouter API Key**: You must have an OpenRouter API key to use Llmkit
 - **SQLite**: For database functionality
 
 ### Optional Dependencies
@@ -186,7 +192,7 @@ LLMKit's evaluation system allows you to:
 
 ### Quick Start (Recommended)
 
-The easiest way to get started with LLMKit is using the `llmkit` command:
+The easiest way to get started with Llmkit is using the `llmkit` command:
 
 1. Install the command:
 ```bash
@@ -201,7 +207,7 @@ llmkit start
 3. **IMPORTANT**: Set your OpenRouter API Key
    - Edit the `.env` file in the `backend` directory
    - Add your OpenRouter API key: `OPENROUTER_API_KEY=your_key_here`
-   - Restart LLMKit if it's already running
+   - Restart Llmkit if it's already running
 
 This command will:
 - Create the SQLite database if it doesn't exist
