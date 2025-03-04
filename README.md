@@ -48,12 +48,11 @@ LLMKit provides a unified interface for working with various LLM providers (Open
 
 ## Key Features
 
-- **= Prompt Versioning**: Track changes and improvements to prompts over time
-- **=� Template Variables**: Dynamic system and user prompts with Liquid templating
-- **=� Prompt Evaluation**: Create test sets and measure prompt performance
-- **= Provider Integration**: Support for multiple LLM providers with a unified API
-- **= API Key Management**: Generate and manage API keys for secure access
-- **< OpenAI Compatible API**: Use with existing OpenAI client libraries
+- **Prompt Versioning**: Track changes and improvements to prompts over time
+- **Template Variables**: Dynamic system and user prompts with Liquid templating
+- **Prompt Evaluation**: Create test sets and measure prompt performance
+- **OpenAI Compatible API**: Use with existing OpenAI client libraries
+- **Provider Integration**: Support for multiple LLM providers with a unified API
 
 ## How It Works
 
@@ -73,7 +72,7 @@ LLMKit supports three types of prompts:
    - Both system and user prompts can contain variables
    - Ideal for structured inputs with consistent format
 
-![Prompt Architecture](assets/prompt_syntax.png) <!-- [SCREENSHOT PLACEHOLDER] -->
+![Prompt Architecture](assets/prompt_syntax.png)
 
 ### Template Variables
 
