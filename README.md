@@ -2,7 +2,7 @@
 
 Llmkit is a comprehensive toolkit for managing, testing, and deploying LLM prompts with a focus on versioning, evaluation, and developer-friendly workflows.
 
-![Llmkit Banner](assets/banner.png) <!-- [SCREENSHOT PLACEHOLDER] -->
+![Llmkit Banner](assets/banner.png)
 
 ## Table of Contents
 
@@ -40,6 +40,8 @@ Llmkit is a comprehensive toolkit for managing, testing, and deploying LLM promp
 ## Overview
 
 Llmkit provides the best way to dynamically craft prompts with modern template syntax, manage, version, test, and run evals on your prompts across any provider and any model. 
+
+![Llmkit Banner](assets/app_screenshot.png)
 
 ## Mission
 
@@ -164,15 +166,14 @@ Every LLM call has a detailed trace that you can view. directly in the llmkit UI
 ### Backend
 
 - **Language**: Rust
-- **Web Framework**: Actix Web
+- **Web Framework**: Axum
 - **Database**: SQLite with SQLx for type-safe queries
-- **Templating Engine**: Liquid templates
+- **Templating Engine**: Tera templates
 
 ### Frontend
 
 - **Framework**: Vue.js (Nuxt.js)
 - **Styling**: Tailwind CSS
-- **State Management**: Vue Composables
 
 ## Requirements
 
