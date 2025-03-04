@@ -5,7 +5,6 @@ use serde::Deserialize;
 pub struct CreateModelRequest {
     pub name: String,
     pub provider_id: i64,
-    pub context_window: i64,
     pub supports_json: bool,
     pub supports_tools: bool,
 }
@@ -14,7 +13,6 @@ pub struct CreateModelRequest {
 pub struct UpdateModelRequest {
     pub name: String,
     pub provider_id: i64,
-    pub context_window: i64,
     pub supports_json: bool,
     pub supports_tools: bool,
 }

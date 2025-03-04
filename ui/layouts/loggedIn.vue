@@ -37,6 +37,26 @@
                 </li>
                 <li>
                   <NuxtLink 
+                    to="/evals" 
+                    class="group flex gap-x-3 rounded-none p-2 text-sm/6 font-semibold text-black border-2 border-black"
+                    :class="route.name === 'evals' ? 'dark:text-white dark:border-white bg-neutral-200 dark:bg-neutral-800':'dark:text-neutral-300 dark:border-neutral-300 text-neutral-700'"
+                  >
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      fill="none" 
+                      viewBox="0 0 24 24" 
+                      stroke-width="1.5" 
+                      stroke="currentColor" 
+                      class="size-6 shrink-0"
+                      :class="route.name === 'evals' ? 'text-black dark:text-white':'text-neutral-700 group-hover:text-black dark:text-neutral-300 dark:group-hover:text-white'"
+                    >
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 0 1-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 0 1 4.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0 1 12 15a9.065 9.065 0 0 0-6.23-.693L5 14.5m14.8.8 1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0 1 12 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
+                    </svg>
+                    Evals
+                  </NuxtLink>
+                </li>
+                <li>
+                  <NuxtLink 
                     to="/traces" 
                     class="group flex gap-x-3 rounded-none p-2 text-sm/6 font-semibold text-black border-2 border-black"
                     :class="route.name === 'traces' ? 'dark:text-white dark:border-white bg-neutral-200 dark:bg-neutral-800':'dark:text-neutral-300 dark:border-neutral-300 text-neutral-700'"
@@ -62,22 +82,22 @@
                 </li>
                 <li>
                   <NuxtLink 
-                    to="/evals" 
+                    to="/models" 
                     class="group flex gap-x-3 rounded-none p-2 text-sm/6 font-semibold text-black border-2 border-black"
-                    :class="route.name === 'evals' ? 'dark:text-white dark:border-white bg-neutral-200 dark:bg-neutral-800':'dark:text-neutral-300 dark:border-neutral-300 text-neutral-700'"
+                    :class="route.name === 'models' ? 'dark:text-white dark:border-white bg-neutral-200 dark:bg-neutral-800':'dark:text-neutral-300 dark:border-neutral-300 text-neutral-700'"
                   >
                     <svg 
+                      class="size-6 shrink-0"
+                      :class="route.name === 'models' ? 'text-black dark:text-white':'text-neutral-700 group-hover:text-black dark:text-neutral-300 dark:group-hover:text-white'"
                       xmlns="http://www.w3.org/2000/svg" 
                       fill="none" 
                       viewBox="0 0 24 24" 
                       stroke-width="1.5" 
                       stroke="currentColor" 
-                      class="size-6 shrink-0"
-                      :class="route.name === 'evals' ? 'text-black dark:text-white':'text-neutral-700 group-hover:text-black dark:text-neutral-300 dark:group-hover:text-white'"
                     >
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 0 1-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 0 1 4.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0 1 12 15a9.065 9.065 0 0 0-6.23-.693L5 14.5m14.8.8 1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0 1 12 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17 17.25 21A2.652 2.652 0 0 0 21 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 1 1-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 0 0 4.486-6.336l-3.276 3.277a3.004 3.004 0 0 1-2.25-2.25l3.276-3.276a4.5 4.5 0 0 0-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437 1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008Z" />
                     </svg>
-                    Evals
+                    Models
                   </NuxtLink>
                 </li>
                 <li>
