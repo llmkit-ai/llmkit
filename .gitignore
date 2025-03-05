@@ -3,3 +3,6 @@
 *.env.copy
 **/node_modules
 .aider*
+
+*llmkit.db
+*llmkit.db.*

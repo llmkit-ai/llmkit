@@ -32,7 +32,7 @@ impl Llm {
         ExponentialBackoff::from_millis(100)
             .max_delay(Duration::from_secs(100))
             .map(jitter)
-            .take(1)
+            .take(3)
     }
 
     pub async fn text(&self) -> Result<(LlmServiceChatCompletionResponse, i64), LlmError> {
@@ -61,7 +61,7 @@ impl Llm {
         &self,
         tx: Sender<Result<LlmServiceChatCompletionChunk, LlmStreamingError>>,
     ) -> Result<(LlmServiceChatCompletionResponse, i64), LlmError> {
-        if self.props.json_mode {
+        if self.props.request.response_format.is_some() {
             tracing::info!("Json mode not supported in chat mode");
             return Err(LlmError::UnsupportedMode(
                 "Json".to_string(),
@@ -164,7 +164,7 @@ impl Llm {
             .map_err(|e| LlmError::SerializationError(e.to_string()))?;
 
         // Check json mode before making the request
-        if self.props.json_mode {
+        if self.props.request.response_format.is_some() {
             tracing::info!("Json mode not supported in chat mode");
             let error = LlmError::UnsupportedMode("Json".to_string(), "Chat".to_string());
 

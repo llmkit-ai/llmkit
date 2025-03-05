@@ -5,7 +5,7 @@ use crate::services::types::{
 };
 use anyhow::Result;
 use futures_util::StreamExt;
-use openrouter_api::models::tool::ToolCall;
+use openrouter_api::models::tool::{Tool, ToolCall};
 use openrouter_api::{OpenRouterClient, Ready};
 use openrouter_api::types::chat::ChatCompletionRequest;
 use tokio::sync::mpsc::Sender;
@@ -36,7 +36,7 @@ impl<'a> OpenrouterProvider<'a> {
 
     /// Builds an HTTP request using the OpenRouter API library's client configuration.
     pub async fn execute_chat(&self) -> Result<LlmServiceChatCompletionResponse, LlmError> {
-        let messages = self.props.messages.iter().map(|msg| {
+        let messages = self.props.request.messages.iter().map(|msg| {
             openrouter_api::types::chat::Message {
                 role: msg.role().to_string(),
                 content: msg.content().to_string(),
@@ -56,11 +56,11 @@ impl<'a> OpenrouterProvider<'a> {
         }).collect();
 
         let request = ChatCompletionRequest {
-            model: self.props.model_name.clone(),
+            model: self.props.request.model.clone(),
             messages,
             stream: if self.streaming { Some(true) } else { None },
-            response_format: if self.props.json_mode { Some("{\"type\": \"json_object\"}".to_string()) } else { None },
-            tools: None,
+            response_format: self.props.request.response_format.clone(),
+            tools: self.props.request.tools.clone().map(|vt| vt.into_iter().map(|t| t.into()).collect::<Vec<Tool>>()),
             provider: None,
             models: None,
             transforms: None,
@@ -74,7 +74,7 @@ impl<'a> OpenrouterProvider<'a> {
         &self,
         tx: Sender<Result<LlmServiceChatCompletionChunk, LlmStreamingError>>,
     ) -> Result<LlmServiceChatCompletionResponse, LlmError> {
-        let messages: Vec<openrouter_api::types::chat::Message> = self.props.messages.iter().map(|msg| {
+        let messages: Vec<openrouter_api::types::chat::Message> = self.props.request.messages.iter().map(|msg| {
             openrouter_api::types::chat::Message {
                 role: msg.role().to_string(),
                 content: msg.content().to_string(),
@@ -94,11 +94,11 @@ impl<'a> OpenrouterProvider<'a> {
         }).collect();
 
         let request = ChatCompletionRequest {
-            model: self.props.model_name.clone(),
+            model: self.props.request.model.clone(),
             messages,
-            stream: Some(true),
-            response_format: None,
-            tools: None,
+            stream: if self.streaming { Some(true) } else { None },
+            response_format: self.props.request.response_format.clone(),
+            tools: self.props.request.tools.clone().map(|vt| vt.into_iter().map(|t| t.into()).collect::<Vec<Tool>>()),
             provider: None,
             models: None,
             transforms: None,
@@ -145,7 +145,7 @@ impl<'a> OpenrouterProvider<'a> {
         Ok(LlmServiceChatCompletionResponse::new_streamed(
             id, 
             content, 
-            self.props.model_name.clone(),
+            self.props.request.model.clone(),
             created, 
             Some(prompt_tokens), 
             Some(completion_tokens), 

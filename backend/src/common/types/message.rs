@@ -107,6 +107,39 @@ pub struct ChatCompletionRequestFunctionDescription {
     pub parameters: serde_json::Value,
 }
 
+impl From<openrouter_api::models::tool::Tool> for ChatCompletionRequestTool {
+    fn from(value: openrouter_api::models::tool::Tool) -> Self {
+        match value {
+            openrouter_api::models::tool::Tool::Function { function } => {
+                let description = ChatCompletionRequestFunctionDescription {
+                    name: function.name, 
+                    description: function.description,
+                    parameters: function.parameters
+                };
+
+                ChatCompletionRequestTool::Function { function: description }
+            }
+        }
+    }
+}
+
+impl From<ChatCompletionRequestTool> for openrouter_api::models::tool::Tool {
+    fn from(value: ChatCompletionRequestTool) -> Self {
+        match value {
+            ChatCompletionRequestTool::Function { function } => {
+                let description =  openrouter_api::models::tool::FunctionDescription {
+                    name: function.name, 
+                    description: function.description,
+                    parameters: function.parameters
+                };
+
+                openrouter_api::models::tool::Tool::Function { function: description }
+            }
+        }
+         
+    }
+}
+
 
 // Helper Methods for easy extraction
 impl ChatCompletionRequestMessage {

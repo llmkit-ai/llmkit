@@ -153,6 +153,7 @@ pub async fn api_completions(
         .get_prompt_by_key(prompt_key)
         .await
         .map_err(|_| AppError::NotFound(format!("`Model` input with `Prompt Key` '{}' not found", prompt_key)))?;
+    let json_mode = prompt.json_mode;
 
     // Insert into cache
     state.prompt_cache.insert(prompt.id, prompt.clone()).await;
@@ -164,9 +165,11 @@ pub async fn api_completions(
             AppError::InternalServerError("Failed to process request".into())
         })?;
 
+    tracing::info!("props: {:?}", llm_props);
+
     let llm = Llm::new(llm_props.clone(), state.db.log.clone());
 
-    let res = if llm_props.json_mode {
+    let res = if json_mode {
         llm.json().await.map_err(|e| {
             tracing::error!("{}", e);
             let error: AppError = e.into();

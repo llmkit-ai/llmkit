@@ -4,7 +4,7 @@ use serde_json::Value;
 
 use crate::{
     common::types::{
-        message::{ChatCompletionRequest, ChatCompletionRequestMessage, ChatCompletionRequestTool}, 
+        message::{ChatCompletionRequest, ChatCompletionRequestMessage}, 
         models::LlmApiProvider
     }, 
     db::types::prompt::PromptRowWithModel
@@ -26,17 +26,9 @@ pub enum LlmServiceRequestError {
 pub struct LlmServiceRequest {
     pub provider: LlmApiProvider,
     pub base_url: String,
-    pub model_name: String,
-    pub max_tokens: i64,
-    pub temperature: f64,
-    pub json_mode: bool,
-    pub messages: Vec<ChatCompletionRequestMessage>,
     pub prompt_id: i64,
     pub model_id: i64,
-    pub stream: Option<bool>,
-    pub tools: Option<Vec<ChatCompletionRequestTool>>,
-    pub fallback_models: Option<Vec<String>>,
-    pub transforms: Option<Vec<String>>,
+    pub request: ChatCompletionRequest
 }
 
 impl LlmServiceRequest {
@@ -114,64 +106,24 @@ impl LlmServiceRequest {
                 ]
             }
         };
-        
+
         // Create request with all properties and overrides
         let mut service_request = LlmServiceRequest {
-            provider: prompt.provider_name.clone().into(),
-            base_url: prompt.provider_base_url.clone(),
-            model_name: prompt.model_name.clone(),
-            max_tokens: prompt.max_tokens,
-            temperature: prompt.temperature,
-            json_mode: prompt.json_mode, 
-            messages,
             prompt_id: prompt.id,
             model_id: prompt.model_id,
-            stream: request.stream,
-            tools: request.tools.clone(),
-            fallback_models: request.models.clone(),
-            transforms: request.transforms.clone(),
+            provider: prompt.provider_name.clone().into(),
+            base_url: prompt.provider_base_url.clone(),
+            request: request.clone() 
         };
         
-        // Apply request overrides if specified
-        if let Some(max_tokens) = request.max_tokens {
-            service_request.max_tokens = max_tokens;
-        }
-        
-        if let Some(temperature) = request.temperature {
-            service_request.temperature = temperature;
-        }
-        
-        // Set JSON mode if specified in request format
-        if let Some(ref response_format) = request.response_format {
-            if response_format == "json_object" {
-                service_request.json_mode = true;
-            }
+        // Override input with inputs from Prompt table
+        service_request.request.max_tokens = Some(prompt.max_tokens);
+        service_request.request.model = prompt.model_name;
+        service_request.request.temperature = Some(prompt.temperature);
+        if prompt.json_mode {
+            service_request.request.response_format = Some("{\"type\": \"json_object\"}".to_string());
         }
         
         Ok(service_request)
-    }
-
-    // Function to enable streaming
-    pub fn with_stream(mut self, enable: bool) -> Self {
-        self.stream = Some(enable);
-        self
-    }
-    
-    // Function to add tools
-    pub fn with_tools(mut self, tools: Vec<ChatCompletionRequestTool>) -> Self {
-        self.tools = Some(tools);
-        self
-    }
-    
-    // Function to add fallback models
-    pub fn with_fallback_models(mut self, models: Vec<String>) -> Self {
-        self.fallback_models = Some(models);
-        self
-    }
-    
-    // Function to add transforms
-    pub fn with_transforms(mut self, transforms: Vec<String>) -> Self {
-        self.transforms = Some(transforms);
-        self
     }
 }

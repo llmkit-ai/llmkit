@@ -197,11 +197,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, reactive } from 'vue'
 import { useModels, type CreateModelPayload } from '~/composables/useModels'
 import { useProviders } from '~/composables/useProviders'
 import type { Model } from '~/types/response/models'
-import type { Provider } from '~/types/response/providers'
 import PrimaryButton from '~/components/global/primary-button.vue'
 
 definePageMeta({
