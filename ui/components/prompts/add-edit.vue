@@ -280,6 +280,16 @@
                 />
               </div>
             </div>
+            
+            <!-- Tool Selector Modal -->
+            <div class="col-span-full">
+              <ToolSelectorModal 
+                :prompt-id="props.prompt?.id" 
+                :prompt-version-id="props.prompt?.version_id"
+                :initial-tools="selectedTools"
+                @update:tools="selectedTools = $event"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -309,9 +319,11 @@
 <script setup lang="ts">
 import type { Prompt } from '~/types/response/prompts';
 import type { Model } from '~/types/response/models';
+import type { ToolVersion } from '~/types/response/tools';
 import type { PromptCreateDTO, PromptUpdateDTO } from '~/types/components/prompt';
 import type { SchemaValidationResponse } from '~/types/response/schema';
 import { useDebounceFn } from '@vueuse/core';
+import ToolSelectorModal from './tool-selector-modal.vue';
 
 const props = defineProps<{
   prompt: Prompt | null
@@ -340,6 +352,8 @@ const promptType = ref(props.prompt?.prompt_type || 'static');
 // Private backing field for chat mode
 const _isChat = ref(props.prompt?.json_mode ? false : props.prompt?.is_chat || false);
 const isOpen = ref(false);
+// Tool selection
+const selectedTools = ref<ToolVersion[]>(props.prompt?.tools || []);
 
 const currentCreatePromptStep = ref(1);
 
@@ -564,6 +578,9 @@ const handleSubmit = async () => {
   // Get the actual chat mode value - should be false if json_mode is true
   const finalChatMode = !jsonMode.value && canEnableChat.value && _isChat.value;
   
+  // Extract tool version IDs
+  const toolVersionIds = selectedTools.value.map(tool => tool.id);
+  
   if (props.mode === 'new') {
     emit("handle-create", {
       key: promptKey.value,
@@ -576,6 +593,7 @@ const handleSubmit = async () => {
       json_schema: finalJsonSchema,
       prompt_type: promptType.value,
       is_chat: finalChatMode,
+      tool_version_ids: toolVersionIds.length > 0 ? toolVersionIds : undefined
     });
   } else {
     emit("handle-update", {
@@ -590,6 +608,7 @@ const handleSubmit = async () => {
       json_schema: finalJsonSchema,
       prompt_type: promptType.value,
       is_chat: finalChatMode,
+      tool_version_ids: toolVersionIds.length > 0 ? toolVersionIds : undefined
     });
   }
 };

@@ -1,6 +1,7 @@
 use serde::Serialize;
 
 use crate::db::types::prompt::PromptRowWithModel;
+use crate::controllers::types::response::tools::ToolVersionResponse;
 
 
 // GET PROMPT RESPONSE
@@ -23,7 +24,8 @@ pub struct PromptResponse {
     pub version_number: i64,
     pub system_version_diff: Option<String>,
     pub user_version_diff: Option<String>,
-    pub updated_at: String
+    pub updated_at: String,
+    pub tools: Vec<ToolVersionResponse>
 }
 
 
@@ -47,7 +49,8 @@ impl From<PromptRowWithModel> for PromptResponse {
             version_number: prompt.version_number,
             system_version_diff: prompt.system_diff,
             user_version_diff: prompt.user_diff,
-            updated_at: prompt.updated_at.to_string()
+            updated_at: prompt.updated_at.to_string(),
+            tools: Vec::new() // Initialize with empty vector, will be filled separately
         }
     }
 }

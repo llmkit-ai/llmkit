@@ -95,6 +95,11 @@
             <dd class="text-sm/6 text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap bg-neutral-100 dark:bg-neutral-800 p-2">{{ props.prompt.user }}</dd>
           </div>
         </div>
+        
+        <!-- Associated Tools Section -->
+        <div class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-3 sm:px-0">
+          <ViewTools :tools="props.prompt.tools || []" />
+        </div>
       </dl>
     </div>
     <div class="mt-6 flex justify-end px-4 sm:px-0 space-x-3">
@@ -119,6 +124,7 @@
 <script setup lang="ts">
 import { format, parseISO } from 'date-fns';
 import type { Prompt } from '~/types/response/prompts';
+import ViewTools from './view-tools.vue';
 
 const props = defineProps<{
   prompt?: Prompt | null
