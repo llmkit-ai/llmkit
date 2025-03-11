@@ -33,9 +33,6 @@
                 Function Name
               </th>
               <th scope="col" class="px-6 py-3 text-left text-xs/4 font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
-                Version
-              </th>
-              <th scope="col" class="px-6 py-3 text-left text-xs/4 font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
@@ -47,9 +44,6 @@
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm/6 text-neutral-500 dark:text-neutral-400">
                 {{ tool.tool_name }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm/6 text-neutral-500 dark:text-neutral-400">
-                v{{ tool.version_number }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <div class="flex space-x-2">
