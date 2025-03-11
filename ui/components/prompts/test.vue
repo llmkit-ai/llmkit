@@ -121,19 +121,31 @@
         {{ jsonContext }}
       </div>
     </div>
-    <div v-if="testResponse" class="mt-5 bg-neutral-100 dark:bg-neutral-800 p-4">
+    <div v-if="testResponseContent" class="mt-5 bg-neutral-100 dark:bg-neutral-800 p-4">
       <div class="flex items-center justify-between">
         <p class="text-xs text-neutral-900 dark:text-neutral-300">Response</p>
         <button
-          @click="showResponse = !showResponse"
+          @click="showResponseContent = !showResponseContent"
           class="text-xs text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-300"
         >
-          {{ showResponse ? 'Hide' : 'Show' }}
+          {{ showResponseContent ? 'Hide' : 'Show' }}
         </button>
       </div>
-      <div v-if="showResponse" class="response-content mt-3 dark:text-neutral-300 text-sm">
-        {{ testResponse }}
+      <div v-if="showResponseContent" class="response-content mt-3 dark:text-neutral-300 text-sm">
+        {{ testResponseContent }}
       </div>
+    </div>
+    <div v-if="testResponseTool" class="mt-5 bg-neutral-100 dark:bg-neutral-800 p-4">
+      <div class="flex items-center justify-between">
+        <p class="text-xs text-neutral-900 dark:text-neutral-300">Response Tools</p>
+        <button
+          @click="showResponseTool = !showResponseTool"
+          class="text-xs text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-300"
+        >
+          {{ showResponseTool ? 'Hide' : 'Show' }}
+        </button>
+      </div>
+      <pre v-if="showResponseTool" class="mt-3 dark:text-neutral-300 text-sm">{{ JSON.stringify(testResponseTool, null, 2) }}</pre>
     </div>
     <div v-if="logResponse" class="mt-5 bg-neutral-100 dark:bg-neutral-800 p-4">
       <div class="flex items-center justify-between">
@@ -180,7 +192,7 @@
 
 <script setup lang="ts">
 import type { ApiLogReponse } from '~/types/response/logs';
-import type { Prompt } from '~/types/response/prompts';
+import type { Prompt, ToolCall } from '~/types/response/prompts';
 
 const props = defineProps<{
   prompt: Prompt
@@ -198,11 +210,13 @@ const {
 const systemPrompt = ref(props.prompt.system)
 const userPrompt = ref(props.prompt.user)
 const jsonContext = ref({})
-const testResponse = ref<string | null>(null)
+const testResponseContent = ref<string | null>(null)
+const testResponseTool = ref<ToolCall[] | null>(null)
 const logResponse = ref<ApiLogReponse | null>(null)
 const showLog = ref(false)
 const showJsonContext = ref(false)
-const showResponse = ref(true)
+const showResponseContent = ref(true)
+const showResponseTool = ref(true)
 const executeLoading = ref(false)
 const directUserInput = ref<string>("")
 
@@ -289,6 +303,7 @@ function templateFieldInput(event: any) {
   const value = event.target.value
 
   // Update the context object with the new value
+  //@ts-ignore
   jsonContext.value[key] = value
 }
 
@@ -344,9 +359,15 @@ async function execute() {
       props.prompt.json_mode
     );
     
+    const responseChoices = response.choices
+
     // Extract content from response
-    if (response.choices && response.choices.length > 0) {
-      testResponse.value = response.choices[0].message.content;
+    if (responseChoices && responseChoices.length > 0) {
+      if (responseChoices[0].message.tool_calls && responseChoices[0].message.tool_calls.length > 0) {
+        testResponseTool.value = response.choices[0].message.tool_calls!;
+      } else {
+        testResponseContent.value = response.choices[0].message.content;
+      }
       
       // Get log by provider response ID
       if (response.id) {
@@ -365,7 +386,7 @@ const error = ref<Error | null>(null)
 
 const executeStream = async () => {
   executeLoading.value = true
-  testResponse.value = '';
+  testResponseContent.value = '';
   error.value = null;
 
   // Prepare messages based on prompt type
@@ -442,7 +463,7 @@ const executeStream = async () => {
           
           // Add delta content if available
           if (choice.delta && choice.delta.content) {
-            testResponse.value += choice.delta.content;
+            testResponseContent.value += choice.delta.content;
           }
         }
       } catch (err) {
