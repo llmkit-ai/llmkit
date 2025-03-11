@@ -106,6 +106,13 @@
       <PrimaryButton
         buttonType="secondary"
         size="sm"
+        @click="handleManageTools()"
+      >
+        Manage Tools
+      </PrimaryButton>
+      <PrimaryButton
+        buttonType="secondary"
+        size="sm"
         @click="handleEdit()"
       >
         Edit
@@ -130,7 +137,11 @@ const props = defineProps<{
   prompt?: Prompt | null
 }>();
 
-const emit = defineEmits(["handle-edit", "handle-test"])
+const emit = defineEmits([
+  "handle-edit", 
+  "handle-test", 
+  "toggle-tools-modal"
+])
 
 const showVersionDiff = ref(false)
 
@@ -140,6 +151,10 @@ function handleEdit() {
 
 function handleTest() {
   emit("handle-test")
+}
+
+function handleManageTools() {
+  emit("toggle-tools-modal")
 }
 
 function formatDate(dateString: string): string {

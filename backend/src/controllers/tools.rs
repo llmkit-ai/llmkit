@@ -8,7 +8,7 @@ use crate::AppState;
 
 use super::types::{
     request::tools::{AssociateToolPromptVersionRequest, CreateToolRequest, UpdateToolRequest},
-    response::tools::{ToolResponse, ToolVersionResponse},
+    response::tools::ToolResponse,
 };
 
 pub async fn create_tool(
@@ -97,45 +97,26 @@ pub async fn delete_tool(
     Ok(())
 }
 
-pub async fn get_tool_versions(
-    Path(id): Path<i64>,
-    State(state): State<AppState>,
-) -> Result<Json<Vec<ToolVersionResponse>>, AppError> {
-    // First check if the tool exists
-    let _tool = state.db.tool.get_tool(id).await?;
-    
-    let versions = state.db.tool.get_tool_versions(id).await?;
-    Ok(Json(versions.into_iter().map(|v| v.into()).collect()))
-}
-
-pub async fn get_tool_version(
-    Path(id): Path<i64>,
-    State(state): State<AppState>,
-) -> Result<Json<ToolVersionResponse>, AppError> {
-    let version = state.db.tool.get_tool_version(id).await?;
-    Ok(Json(version.into()))
-}
-
-pub async fn associate_tool_version_with_prompt_version(
+pub async fn associate_tool_with_prompt_version(
     State(state): State<AppState>,
     Json(payload): Json<AssociateToolPromptVersionRequest>,
 ) -> Result<(), AppError> {
     state
         .db
         .tool
-        .associate_tool_version_with_prompt_version(payload.tool_version_id, payload.prompt_version_id)
+        .associate_tool_with_prompt_version(payload.tool_id, payload.prompt_version_id)
         .await?;
     Ok(())
 }
 
-pub async fn remove_tool_version_prompt_version_association(
+pub async fn remove_tool_prompt_version_association(
     State(state): State<AppState>,
     Json(payload): Json<AssociateToolPromptVersionRequest>,
 ) -> Result<(), AppError> {
     let removed = state
         .db
         .tool
-        .remove_tool_version_prompt_version_association(payload.tool_version_id, payload.prompt_version_id)
+        .remove_tool_prompt_version_association(payload.tool_id, payload.prompt_version_id)
         .await?;
     
     if !removed {
@@ -145,24 +126,24 @@ pub async fn remove_tool_version_prompt_version_association(
     Ok(())
 }
 
-pub async fn get_prompt_versions_by_tool_version(
+pub async fn get_prompt_versions_by_tool(
     Path(id): Path<i64>,
     State(state): State<AppState>,
 ) -> Result<Json<Vec<i64>>, AppError> {
-    // First check if the tool version exists
-    let _version = state.db.tool.get_tool_version(id).await?;
+    // First check if the tool exists
+    let _tool = state.db.tool.get_tool(id).await?;
     
-    let prompt_version_ids = state.db.tool.get_prompt_versions_by_tool_version(id).await?;
+    let prompt_version_ids = state.db.tool.get_prompt_versions_by_tool(id).await?;
     Ok(Json(prompt_version_ids))
 }
 
-pub async fn get_tool_versions_by_prompt_version(
+pub async fn get_tools_by_prompt_version(
     Path(id): Path<i64>,
     State(state): State<AppState>,
-) -> Result<Json<Vec<ToolVersionResponse>>, AppError> {
+) -> Result<Json<Vec<ToolResponse>>, AppError> {
     // We should check if the prompt version exists, but we'll assume it does for now
     // We could add a method to get a prompt version by id in the PromptRepository if needed
     
-    let tool_versions = state.db.tool.get_tool_versions_by_prompt_version(id).await?;
-    Ok(Json(tool_versions.into_iter().map(|v| v.into()).collect()))
+    let tools = state.db.tool.get_tools_by_prompt_version(id).await?;
+    Ok(Json(tools.into_iter().map(|t| t.into()).collect()))
 }

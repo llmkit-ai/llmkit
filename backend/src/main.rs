@@ -30,10 +30,9 @@ use controllers::{
     }, 
     schema::validate_schema,
     tools::{
-        associate_tool_version_with_prompt_version, create_tool, delete_tool, 
-        get_prompt_versions_by_tool_version, get_tool, get_tool_version, get_tool_versions, 
-        get_tool_versions_by_prompt_version, list_tools, remove_tool_version_prompt_version_association, 
-        update_tool
+        associate_tool_with_prompt_version, create_tool, delete_tool, 
+        get_prompt_versions_by_tool, get_tool, get_tools_by_prompt_version, 
+        list_tools, remove_tool_prompt_version_association, update_tool
     },
     user::{login, register, me},
 };
@@ -103,12 +102,10 @@ async fn main() -> Result<()> {
         .route("/ui/schema/validate", post(validate_schema))
         .route("/ui/tools", post(create_tool).get(list_tools))
         .route("/ui/tools/{id}", get(get_tool).put(update_tool).delete(delete_tool))
-        .route("/ui/tools/{id}/versions", get(get_tool_versions))
-        .route("/ui/tools/versions/{id}", get(get_tool_version))
-        .route("/ui/tools/associate", post(associate_tool_version_with_prompt_version))
-        .route("/ui/tools/disassociate", post(remove_tool_version_prompt_version_association))
-        .route("/ui/tools/versions/{id}/prompts", get(get_prompt_versions_by_tool_version))
-        .route("/ui/prompts/versions/{id}/tools", get(get_tool_versions_by_prompt_version))
+        .route("/ui/tools/associate", post(associate_tool_with_prompt_version))
+        .route("/ui/tools/disassociate", post(remove_tool_prompt_version_association))
+        .route("/ui/tools/{id}/prompts", get(get_prompt_versions_by_tool))
+        .route("/ui/prompts/versions/{id}/tools", get(get_tools_by_prompt_version))
         .layer(axum_middleware::from_fn_with_state(app_state.clone(), user_auth_middleware))
         .layer(CookieManagerLayer::new());
 

@@ -1,7 +1,7 @@
 use serde::Serialize;
 
 use crate::db::types::prompt::PromptRowWithModel;
-use crate::controllers::types::response::tools::ToolVersionResponse;
+use crate::controllers::types::response::tools::ToolResponse;
 
 
 // GET PROMPT RESPONSE
@@ -25,7 +25,7 @@ pub struct PromptResponse {
     pub system_version_diff: Option<String>,
     pub user_version_diff: Option<String>,
     pub updated_at: String,
-    pub tools: Vec<ToolVersionResponse>
+    pub tools: Vec<ToolResponse>
 }
 
 

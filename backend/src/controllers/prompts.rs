@@ -62,14 +62,14 @@ pub async fn create_prompt(
     // add the new prompt to the cache
     state.prompt_cache.insert(id, prompt.clone()).await;
 
-    // Fetch associated tool versions (newly created prompt will have none, but including for consistency)
-    let tool_versions = state.db.tool.get_tool_versions_by_prompt_version(prompt.version_id).await?;
+    // Fetch associated tools (newly created prompt will have none, but including for consistency)
+    let tools = state.db.tool.get_tools_by_prompt_version(prompt.version_id).await?;
     
     // Convert prompt to PromptResponse
     let mut response: PromptResponse = prompt.into();
     
-    // Add tool versions to the response
-    response.tools = tool_versions.into_iter().map(|v| v.into()).collect();
+    // Add tools to the response
+    response.tools = tools.into_iter().map(|t| t.into()).collect();
 
     Ok(Json(response))
 }
@@ -87,14 +87,14 @@ pub async fn get_prompt(
         }
     };
     
-    // Fetch associated tool versions
-    let tool_versions = state.db.tool.get_tool_versions_by_prompt_version(prompt.version_id).await?;
+    // Fetch associated tools
+    let tools = state.db.tool.get_tools_by_prompt_version(prompt.version_id).await?;
     
     // Convert prompt to PromptResponse
     let mut response: PromptResponse = prompt.into();
     
-    // Add tool versions to the response
-    response.tools = tool_versions.into_iter().map(|v| v.into()).collect();
+    // Add tools to the response
+    response.tools = tools.into_iter().map(|t| t.into()).collect();
     
     Ok(Json(response))
 }
@@ -106,14 +106,14 @@ pub async fn list_prompts(
     
     let mut responses = Vec::new();
     for prompt in prompts {
-        // Fetch associated tool versions for each prompt
-        let tool_versions = state.db.tool.get_tool_versions_by_prompt_version(prompt.version_id).await?;
+        // Fetch associated tools for each prompt
+        let tools = state.db.tool.get_tools_by_prompt_version(prompt.version_id).await?;
         
         // Convert prompt to PromptResponse
         let mut response: PromptResponse = prompt.into();
         
-        // Add tool versions to the response
-        response.tools = tool_versions.into_iter().map(|v| v.into()).collect();
+        // Add tools to the response
+        response.tools = tools.into_iter().map(|t| t.into()).collect();
         
         responses.push(response);
     }
@@ -126,6 +126,17 @@ pub async fn update_prompt(
     State(state): State<AppState>,
     Json(payload): Json<UpdatePromptRequest>,
 ) -> Result<Json<PromptResponse>, AppError> {
+    // Get the current prompt to access its version ID before update
+    let current_prompt = state
+        .db
+        .prompt
+        .get_prompt(id)
+        .await?;
+    
+    // Get the tools associated with the current prompt version
+    let current_tools = state.db.tool.get_tools_by_prompt_version(current_prompt.version_id).await?;
+    
+    // Update the prompt, which creates a new version
     let updated = state
         .db
         .prompt
@@ -148,6 +159,7 @@ pub async fn update_prompt(
         return Err(AppError::NotFound("Prompt not found".into()));
     }
 
+    // Get the updated prompt with its new version ID
     let prompt = state
         .db
         .prompt
@@ -155,16 +167,22 @@ pub async fn update_prompt(
         .await
         .map_err(|_| AppError::NotFound("Prompt not found after update".into()))?;
 
+    // Add to cache
     state.prompt_cache.insert(id, prompt.clone()).await;
 
-    // Fetch associated tool versions
-    let tool_versions = state.db.tool.get_tool_versions_by_prompt_version(prompt.version_id).await?;
+    // Copy tool associations from the previous version to the new version
+    for tool in current_tools {
+        state.db.tool.associate_tool_with_prompt_version(tool.id, prompt.version_id).await?;
+    }
+
+    // Fetch associated tools for the new version
+    let tools = state.db.tool.get_tools_by_prompt_version(prompt.version_id).await?;
     
     // Convert prompt to PromptResponse
     let mut response: PromptResponse = prompt.into();
     
-    // Add tool versions to the response
-    response.tools = tool_versions.into_iter().map(|v| v.into()).collect();
+    // Add tools to the response
+    response.tools = tools.into_iter().map(|t| t.into()).collect();
 
     Ok(Json(response))
 }
@@ -205,14 +223,14 @@ pub async fn api_completions(
         .map_err(|_| AppError::NotFound(format!("`Model` input with `Prompt Key` '{}' not found", prompt_key)))?;
     let json_mode = prompt.json_mode;
 
-    // Fetch associated tool versions
-    let tool_versions = state.db.tool.get_tool_versions_by_prompt_version(prompt.version_id).await?;
-    let tools = tool_versions.into_iter().map(|tv| {
+    // Fetch associated tools
+    let tools_list = state.db.tool.get_tools_by_prompt_version(prompt.version_id).await?;
+    let tools = tools_list.into_iter().map(|t| {
         ChatCompletionRequestTool::Function {
             function: ChatCompletionRequestFunctionDescription {
-                name: tv.tool_name,
-                description: Some(tv.description),
-                parameters: serde_json::from_str(&tv.parameters).unwrap_or_default(),
+                name: t.tool_name,
+                description: Some(t.description),
+                parameters: serde_json::from_str(&t.parameters).unwrap_or_default(),
             }
         }
     }).collect::<Vec<_>>();
@@ -269,7 +287,7 @@ pub async fn api_completions_stream(
     };
 
     // Fetch associated tool versions
-    let tool_versions = state.db.tool.get_tool_versions_by_prompt_version(prompt.version_id).await
+    let tool_versions = state.db.tool.get_tools_by_prompt_version(prompt.version_id).await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let tools = tool_versions.into_iter().map(|tv| {
         ChatCompletionRequestTool::Function {

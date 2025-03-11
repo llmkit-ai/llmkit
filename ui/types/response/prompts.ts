@@ -1,6 +1,6 @@
 import type { ApiLogReponse } from "./logs"
 
-import type { ToolVersion } from './tools'
+import type { Tool } from './tools'
 
 export interface Prompt {
   id: number
@@ -21,7 +21,7 @@ export interface Prompt {
   system_version_diff: string | null
   user_version_diff: string | null
   updated_at: string
-  tools: ToolVersion[]
+  tools: Tool[]
 }
 
 

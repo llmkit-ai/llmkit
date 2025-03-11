@@ -20,6 +20,6 @@ pub struct UpdateToolRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AssociateToolPromptVersionRequest {
-    pub tool_version_id: i64,
+    pub tool_id: i64,
     pub prompt_version_id: i64,
 }

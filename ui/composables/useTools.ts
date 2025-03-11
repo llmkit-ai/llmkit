@@ -1,4 +1,4 @@
-import type { Tool, ToolVersion } from '../types/response/tools'
+import type { Tool } from '../types/response/tools'
 
 export interface CreateToolPayload {
   name: string
@@ -17,13 +17,12 @@ export interface UpdateToolPayload {
 }
 
 export interface AssociateToolPromptPayload {
-  tool_version_id: number
+  tool_id: number
   prompt_version_id: number
 }
 
 export const useTools = () => {
   const tools = ref<Tool[]>([])
-  const toolVersions = ref<ToolVersion[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
 
@@ -110,34 +109,7 @@ export const useTools = () => {
     }
   }
 
-  const getToolVersions = async (toolId: number) => {
-    try {
-      loading.value = true
-      toolVersions.value = await $fetch<ToolVersion[]>(`/v1/ui/tools/${toolId}/versions`)
-      return toolVersions.value
-    } catch (err) {
-      console.error(err)
-      error.value = 'Failed to fetch tool versions'
-      throw err
-    } finally {
-      loading.value = false
-    }
-  }
-
-  const getToolVersion = async (versionId: number) => {
-    try {
-      loading.value = true
-      return await $fetch<ToolVersion>(`/v1/ui/tools/versions/${versionId}`)
-    } catch (err) {
-      console.error(err)
-      error.value = 'Failed to fetch tool version'
-      throw err
-    } finally {
-      loading.value = false
-    }
-  }
-
-  const associateToolVersionWithPromptVersion = async (payload: AssociateToolPromptPayload) => {
+  const associateToolWithPromptVersion = async (payload: AssociateToolPromptPayload) => {
     try {
       loading.value = true
       await $fetch('/v1/ui/tools/associate', {
@@ -146,8 +118,8 @@ export const useTools = () => {
       })
       error.value = null
     } catch (err: any) {
-      console.error('Failed to associate tool version with prompt version:', err)
-      const errorMessage = err?.data?.message || err?.message || 'Failed to associate tool version with prompt version'
+      console.error('Failed to associate tool with prompt version:', err)
+      const errorMessage = err?.data?.message || err?.message || 'Failed to associate tool with prompt version'
       error.value = errorMessage
       throw err
     } finally {
@@ -173,10 +145,10 @@ export const useTools = () => {
     }
   }
 
-  const getPromptVersionsByToolVersion = async (toolVersionId: number) => {
+  const getPromptVersionsByTool = async (toolId: number) => {
     try {
       loading.value = true
-      return await $fetch<number[]>(`/v1/ui/tools/versions/${toolVersionId}/prompts`)
+      return await $fetch<number[]>(`/v1/ui/tools/${toolId}/prompts`)
     } catch (err) {
       console.error(err)
       error.value = 'Failed to fetch prompt versions'
@@ -186,13 +158,13 @@ export const useTools = () => {
     }
   }
 
-  const getToolVersionsByPromptVersion = async (promptVersionId: number) => {
+  const getToolsByPromptVersion = async (promptVersionId: number) => {
     try {
       loading.value = true
-      return await $fetch<ToolVersion[]>(`/v1/ui/prompts/versions/${promptVersionId}/tools`)
+      return await $fetch<Tool[]>(`/v1/ui/prompts/versions/${promptVersionId}/tools`)
     } catch (err) {
       console.error(err)
-      error.value = 'Failed to fetch tool versions'
+      error.value = 'Failed to fetch tools'
       throw err
     } finally {
       loading.value = false
@@ -201,7 +173,6 @@ export const useTools = () => {
 
   return {
     tools,
-    toolVersions,
     loading,
     error,
     fetchTools,
@@ -209,11 +180,9 @@ export const useTools = () => {
     createTool,
     updateTool,
     deleteTool,
-    getToolVersions,
-    getToolVersion,
-    associateToolVersionWithPromptVersion,
+    associateToolWithPromptVersion,
     removeToolPromptAssociation,
-    getPromptVersionsByToolVersion,
-    getToolVersionsByPromptVersion
+    getPromptVersionsByTool,
+    getToolsByPromptVersion
   }
 }

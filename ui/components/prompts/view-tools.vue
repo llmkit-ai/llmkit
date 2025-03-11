@@ -25,7 +25,6 @@
             >
               <div class="flex items-center">
                 <span class="font-medium text-neutral-900 dark:text-white">{{ tool.tool_name }}</span>
-                <span class="ml-2 text-xs text-neutral-500 dark:text-neutral-400">(v{{ tool.version_number }})</span>
               </div>
               <svg
                 class="w-5 h-5 text-neutral-500 dark:text-neutral-400 transition-transform duration-200"
@@ -61,10 +60,10 @@
 
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue';
-import type { ToolVersion } from '~/types/response/tools';
+import type { Tool } from '~/types/response/tools';
 
 const props = defineProps<{
-  tools: ToolVersion[];
+  tools: Tool[];
   loading?: boolean;
 }>();
 
