@@ -19,9 +19,6 @@
         <div class="space-y-4">
           <div class="flex justify-between">
             <h3 class="text-lg font-medium text-neutral-900 dark:text-white">{{ tool.name }}</h3>
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400">
-              v{{ tool.version_number }}
-            </span>
           </div>
           
           <div>

@@ -40,8 +40,25 @@
       <form @submit.prevent="execute">
         <div class="mt-4 grid grid-cols-4 gap-x-2">
           <!-- Add debugging info to see what fields are found -->
-          <p v-if="templateFields.length === 0" class="col-span-4 text-red-500">No dynamic fields found in templates</p>
+          <p v-if="templateFields.length === 0 && (props.prompt?.prompt_type !== 'static' && props.prompt?.prompt_type !== 'dynamic_system')" class="col-span-4 text-red-500">No dynamic fields found in templates</p>
           
+          <!-- Direct user input for static or dynamic_system prompts -->
+          <div 
+            v-if="props.prompt?.prompt_type === 'static' || props.prompt?.prompt_type === 'dynamic_system'" 
+            class="col-span-4 mb-4"
+          >
+            <label for="direct-user-input" class="block text-sm/6 font-medium text-neutral-900 dark:text-white">User Message</label>
+            <div class="mt-0.5">
+              <textarea
+                v-model="directUserInput"
+                id="direct-user-input"
+                rows="4"
+                class="block w-full bg-white dark:bg-neutral-800 px-3 py-1.5 text-base text-neutral-900 dark:text-white outline outline-1 -outline-offset-1 outline-neutral-300 dark:outline-neutral-600 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-black dark:focus:outline-white sm:text-sm/6"
+              ></textarea>
+            </div>
+          </div>
+          
+          <!-- Dynamic fields for templates with variables -->
           <div v-for="f in templateFields" :key="f" class="mb-4">
             <label :for="f" class="block text-sm/6 font-medium text-neutral-900 dark:text-white">{{ f }}</label>
             <div class="mt-0.5">
@@ -187,6 +204,7 @@ const showLog = ref(false)
 const showJsonContext = ref(false)
 const showResponse = ref(true)
 const executeLoading = ref(false)
+const directUserInput = ref<string>("")
 
 
 // Computed property for rendered system prompt with variables replaced
@@ -280,8 +298,9 @@ async function execute() {
     // Prepare messages based on prompt type
     let messages = [];
     
-    // For dynamic_both prompts, we need to handle system and user contexts separately
+    // Handle different prompt types
     if (props.prompt.prompt_type === 'dynamic_both') {
+      // For dynamic_both prompts, we need to handle system and user contexts separately
       messages = [
         {
           role: 'system',
@@ -292,8 +311,20 @@ async function execute() {
           content: JSON.stringify(jsonContext.value)
         }
       ];
+    } else if (props.prompt.prompt_type === 'static' || props.prompt.prompt_type === 'dynamic_system') {
+      // For static or dynamic_system prompts with direct user input
+      messages = [
+        {
+          role: 'system',
+          content: props.prompt.prompt_type === 'dynamic_system' ? JSON.stringify(jsonContext.value) : systemPrompt.value
+        },
+        {
+          role: 'user',
+          content: directUserInput.value
+        }
+      ];
     } else {
-      // For other prompt types, just include the system message
+      // Fallback for other prompt types
       messages = [
         {
           role: 'system',
@@ -340,8 +371,9 @@ const executeStream = async () => {
   // Prepare messages based on prompt type
   let messages = [];
   
-  // For dynamic_both prompts, we need to handle system and user contexts separately
+  // Handle different prompt types
   if (props.prompt.prompt_type === 'dynamic_both') {
+    // For dynamic_both prompts, we need to handle system and user contexts separately
     messages = [
       {
         role: 'system',
@@ -352,8 +384,20 @@ const executeStream = async () => {
         content: JSON.stringify(jsonContext.value)
       }
     ];
+  } else if (props.prompt.prompt_type === 'static' || props.prompt.prompt_type === 'dynamic_system') {
+    // For static or dynamic_system prompts with direct user input
+    messages = [
+      {
+        role: 'system',
+        content: props.prompt.prompt_type === 'dynamic_system' ? JSON.stringify(jsonContext.value) : systemPrompt.value
+      },
+      {
+        role: 'user',
+        content: directUserInput.value
+      }
+    ];
   } else {
-    // For other prompt types, just include the system message
+    // Fallback for other prompt types
     messages = [
       {
         role: 'system',

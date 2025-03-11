@@ -87,7 +87,19 @@
               :prompt="selectedPrompt" 
               @handle-edit="mode = 'edit'"
               @handle-test="mode = 'test'"
+              @toggle-tools-modal="showToolsModal = !showToolsModal"
             />
+            
+            <!-- Tools Management Modal -->
+            <div v-if="showToolsModal">
+              <ToolSelectorModal
+                :prompt-version-id="selectedPrompt.version_id"
+                :associated-tools="selectedPrompt.tools || []"
+                @add-tool="handleToolAdd"
+                @remove-tool="handleToolRemove"
+                @close="showToolsModal = false"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -98,7 +110,9 @@
 <script setup lang="ts">
 import type { Prompt } from '~/types/response/prompts';
 import type { PromptCreateDTO, PromptUpdateDTO } from '~/types/components/prompt';
+import type { Tool } from '~/types/response/tools';
 import PromptsChatTest from '~/components/prompts/chat-test.vue';
+import ToolSelectorModal from '~/components/prompts/tool-selector-modal.vue';
 
 definePageMeta({
   layout: "logged-in",
@@ -108,7 +122,7 @@ definePageMeta({
 const mode = ref<'view' | 'edit' | 'new' | 'test'>('view');
 
 const selectedPrompt = ref<Prompt | null>(null);
-const selectedPromptCache = ref<Prompt | null>(null);
+const showToolsModal = ref(false);
 
 const { 
   prompts, 
@@ -118,7 +132,7 @@ const {
   fetchPrompts 
 } = usePrompts();
 
-
+const { associateToolWithPromptVersion, removeToolPromptAssociation } = useTools();
 const { models, fetchModels } = useModels();
 
 onBeforeMount(async () => {
@@ -128,25 +142,6 @@ onBeforeMount(async () => {
     selectedPrompt.value = prompts.value[0];
   }
 })
-
-// function handleCancelClick() {
-//   if (selectedPromptCache.value) {
-//     selectedPrompt.value = selectedPromptCache.value
-//     selectedPromptCache.value = null
-//   }
-//   promptMode.value = 'view';
-// }
-//
-// function handleNewClick() {
-//   selectedPromptCache.value = selectedPrompt.value
-//   selectedPrompt.value = null
-//   promptMode.value = 'new';
-// }
-
-// async function handleSaved(newPrompt: Prompt) {
-//   await fetchPrompts();
-//   selectedPrompt.value = newPrompt;
-// }
 
 
 async function handleCreate(payload: PromptCreateDTO) {
@@ -169,6 +164,38 @@ async function handleUpdate(payload: PromptUpdateDTO) {
     mode.value = "view"
   } catch(e) {
     console.error(e)
+  }
+}
+
+async function handleToolAdd(newTool: Tool) {
+  if (!selectedPrompt.value) {
+    throw createError({ statusCode: 500, statusMessage: "Missing prompt" })
+  }
+  
+  if (selectedPrompt.value && selectedPrompt.value.version_id) {
+    await associateToolWithPromptVersion({
+      tool_id: newTool.id,
+      prompt_version_id: selectedPrompt.value.version_id
+    })
+
+    selectedPrompt.value.tools.push(newTool)
+  }
+}
+
+async function handleToolRemove(removedTool: Tool) {
+  if (!selectedPrompt.value) {
+    throw createError({ statusCode: 500, statusMessage: "Missing prompt" })
+  }
+  
+  if (selectedPrompt.value && selectedPrompt.value.version_id) {
+    // Process removals first
+    await removeToolPromptAssociation({
+      tool_id: removedTool.id, 
+      prompt_version_id: selectedPrompt.value.version_id
+    })
+
+    const index = selectedPrompt.value.tools.findIndex(t => t.id = removedTool.id)
+    selectedPrompt.value.tools.splice(index, 1)
   }
 }
 </script>

@@ -280,6 +280,8 @@
                 />
               </div>
             </div>
+            
+            <!-- We've moved Tool Management to the View page -->
           </div>
         </div>
       </div>
@@ -340,6 +342,7 @@ const promptType = ref(props.prompt?.prompt_type || 'static');
 // Private backing field for chat mode
 const _isChat = ref(props.prompt?.json_mode ? false : props.prompt?.is_chat || false);
 const isOpen = ref(false);
+// Tools are now managed outside the edit view
 
 const currentCreatePromptStep = ref(1);
 
@@ -564,6 +567,8 @@ const handleSubmit = async () => {
   // Get the actual chat mode value - should be false if json_mode is true
   const finalChatMode = !jsonMode.value && canEnableChat.value && _isChat.value;
   
+  // We're no longer handling tools in this component
+  
   if (props.mode === 'new') {
     emit("handle-create", {
       key: promptKey.value,
@@ -575,7 +580,7 @@ const handleSubmit = async () => {
       json_mode: jsonMode.value,
       json_schema: finalJsonSchema,
       prompt_type: promptType.value,
-      is_chat: finalChatMode,
+      is_chat: finalChatMode
     });
   } else {
     emit("handle-update", {
@@ -589,7 +594,7 @@ const handleSubmit = async () => {
       json_mode: jsonMode.value,
       json_schema: finalJsonSchema,
       prompt_type: promptType.value,
-      is_chat: finalChatMode,
+      is_chat: finalChatMode
     });
   }
 };

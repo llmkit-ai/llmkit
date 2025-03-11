@@ -1,5 +1,7 @@
 import type { ApiLogReponse } from "./logs"
 
+import type { Tool } from './tools'
+
 export interface Prompt {
   id: number
   system: string
@@ -19,6 +21,7 @@ export interface Prompt {
   system_version_diff: string | null
   user_version_diff: string | null
   updated_at: string
+  tools: Tool[]
 }
 
 
@@ -26,6 +29,18 @@ export interface Prompt {
 export interface Message {
   role: 'system' | 'user' | 'assistant';
   content: string;
+  tool_calls?: ToolCall[];
+  tool_call_id?: string; // For tool responses
+}
+
+// Tool call structure
+export interface ToolCall {
+  id: string;
+  type: 'function';
+  function: {
+    name: string;
+    arguments: string;
+  };
 }
 
 // PROMPT EXECUTION RESPONSE
@@ -48,6 +63,7 @@ export interface ApiChoice {
   index: number;
   message: Message;
   finish_reason: string;
+  tool_calls?: ToolCall[];
 }
 
 export interface ApiUsage {
@@ -74,6 +90,7 @@ export interface ApiChunkChoice {
 export interface ApiDelta {
   content?: string;
   role?: string;
+  tool_calls?: ToolCall[];
 }
 
 
