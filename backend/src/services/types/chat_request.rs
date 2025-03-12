@@ -54,8 +54,21 @@ impl LlmServiceRequest {
             }
         }
         
-        let rendered_system_prompt = tera.render("system_prompt", &system_ctx)
+        let mut rendered_system_prompt = tera.render("system_prompt", &system_ctx)
             .map_err(|e| LlmServiceRequestError::TeraRenderError(e))?;
+
+        if let Some(json_schema) = &prompt.json_schema {
+            // double check we are in JSON mode and json_schema wasn't passed somehow in error
+            if prompt.json_mode {
+                let json_schema_addition = format!(
+                    "Please respond in adherence to the following JSON Schema: {}", 
+                    json_schema
+                );
+
+                rendered_system_prompt.push_str(&json_schema_addition);
+            }
+        }
+
 
         // If the message length is greater than or equal to two that means that we have atleast: 
         // 1 User Message and 1 Assistant message
