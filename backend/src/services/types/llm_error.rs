@@ -23,6 +23,8 @@ pub enum LlmError {
     // Serialization/Deserialization errors
     #[error("JSON error: {0}")]
     Json(#[from] serde_json::Error),
+    #[error("JSON returned from model did match match the JSON schema specified in the prompt")]
+    InvalidJsonSchema,
     #[error("Invalid UTF8 in chunk: {0}")]
     Utf8Error(#[from] std::str::Utf8Error),
     

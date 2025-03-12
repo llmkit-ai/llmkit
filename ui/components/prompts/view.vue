@@ -12,10 +12,23 @@
           <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 sm:mt-2">{{ props.prompt.key }}</dd>
         </div>
 
-        <!-- Version Info -->
+        <!-- Version Info with Selector -->
         <div class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-1 sm:px-0">
           <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">Prompt Version</dt>
-          <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 sm:mt-2"><b>{{ props.prompt.version_number }}</b> - <i>{{ formatDate(props.prompt.updated_at) }}</i></dd>
+          <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 sm:mt-2 flex items-center">
+            <select 
+              v-if="versions.length > 0" 
+              v-model="selectedVersionId" 
+              @change="changeVersion" 
+              class="mr-2 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded text-sm/6"
+            >
+              <option v-for="version in versions" :key="version.version_id" :value="version.version_id">
+                Version {{ version.version_number }}
+              </option>
+            </select>
+            <span v-else><b>{{ props.prompt.version_number }}</b></span>
+            <span class="ml-1">- <i>{{ formatDate(props.prompt.updated_at) }}</i></span>
+          </dd>
         </div>
 
 
@@ -57,8 +70,22 @@
 
         <!-- JSON Schema -->
         <div v-if="props.prompt.json_mode && props.prompt.json_schema" class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-3 sm:px-0">
-          <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">JSON Schema</dt>
-          <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 font-mono whitespace-pre-wrap bg-neutral-100 dark:bg-neutral-800 p-2">{{ formatJsonSchema(props.prompt.json_schema) }}</dd>
+          <div class="flex items-center justify-between">
+            <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">JSON Schema</dt>
+            <button
+              @click="showJsonSchema = !showJsonSchema"
+              class="text-xs text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-300"
+            >
+              {{ showJsonSchema ? 'Hide' : 'Show' }}
+            </button>
+          </div>
+          <!-- Schema preview with gradient -->
+          <dd v-if="!showJsonSchema" class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 font-mono whitespace-pre-wrap bg-neutral-100 dark:bg-neutral-800 p-2 relative max-h-20 overflow-hidden">
+            {{ formatJsonSchema(props.prompt.json_schema) }}
+            <div class="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-neutral-100 dark:from-neutral-800 to-transparent"></div>
+          </dd>
+          <!-- Full schema -->
+          <dd v-else class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 font-mono whitespace-pre-wrap bg-neutral-100 dark:bg-neutral-800 p-2">{{ formatJsonSchema(props.prompt.json_schema) }}</dd>
         </div>
 
 
@@ -89,8 +116,8 @@
             <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">System Prompt</dt>
             <dd class="text-sm/6 text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap bg-neutral-100 dark:bg-neutral-800 p-2">{{ props.prompt.system }}</dd>
           </div>
-          <!-- Only show User Prompt for dynamic_both type -->
-          <div v-if="props.prompt.prompt_type === 'dynamic_both'" class="px-4 sm:px-0 mt-2">
+          <!-- Only show User Prompt for dynamic_both type if it exists -->
+          <div v-if="props.prompt.prompt_type === 'dynamic_both' && props.prompt.user" class="px-4 sm:px-0 mt-2">
             <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">User Prompt</dt>
             <dd class="text-sm/6 text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap bg-neutral-100 dark:bg-neutral-800 p-2">{{ props.prompt.user }}</dd>
           </div>
@@ -140,10 +167,44 @@ const props = defineProps<{
 const emit = defineEmits([
   "handle-edit", 
   "handle-test", 
-  "toggle-tools-modal"
+  "toggle-tools-modal",
+  "prompt-updated"
 ])
 
+const { fetchPromptVersions, setActiveVersion } = usePrompts()
 const showVersionDiff = ref(false)
+const showJsonSchema = ref(false)
+const versions = ref<Prompt[]>([])
+const selectedVersionId = ref<number | null>(null)
+const isLoading = ref(false)
+
+watchEffect(async () => {
+  if (props.prompt?.id) {
+    selectedVersionId.value = props.prompt.version_id
+    try {
+      isLoading.value = true
+      versions.value = await fetchPromptVersions(props.prompt.id)
+    } catch (error) {
+      console.error('Error fetching versions:', error)
+    } finally {
+      isLoading.value = false
+    }
+  }
+})
+
+async function changeVersion() {
+  if (!props.prompt?.id || !selectedVersionId.value) return
+  
+  try {
+    isLoading.value = true
+    const updatedPrompt = await setActiveVersion(props.prompt.id, selectedVersionId.value)
+    emit("prompt-updated", updatedPrompt)
+  } catch (error) {
+    console.error('Error changing version:', error)
+  } finally {
+    isLoading.value = false
+  }
+}
 
 function handleEdit() {
   emit("handle-edit")

@@ -195,9 +195,10 @@ impl PromptRepository {
 
         // 1. fetch current prompt to compute diffs
         let current_prompt = self.get_prompt(id).await?;
+        let current_user_prompt = current_prompt.user.unwrap_or("".to_string());
 
         let system_diff = generate_diff(&current_prompt.system, system_prompt);
-        let user_diff = generate_diff(&current_prompt.user, user_prompt);
+        let user_diff = generate_diff(&current_user_prompt, user_prompt);
 
         // 2. get the latest version number for THIS prompt (using prompt_id)
         let latest_version: Option<i64> = sqlx::query!(
@@ -320,6 +321,86 @@ impl PromptRepository {
         .fetch_one(&self.pool)
         .await?;
         Ok(prompt)
+    }
+
+    pub async fn get_prompt_versions(&self, prompt_id: i64) -> Result<Vec<PromptRowWithModel>> {
+        let versions = sqlx::query_as!(
+            PromptRowWithModel,
+            r#"
+            SELECT
+                p.id,
+                p.key,
+                pv.system,
+                pv.user,
+                pv.model_id,
+                pv.max_tokens,
+                pv.temperature,
+                pv.json_mode,
+                pv.json_schema,
+                pv.prompt_type,
+                pv.is_chat,
+                m.name as model_name,
+                pr.name as provider_name,
+                pr.base_url as provider_base_url,
+                pv.system_diff,
+                pv.user_diff,
+                pv.version_number,
+                pv.id as version_id,
+                pv.created_at,
+                pv.updated_at
+            FROM prompt_version pv
+            JOIN prompt p ON pv.prompt_id = p.id
+            JOIN model m ON pv.model_id = m.id
+            JOIN provider pr ON m.provider_id = pr.id
+            WHERE pv.prompt_id = ?
+            ORDER BY pv.version_number DESC
+            "#,
+            prompt_id
+        )
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(versions)
+    }
+
+    pub async fn set_active_prompt_version(&self, prompt_id: i64, version_id: i64) -> Result<PromptRowWithModel> {
+        // Verify the version belongs to this prompt
+        let version_count = sqlx::query!(
+            r#"
+            SELECT COUNT(*) as count
+            FROM prompt_version
+            WHERE id = ? AND prompt_id = ?
+            "#,
+            version_id,
+            prompt_id
+        )
+        .fetch_one(&self.pool)
+        .await?
+        .count;
+
+        if version_count == 0 {
+            anyhow::bail!("Version not found or does not belong to this prompt");
+        }
+
+        // Update the prompt's current version
+        let affected = sqlx::query!(
+            r#"
+            UPDATE prompt
+            SET current_prompt_version_id = ?
+            WHERE id = ?
+            "#,
+            version_id,
+            prompt_id
+        )
+        .execute(&self.pool)
+        .await?
+        .rows_affected();
+
+        if affected == 0 {
+            anyhow::bail!("Prompt not found");
+        }
+
+        // Return the updated prompt
+        self.get_prompt(prompt_id).await
     }
 }
 

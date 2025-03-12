@@ -202,6 +202,51 @@ pub async fn delete_prompt(
     Ok(())
 }
 
+pub async fn get_prompt_versions(
+    Path(id): Path<i64>,
+    State(state): State<AppState>,
+) -> Result<Json<Vec<PromptResponse>>, AppError> {
+    let versions = state.db.prompt.get_prompt_versions(id).await?;
+    
+    let mut responses = Vec::new();
+    for version in versions {
+        // Fetch associated tools for each version
+        let tools = state.db.tool.get_tools_by_prompt_version(version.version_id).await?;
+        
+        // Convert version to PromptResponse
+        let mut response: PromptResponse = version.into();
+        
+        // Add tools to the response
+        response.tools = tools.into_iter().map(|t| t.into()).collect();
+        
+        responses.push(response);
+    }
+    
+    Ok(Json(responses))
+}
+
+pub async fn set_active_version(
+    Path((prompt_id, version_id)): Path<(i64, i64)>,
+    State(state): State<AppState>,
+) -> Result<Json<PromptResponse>, AppError> {
+    // Set the active version in the database
+    let prompt = state.db.prompt.set_active_prompt_version(prompt_id, version_id).await?;
+    
+    // Update the cache
+    state.prompt_cache.insert(prompt_id, prompt.clone()).await;
+    
+    // Fetch associated tools
+    let tools = state.db.tool.get_tools_by_prompt_version(prompt.version_id).await?;
+    
+    // Convert prompt to PromptResponse
+    let mut response: PromptResponse = prompt.into();
+    
+    // Add tools to the response
+    response.tools = tools.into_iter().map(|t| t.into()).collect();
+    
+    Ok(Json(response))
+}
+
 // OpenAI compatible API endpoints
 #[axum::debug_handler]
 pub async fn api_completions(

@@ -26,7 +26,8 @@ use controllers::{
         get_eval_runs_by_prompt_version, update_eval_run_score,
     },
     prompts::{
-        api_completions, api_completions_stream, create_prompt, delete_prompt, get_prompt, list_prompts, update_prompt
+        api_completions, api_completions_stream, create_prompt, delete_prompt, get_prompt, 
+        get_prompt_versions, list_prompts, set_active_version, update_prompt
     }, 
     schema::validate_schema,
     tools::{
@@ -82,6 +83,8 @@ async fn main() -> Result<()> {
         .route("/ui/settings/api-keys/{id}", delete(delete_api_key))
         .route("/ui/prompts", post(create_prompt).get(list_prompts))
         .route("/ui/prompts/{id}", get(get_prompt).put(update_prompt).delete(delete_prompt))
+        .route("/ui/prompts/{id}/versions", get(get_prompt_versions))
+        .route("/ui/prompts/{prompt_id}/set-version/{version_id}", put(set_active_version))
         .route("/ui/prompts/{id}/prompt-evals", get(get_eval_test_by_prompt))
         .route("/ui/prompts/{id}/performance", get(get_eval_performance_by_prompt_id))
         .route("/ui/prompts/execute", post(api_completions))

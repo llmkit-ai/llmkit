@@ -30,7 +30,7 @@ SELECT
     NULL,
     NULL,
     'You are a helpful, friendly assistant who provides clear and concise answers to questions. Be polite, accurate, and straightforward.',
-    '',
+    NULL,
     m.id,
     2048,
     0.7,
@@ -83,7 +83,7 @@ SELECT
 Here are some examples of good responses:
 {{ examples }}
 {% endif %}',
-    '',
+    NULL,
     m.id,
     2048,
     0.7,
@@ -137,7 +137,7 @@ Use a {{ style }} writing style.
 {% if focus_on %}
 Focus particularly on {{ focus_on }} in your summary.
 {% endif %}',
-    '',
+    NULL,
     m.id,
     1024,
     0.5,
@@ -246,30 +246,24 @@ SELECT
     1,
     NULL,
     NULL,
-    'You are a product analysis expert. Analyze the given product based on the following criteria: {{ criteria }}.
+    '
+You are a product analyst. The user will give you a product to analyze.
 
-Your task is to extract key information and provide a structured analysis of the product.
-
-Return the result in JSON format with the following structure:
+Respond in JSON format with the following structure:
 {
-  "product_name": string,
-  "category": string,
   "key_features": string[],
-  "strengths": string[],
-  "weaknesses": string[],
-  "target_audience": string[],
-  "competitive_analysis": {
-    "advantages": string[],
-    "disadvantages": string[]
-  },
-  "overall_rating": number (1-10),
-  "recommendation": string
+  "pros": string[],
+  "cons": string[],
+  "target_users": string[],
+  "rating": number (1-10),
+  "summary": string
 }
 
-{% if include_price_analysis %}
-Also include a "price_analysis" field with a price_to_value assessment.
-{% endif %}',
-    '',
+{% if include_anecdotes %}
+Also include anecdotal things you''ve heard about the product.
+{% endif %}
+',
+    null,
     m.id,
     1536,
     0.2,
