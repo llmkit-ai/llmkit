@@ -294,8 +294,6 @@ pub async fn api_completions(
             AppError::InternalServerError("Failed to process request".into())
         })?;
 
-    tracing::info!("props: {:?}", llm_props);
-
     let llm = Llm::new(llm_props.clone(), state.db.log.clone());
 
     let res = if json_mode {

@@ -32,7 +32,7 @@ impl Llm {
         ExponentialBackoff::from_millis(100)
             .max_delay(Duration::from_secs(100))
             .map(jitter)
-            .take(3)
+            .take(1)
     }
 
     pub async fn text(&self) -> Result<(LlmServiceChatCompletionResponse, i64), LlmError> {
@@ -52,6 +52,7 @@ impl Llm {
                     Some(js) => {
                         let is_valid = &self.validate_schema(&c.message.content, &js)?;
                         if !is_valid {
+                            tracing::error!("The schema was not valid");
                             return Err(LlmError::InvalidJsonSchema);
                         }
                     },
@@ -67,7 +68,10 @@ impl Llm {
     }
 
     fn validate_schema(&self, response: &str, schema: &str) -> Result<bool, LlmError> {
+        tracing::info!("Parsing response json: {}", response);
         let response_json: serde_json::Value = serde_json::from_str(&response)?;
+
+        tracing::info!("Parsing schema json");
         let schema_json: serde_json::Value = serde_json::from_str(&schema)?;
         let is_valid = jsonschema::is_valid(&schema_json, &response_json);
 

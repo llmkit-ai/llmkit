@@ -4,7 +4,7 @@ use serde_json::Value;
 
 use crate::{
     common::types::{
-        message::{ChatCompletionRequest, ChatCompletionRequestMessage}, 
+        message::{ChatCompletionRequest, ChatCompletionRequestMessage, ChatCompletionRequestResponseFormat}, 
         models::LlmApiProvider
     }, 
     db::types::prompt::PromptRowWithModel
@@ -143,7 +143,9 @@ impl LlmServiceRequest {
         service_request.request.model = prompt.model_name.clone();
         service_request.request.temperature = Some(prompt.temperature);
         if prompt.json_mode {
-            service_request.request.response_format = Some("{\"type\": \"json_object\"}".to_string());
+            service_request.request.response_format = Some( 
+                ChatCompletionRequestResponseFormat { format_type: "json_object".to_string() }
+            );
         }
         
         Ok(service_request)
@@ -572,7 +574,9 @@ mod tests {
         // Check that response_format was set correctly
         assert_eq!(
             service_request.request.response_format,
-            Some("{\"type\": \"json_object\"}".to_string())
+            Some( 
+                ChatCompletionRequestResponseFormat { format_type: "json_object".to_string() }
+            )
         );
     }
     

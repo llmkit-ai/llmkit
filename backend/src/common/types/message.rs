@@ -14,7 +14,7 @@ pub struct ChatCompletionRequest {
     pub stream: Option<bool>,
     /// (Optional) Stub for response_format.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub response_format: Option<String>,
+    pub response_format: Option<ChatCompletionRequestResponseFormat>,
     /// (Optional) Tool calling field. Now uses our production‑ready tool types.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tools: Option<Vec<ChatCompletionRequestTool>>,
@@ -35,11 +35,19 @@ pub struct ChatCompletionRequest {
     pub temperature: Option<f64>,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+impl From<ChatCompletionRequestResponseFormat> for openrouter_api::types::chat::ResponseFormat { 
+    fn from(value: ChatCompletionRequestResponseFormat) -> Self {
+        openrouter_api::types::chat::ResponseFormat {
+            format_type: value.format_type
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 pub struct ChatCompletionRequestResponseFormat {
     /// Currently only supports "json_object" as per OpenAI spec
-    #[serde(default)]
-    pub r#type: String
+    #[serde(rename = "type")]
+    pub format_type: String
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
