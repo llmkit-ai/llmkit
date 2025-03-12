@@ -187,20 +187,12 @@ export const usePrompts = () => {
   const executeApiCompletion = async (
     modelKey: string, 
     messages: Message[], 
-    jsonMode: boolean = false
   ) => {
     try {
       const requestBody: any = {
         model: modelKey,
         messages
       };
-      
-      // Add JSON mode if required
-      if (jsonMode) {
-        requestBody.response_format = {
-          type: "json_object"
-        };
-      }
       
       // Use the OpenAI-compatible API endpoint
       return await $fetch<ApiCompletionResponse>('/v1/ui/prompts/execute', {

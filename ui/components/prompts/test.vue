@@ -131,9 +131,10 @@
           {{ showResponseContent ? 'Hide' : 'Show' }}
         </button>
       </div>
-      <div v-if="showResponseContent" class="response-content mt-3 dark:text-neutral-300 text-sm">
+      <div v-if="showResponseContent && !prompt.json_schema" class="response-content mt-3 dark:text-neutral-300 text-sm">
         {{ testResponseContent }}
       </div>
+      <pre v-if="showResponseContent && prompt.json_schema" class="mt-3 dark:text-neutral-300 text-sm">{{ testResponseContent }}</pre>
     </div>
     <div v-if="testResponseTool" class="mt-5 bg-neutral-100 dark:bg-neutral-800 p-4">
       <div class="flex items-center justify-between">
@@ -350,13 +351,12 @@ async function execute() {
     
     // Get API client from composable
     const { executeApiCompletion } = usePrompts();
-    
+
     // Execute the prompt using the composable
     const response = await executeApiCompletion(
       props.prompt.key,
       // @ts-ignore
-      messages,
-      props.prompt.json_mode
+      messages
     );
     
     const responseChoices = response.choices
