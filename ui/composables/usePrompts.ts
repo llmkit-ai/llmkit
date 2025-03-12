@@ -274,6 +274,40 @@ export const usePrompts = () => {
     }
   }
 
+  const fetchPromptVersions = async (promptId: number) => {
+    try {
+      loading.value = true
+      return await $fetch<Prompt[]>(`/v1/ui/prompts/${promptId}/versions`)
+    } catch (err) {
+      console.error(err)
+      error.value = 'Failed to fetch prompt versions'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const setActiveVersion = async (promptId: number, versionId: number) => {
+    try {
+      loading.value = true
+      const updatedPrompt = await $fetch<Prompt>(`/v1/ui/prompts/${promptId}/set-version/${versionId}`, {
+        method: 'PUT'
+      })
+      
+      // Update the prompt in the local list
+      const index = prompts.value.findIndex(p => p.id === promptId)
+      if (index !== -1) prompts.value[index] = updatedPrompt
+      
+      return updatedPrompt
+    } catch (err) {
+      console.error(err)
+      error.value = 'Failed to set active version'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     prompts,
     promptPerformance,
@@ -289,6 +323,8 @@ export const usePrompts = () => {
     executeChat,
     executeApiCompletion,
     executeApiCompletionStream,
-    validateJsonSchema
+    validateJsonSchema,
+    fetchPromptVersions,
+    setActiveVersion
   }
 }

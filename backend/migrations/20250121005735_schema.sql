@@ -33,7 +33,7 @@ CREATE TABLE prompt_version (
     system_diff TEXT,
     user_diff TEXT,
     system TEXT NOT NULL,
-    user TEXT NOT NULL,
+    user TEXT,
     model_id INTEGER NOT NULL,
     max_tokens INTEGER NOT NULL DEFAULT 256,
     temperature REAL NOT NULL DEFAULT 0.7,

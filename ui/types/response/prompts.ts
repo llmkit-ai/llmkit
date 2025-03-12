@@ -5,7 +5,7 @@ import type { Tool } from './tools'
 export interface Prompt {
   id: number
   system: string
-  user: string
+  user: string | null
   key: string
   model: string
   model_id: number

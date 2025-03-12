@@ -88,6 +88,7 @@
               @handle-edit="mode = 'edit'"
               @handle-test="mode = 'test'"
               @toggle-tools-modal="showToolsModal = !showToolsModal"
+              @prompt-updated="handlePromptVersionChange"
             />
             
             <!-- Tools Management Modal -->
@@ -196,6 +197,17 @@ async function handleToolRemove(removedTool: Tool) {
 
     const index = selectedPrompt.value.tools.findIndex(t => t.id = removedTool.id)
     selectedPrompt.value.tools.splice(index, 1)
+  }
+}
+
+function handlePromptVersionChange(updatedPrompt: Prompt) {
+  // Update the selected prompt with the new version
+  selectedPrompt.value = updatedPrompt
+
+  // Also update the prompt in the prompts list
+  const index = prompts.value.findIndex(p => p.id === updatedPrompt.id)
+  if (index !== -1) {
+    prompts.value[index] = updatedPrompt
   }
 }
 </script>

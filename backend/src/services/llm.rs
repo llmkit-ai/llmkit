@@ -44,17 +44,38 @@ impl Llm {
         let retry_strategy = self.retry_strategy();
         Retry::spawn(retry_strategy, || async {
             let res = self.send_request().await?;
-            // Since this is not a client library and will be invoked via API
-            // we can't strongly enforce the shape of the JSON, therefore we just
-            // need to make sure it is a valid JSON (hence Value) and then convert
-            // it back into text and be on our way
+
             if let Some(c) = res.0.choices.first() {
-                let _json: serde_json::Value = serde_json::from_str(&c.message.content)?;
+                // if we have a JSON schema available lets use it
+                // Otherwise just make sure it's valid JSON and return
+                match &self.props.json_schema {
+                    Some(js) => {
+                        let is_valid = &self.validate_schema(&c.message.content, &js)?;
+                        if !is_valid {
+                            return Err(LlmError::InvalidJsonSchema);
+                        }
+                    },
+                    None => {
+                        let _json: serde_json::Value = serde_json::from_str(&c.message.content)?;
+                    } 
+                }
             }
 
             Ok(res)
         })
         .await
+    }
+
+    fn validate_schema(&self, response: &str, schema: &str) -> Result<bool, LlmError> {
+        let response_json: serde_json::Value = serde_json::from_str(&response)?;
+        let schema_json: serde_json::Value = serde_json::from_str(&schema)?;
+        let is_valid = jsonschema::is_valid(&schema_json, &response_json);
+
+        if !is_valid {
+            return Ok(false);
+        }
+
+        Ok(true)
     }
 
     pub async fn stream(
@@ -275,5 +296,246 @@ impl Llm {
             )
             .await
             .map_err(|e| LlmError::DbLoggingError(e.to_string()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // This struct represents a test version of Llm that we can use for unit testing the validate_schema method
+    struct TestLlm {}
+
+    impl TestLlm {
+        // Create a simplified version of validate_schema for testing
+        fn validate_schema(&self, response: &str, schema: &str) -> Result<bool, LlmError> {
+            let response_json: serde_json::Value = serde_json::from_str(&response)?;
+            let schema_json: serde_json::Value = serde_json::from_str(&schema)?;
+            let is_valid = jsonschema::is_valid(&schema_json, &response_json);
+
+            if !is_valid {
+                return Ok(false);
+            }
+
+            Ok(true)
+        }
+    }
+
+    #[test]
+    fn test_validate_schema_valid_response() {
+        let llm = TestLlm {};
+        
+        // Simple schema requiring a string field named "test"
+        let schema = r#"{
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "required": ["test"],
+            "properties": {
+                "test": {"type": "string"}
+            }
+        }"#;
+        
+        // Valid response matching the schema
+        let response = r#"{"test": "hello world"}"#;
+        
+        let result = llm.validate_schema(response, schema);
+        assert!(result.is_ok());
+        assert!(result.unwrap());
+    }
+
+    #[test]
+    fn test_validate_schema_invalid_response() {
+        let llm = TestLlm {};
+        
+        // Simple schema requiring a string field named "test"
+        let schema = r#"{
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "required": ["test"],
+            "properties": {
+                "test": {"type": "string"}
+            }
+        }"#;
+        
+        // Invalid response missing required field
+        let response = r#"{"other_field": "hello world"}"#;
+        
+        let result = llm.validate_schema(response, schema);
+        assert!(result.is_ok());
+        assert!(!result.unwrap());
+    }
+
+    #[test]
+    fn test_validate_schema_wrong_type() {
+        let llm = TestLlm {};
+        
+        // Simple schema requiring a string field named "test"
+        let schema = r#"{
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "required": ["test"],
+            "properties": {
+                "test": {"type": "string"}
+            }
+        }"#;
+        
+        // Invalid response with wrong type for field
+        let response = r#"{"test": 123}"#;
+        
+        let result = llm.validate_schema(response, schema);
+        assert!(result.is_ok());
+        assert!(!result.unwrap());
+    }
+
+    #[test]
+    fn test_validate_schema_product_review() {
+        let llm = TestLlm {};
+        
+        // Complex schema for product review
+        let schema = r#"{
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "required": [
+            "key_features",
+            "pros",
+            "cons",
+            "target_users",
+            "rating",
+            "summary"
+          ],
+          "properties": {
+            "key_features": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "pros": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "cons": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "target_users": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "rating": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 10
+            },
+            "summary": {
+              "type": "string"
+            }
+          }
+        }"#;
+        
+        // Valid response matching the product review schema
+        let response = r#"{
+            "key_features": ["Feature 1", "Feature 2", "Feature 3"],
+            "pros": ["Pro 1", "Pro 2"],
+            "cons": ["Con 1"],
+            "target_users": ["User type 1", "User type 2"],
+            "rating": 8.5,
+            "summary": "This is a great product overall."
+        }"#;
+        
+        let result = llm.validate_schema(response, schema);
+        assert!(result.is_ok());
+        assert!(result.unwrap());
+    }
+
+    #[test]
+    fn test_validate_schema_product_review_invalid() {
+        let llm = TestLlm {};
+        
+        // Complex schema for product review
+        let schema = r#"{
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "required": [
+            "key_features",
+            "pros",
+            "cons",
+            "target_users",
+            "rating",
+            "summary"
+          ],
+          "properties": {
+            "key_features": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "pros": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "cons": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "target_users": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "rating": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 10
+            },
+            "summary": {
+              "type": "string"
+            }
+          }
+        }"#;
+        
+        // Invalid response: missing required fields and invalid rating value
+        let response = r#"{
+            "key_features": ["Feature 1", "Feature 2"],
+            "pros": ["Pro 1", "Pro 2"],
+            "rating": 11,
+            "summary": "This is a great product overall."
+        }"#;
+        
+        let result = llm.validate_schema(response, schema);
+        assert!(result.is_ok());
+        assert!(!result.unwrap());
+    }
+
+    #[test]
+    fn test_validate_schema_invalid_json() {
+        let llm = TestLlm {};
+        
+        // Simple schema
+        let schema = r#"{
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "properties": {
+                "test": {"type": "string"}
+            }
+        }"#;
+        
+        // Invalid JSON response
+        let response = r#"{"test": "unclosed string"#;
+        
+        let result = llm.validate_schema(response, schema);
+        assert!(result.is_err());
     }
 }

@@ -10,7 +10,7 @@ pub struct PromptResponse {
     pub id: i64,
     pub key: String,
     pub system: String,
-    pub user: String,
+    pub user: Option<String>,
     pub model: String,
     pub model_id: i64,
     pub provider: String,

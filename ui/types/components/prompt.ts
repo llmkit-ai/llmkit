@@ -1,7 +1,7 @@
 export interface PromptCreateDTO {
   key: string;
   system: string;
-  user: string;
+  user?: string | null;
   model_id: number | null;
   max_tokens: number;
   temperature: number;
@@ -16,7 +16,7 @@ export interface PromptUpdateDTO {
   id: number;
   key: string;
   system: string;
-  user: string;
+  user?: string | null;
   model_id: number | null;
   max_tokens: number;
   temperature: number;

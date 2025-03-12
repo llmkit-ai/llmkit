@@ -11,8 +11,8 @@
           <dd class="text-sm/6 text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap bg-neutral-100 dark:bg-neutral-800 p-2">{{ systemPrompt }}</dd>
         </div>
       </dl>
-      <!-- Only show User Prompt for dynamic_both type -->
-      <dl v-if="props.prompt.prompt_type === 'dynamic_both'" class="grid grid-cols-1 sm:grid-cols-2">
+      <!-- Only show User Prompt for dynamic_both type if it exists -->
+      <dl v-if="props.prompt.prompt_type === 'dynamic_both' && userPrompt" class="grid grid-cols-1 sm:grid-cols-2">
         <div class="dark:border-neutral-700 px-4 sm:col-span-2 sm:px-0">
           <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">User Prompt</dt>
           <dd class="text-sm/6 text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap bg-neutral-100 dark:bg-neutral-800 p-2">{{ userPrompt }}</dd>
@@ -26,7 +26,7 @@
           <dd class="text-sm/6 text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap bg-neutral-100 dark:bg-neutral-800 p-2">{{ renderedSystemPrompt }}</dd>
         </div>
         
-        <div v-if="props.prompt.prompt_type === 'dynamic_both'" class="dark:border-neutral-700 px-4 sm:col-span-2 sm:px-0">
+        <div v-if="props.prompt.prompt_type === 'dynamic_both' && renderedUserPrompt" class="dark:border-neutral-700 px-4 sm:col-span-2 sm:px-0">
           <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">Rendered User Prompt</dt>
           <dd class="text-sm/6 text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap bg-neutral-100 dark:bg-neutral-800 p-2">{{ renderedUserPrompt }}</dd>
         </div>
