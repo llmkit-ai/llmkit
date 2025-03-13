@@ -38,7 +38,18 @@ pub struct ChatCompletionRequest {
 impl From<ChatCompletionRequestResponseFormat> for openrouter_api::types::chat::ResponseFormat { 
     fn from(value: ChatCompletionRequestResponseFormat) -> Self {
         openrouter_api::types::chat::ResponseFormat {
-            format_type: value.format_type
+            format_type: value.format_type,
+            json_schema: value.json_schema.map(|js| js.into())
+        }
+    }
+}
+
+impl From<ChatCompletionRequestJsonSchema> for openrouter_api::types::chat::JsonSchema { 
+    fn from(value: ChatCompletionRequestJsonSchema) -> Self {
+        openrouter_api::types::chat::JsonSchema {
+            name: value.name,
+            strict: value.strict,
+            schema: value.schema
         }
     }
 }
@@ -47,7 +58,15 @@ impl From<ChatCompletionRequestResponseFormat> for openrouter_api::types::chat::
 pub struct ChatCompletionRequestResponseFormat {
     /// Currently only supports "json_object" as per OpenAI spec
     #[serde(rename = "type")]
-    pub format_type: String
+    pub format_type: String,
+    pub json_schema: Option<ChatCompletionRequestJsonSchema>
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
+pub struct ChatCompletionRequestJsonSchema {
+    pub name: String,
+    pub strict: bool,
+    pub schema: serde_json::Value
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

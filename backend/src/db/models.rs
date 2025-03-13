@@ -16,6 +16,7 @@ impl ModelRepository {
         provider_id: i64,
         name: &str,
         supports_json: bool,
+        supports_json_schema: bool,
         supports_tools: bool,
     ) -> Result<i64> {
         let mut conn = self.pool.acquire().await?;
@@ -25,12 +26,14 @@ impl ModelRepository {
                 provider_id,
                 name,
                 supports_json,
+                supports_json_schema,
                 supports_tools
-            ) VALUES (?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?)
             "#,
             provider_id,
             name,
             supports_json,
+            supports_json_schema,
             supports_tools
         )
         .execute(&mut *conn)
@@ -45,6 +48,7 @@ impl ModelRepository {
         provider_id: i64,
         name: &str,
         supports_json: bool,
+        supports_json_schema: bool,
         supports_tools: bool,
     ) -> Result<bool> {
         let rows_affected = sqlx::query!(
@@ -54,12 +58,14 @@ impl ModelRepository {
                 provider_id = ?,
                 name = ?,
                 supports_json = ?,
+                supports_json_schema = ?,
                 supports_tools = ?
             WHERE id = ?
             "#,
             provider_id,
             name,
             supports_json,
+            supports_json_schema,
             supports_tools,
             id
         )
@@ -80,6 +86,7 @@ impl ModelRepository {
                 m.name as model_name,
                 p.name as provider_name,
                 m.supports_json,
+                m.supports_json_schema,
                 m.supports_tools,
                 p.base_url as provider_base_url,
                 m.created_at
@@ -104,6 +111,7 @@ impl ModelRepository {
                 m.name as model_name,
                 p.name as provider_name,
                 m.supports_json,
+                m.supports_json_schema,
                 m.supports_tools,
                 p.base_url as provider_base_url,
                 m.created_at
@@ -128,6 +136,7 @@ impl ModelRepository {
                 m.name as model_name,
                 p.name as provider_name,
                 m.supports_json,
+                m.supports_json_schema,
                 m.supports_tools,
                 p.base_url as provider_base_url,
                 m.created_at

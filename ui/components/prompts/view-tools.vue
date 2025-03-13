@@ -2,6 +2,7 @@
   <div>
     <h3 class="text-base/7 font-semibold text-neutral-900 dark:text-white mb-4">
       Associated Tools <span v-if="tools.length > 0" class="text-sm font-normal text-neutral-500">({{ tools.length }})</span>
+      <span v-if="tools.length > 0 && modelSupportsTools === false" class="ml-2 text-xs text-amber-500">(Warning: Model doesn't support tools)</span>
     </h3>
     
     <div v-if="loading" class="animate-pulse p-4 space-y-2">
@@ -65,6 +66,7 @@ import type { Tool } from '~/types/response/tools';
 const props = defineProps<{
   tools: Tool[];
   loading?: boolean;
+  modelSupportsTools?: boolean;
 }>();
 
 // UI state

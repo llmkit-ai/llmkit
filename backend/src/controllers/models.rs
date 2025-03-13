@@ -27,6 +27,7 @@ pub async fn create_model(
             payload.provider_id,
             &payload.name,
             payload.supports_json,
+            payload.supports_json_schema,
             payload.supports_tools,
         )
         .await?;
@@ -54,6 +55,7 @@ pub async fn update_model(
             payload.provider_id,
             &payload.name,
             payload.supports_json,
+            payload.supports_json_schema,
             payload.supports_tools,
         )
         .await?;

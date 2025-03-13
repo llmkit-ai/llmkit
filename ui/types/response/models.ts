@@ -5,5 +5,6 @@ export interface Model {
   provider_name: string,
   provider_base_url: string,
   supports_json: boolean,
+  supports_json_schema: boolean,
   supports_tools: boolean,
 }

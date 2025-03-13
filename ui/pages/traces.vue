@@ -49,11 +49,11 @@
                   [in:{{ log.input_tokens }} out:{{ log.output_tokens }} rt:{{ log.reasoning_tokens }}]
                 </span>
                 
-                <span class="text-neutral-500 dark:text-neutral-400">request:</span>
-                <pre class="p-2 bg-neutral-200 dark:bg-neutral-800 rounded text-neutral-900 dark:text-neutral-300 overflow-x-auto">{{ JSON.parse(log.request_body!) }}</pre>
+                <span v-if="log.request_body" class="text-neutral-500 dark:text-neutral-400">request:</span>
+                <pre v-if="log.request_body" class="p-2 bg-neutral-200 dark:bg-neutral-800 rounded text-neutral-900 dark:text-neutral-300 overflow-x-auto">{{ parseJson(log.request_body) }}</pre>
                 
-                <span class="text-neutral-500 dark:text-neutral-400">response:</span>
-                <pre class="p-2 bg-neutral-200 dark:bg-neutral-800 rounded text-neutral-900 dark:text-neutral-300 overflow-x-auto">{{ JSON.parse(log.response_data!) }}</pre>
+                <span v-if="log.response_data" class="text-neutral-500 dark:text-neutral-400">response:</span>
+                <pre v-if="log.response_data" class="p-2 bg-neutral-200 dark:bg-neutral-800 rounded text-neutral-900 dark:text-neutral-300 overflow-x-auto">{{ parseJson(log.response_data) }}</pre>
               </div>
             </div>
           </div>
@@ -153,6 +153,16 @@ onMounted(async () => {
   await fetchLogs(currentPage.value, pageSize)
   await fetchLogsCount()
 })
+
+function parseJson(json: string | null) {
+  if (!json) { return null; } 
+
+  try {
+    return JSON.parse(json)
+  } catch {
+    return json
+  }
+}
 </script>
 
 <style>

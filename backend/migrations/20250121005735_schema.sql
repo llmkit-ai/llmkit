@@ -12,6 +12,7 @@ CREATE TABLE model (
     provider_id INTEGER NOT NULL,
     name TEXT NOT NULL,
     supports_json BOOLEAN NOT NULL DEFAULT 0,
+    supports_json_schema BOOLEAN NOT NULL DEFAULT 0,
     supports_tools BOOLEAN NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(provider_id) REFERENCES provider(id),

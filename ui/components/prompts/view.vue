@@ -33,9 +33,27 @@
 
 
         <!-- Model -->
-        <div class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-1 sm:px-0">
+        <div class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-3 sm:px-0">
           <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">Model</dt>
-          <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 sm:mt-2">{{ props.prompt.model }} ({{ props.prompt.provider }})</dd>
+          <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 sm:mt-2">
+            <div class="flex flex-col space-y-2">
+              <div>{{ props.prompt.model }} ({{ props.prompt.provider }})</div>
+              <div class="flex flex-wrap gap-2">
+                <span v-if="props.prompt.supports_json" class="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-800 dark:bg-blue-900/20 dark:text-blue-400">
+                  JSON
+                </span>
+                <span v-if="props.prompt.supports_json_schema" class="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-xs text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
+                  JSON Schema
+                </span>
+                <span v-if="props.prompt.supports_tools" class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-800 dark:bg-green-900/20 dark:text-green-400">
+                  Tools
+                </span>
+                <span v-if="!props.prompt.supports_json && !props.prompt.supports_json_schema && !props.prompt.supports_tools" class="text-neutral-500 dark:text-neutral-400 text-xs">
+                  No capabilities
+                </span>
+              </div>
+            </div>
+          </dd>
         </div>
 
         <!-- Prompt Type -->
@@ -55,7 +73,7 @@
           <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">Chat Mode</dt>
           <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 sm:mt-2">{{ props.prompt.is_chat ? 'Enabled' : 'Disabled' }}</dd>
         </div>
-
+        
         <!-- Max Tokens -->
         <div class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-1 sm:px-0">
           <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">Max Tokens</dt>
@@ -125,7 +143,10 @@
         
         <!-- Associated Tools Section -->
         <div class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-3 sm:px-0">
-          <ViewTools :tools="props.prompt.tools || []" />
+          <ViewTools 
+            :tools="props.prompt.tools || []" 
+            :model-supports-tools="props.prompt.supports_tools" 
+          />
         </div>
       </dl>
     </div>

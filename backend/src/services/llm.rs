@@ -48,17 +48,22 @@ impl Llm {
             if let Some(c) = res.0.choices.first() {
                 // if we have a JSON schema available lets use it
                 // Otherwise just make sure it's valid JSON and return
-                match &self.props.json_schema {
-                    Some(js) => {
-                        let is_valid = &self.validate_schema(&c.message.content, &js)?;
-                        if !is_valid {
-                            tracing::error!("The schema was not valid");
-                            return Err(LlmError::InvalidJsonSchema);
+                match &self.props.request.response_format {
+                    Some(rf) => {
+                        match &rf.json_schema {
+                            Some(js) => {
+                                let is_valid = &self.validate_schema(&c.message.content, &js.schema)?;
+                                if !is_valid {
+                                    tracing::error!("The schema was not valid");
+                                    return Err(LlmError::InvalidJsonSchema);
+                                }
+                            },
+                            None => {
+                                let _json: serde_json::Value = serde_json::from_str(&c.message.content)?;
+                            } 
                         }
                     },
-                    None => {
-                        let _json: serde_json::Value = serde_json::from_str(&c.message.content)?;
-                    } 
+                    None => unreachable!("Encountered a situation where we don't have a response_format in JSON mode")
                 }
             }
 
@@ -67,13 +72,9 @@ impl Llm {
         .await
     }
 
-    fn validate_schema(&self, response: &str, schema: &str) -> Result<bool, LlmError> {
-        tracing::info!("Parsing response json: {}", response);
+    fn validate_schema(&self, response: &str, schema: &serde_json::Value) -> Result<bool, LlmError> {
         let response_json: serde_json::Value = serde_json::from_str(&response)?;
-
-        tracing::info!("Parsing schema json");
-        let schema_json: serde_json::Value = serde_json::from_str(&schema)?;
-        let is_valid = jsonschema::is_valid(&schema_json, &response_json);
+        let is_valid = jsonschema::is_valid(&schema, &response_json);
 
         if !is_valid {
             return Ok(false);

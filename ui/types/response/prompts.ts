@@ -22,6 +22,9 @@ export interface Prompt {
   user_version_diff: string | null
   updated_at: string
   tools: Tool[]
+  supports_json: boolean
+  supports_json_schema: boolean
+  supports_tools: boolean
 }
 
 

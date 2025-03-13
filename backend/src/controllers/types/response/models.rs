@@ -10,6 +10,7 @@ pub struct ModelResponse {
     pub provider_name: String,
     pub provider_base_url: String,
     pub supports_json: bool,
+    pub supports_json_schema: bool,
     pub supports_tools: bool,
 }
 
@@ -22,6 +23,7 @@ impl From<ModelProviderRow> for ModelResponse {
             provider_name: row.provider_name.into(),
             provider_base_url: row.provider_base_url,
             supports_json: row.supports_json,
+            supports_json_schema: row.supports_json_schema,
             supports_tools: row.supports_tools,
         }
     }

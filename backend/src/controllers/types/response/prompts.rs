@@ -25,7 +25,10 @@ pub struct PromptResponse {
     pub system_version_diff: Option<String>,
     pub user_version_diff: Option<String>,
     pub updated_at: String,
-    pub tools: Vec<ToolResponse>
+    pub tools: Vec<ToolResponse>,
+    pub supports_json: bool,
+    pub supports_json_schema: bool,
+    pub supports_tools: bool
 }
 
 
@@ -50,7 +53,10 @@ impl From<PromptRowWithModel> for PromptResponse {
             system_version_diff: prompt.system_diff,
             user_version_diff: prompt.user_diff,
             updated_at: prompt.updated_at.to_string(),
-            tools: Vec::new() // Initialize with empty vector, will be filled separately
+            tools: Vec::new(), // Initialize with empty vector, will be filled separately
+            supports_json: prompt.supports_json,
+            supports_json_schema: prompt.supports_json_schema,
+            supports_tools: prompt.supports_tools
         }
     }
 }

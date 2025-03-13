@@ -4,6 +4,7 @@ export interface CreateModelPayload {
   name: string
   provider_id: number
   supports_json: boolean
+  supports_json_schema: boolean
   supports_tools: boolean
 }
 

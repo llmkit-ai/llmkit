@@ -160,6 +160,9 @@
                     <option :value="true">Yes</option>
                   </select>
                 </div>
+                <p v-if="selectedModel && jsonMode && !selectedModel.supports_json" class="mt-1 text-xs text-amber-500">
+                  Warning: Selected model doesn't support JSON mode
+                </p>
               </div>
               
               <div>
@@ -248,6 +251,9 @@
                 <span v-else>
                   Adding a JSON Schema helps enforce structure in model responses when JSON mode is enabled.
                 </span>
+              </p>
+              <p v-if="selectedModel && jsonSchema && !selectedModel.supports_json_schema" class="mt-1 text-xs text-amber-500">
+                Warning: Selected model doesn't support JSON Schema
               </p>
             </div>
 
@@ -469,6 +475,22 @@ function toggleDropdown() {
 function selectModel(model: Model) {
   selectedModelId.value = model.id;
   isOpen.value = false;
+
+  // Show warnings for potentially incompatible features
+  if (jsonMode.value && !model.supports_json) {
+    // Add a warning notification about JSON mode incompatibility
+    console.warn("Selected model doesn't support JSON mode but JSON mode is enabled");
+  }
+  
+  if (jsonSchema.value && !model.supports_json_schema) {
+    // Add a warning notification about JSON Schema incompatibility
+    console.warn("Selected model doesn't support JSON Schema but a schema is defined");
+  }
+  
+  if (props.prompt?.tools?.length > 0 && !model.supports_tools) {
+    // Add a warning notification about tools incompatibility
+    console.warn("Selected model doesn't support tools but tools are associated with this prompt");
+  }
 }
 
 // Auto-expand textarea based on content, respecting min and max rows

@@ -1757,7 +1757,7 @@ checksum = "1261fe7e33c73b354eab43b1273a57c8f967d0391e80353e51f764ac02cf6775"
 [[package]]
 name = "openrouter_api"
 version = "0.1.2"
-source = "git+https://github.com/danwritecode/openrouter_api#524f90441a663e79ba123fe03e13b4d1ab6a9f61"
+source = "git+https://github.com/danwritecode/openrouter_api#9c757ba466d1f6c21430f0d73103051cb012fd20"
 dependencies = [
  "async-stream",
  "chrono",

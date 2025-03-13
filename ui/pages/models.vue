@@ -57,9 +57,12 @@
                 {{ model.provider_name }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm/6 text-neutral-500 dark:text-neutral-400">
-                <div class="flex space-x-2">
+                <div class="flex flex-wrap gap-2">
                   <span v-if="model.supports_json" class="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-800 dark:bg-blue-900/20 dark:text-blue-400">
                     JSON
+                  </span>
+                  <span v-if="model.supports_json_schema" class="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-xs text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
+                    JSON Schema
                   </span>
                   <span v-if="model.supports_tools" class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-800 dark:bg-green-900/20 dark:text-green-400">
                     Tools
@@ -140,25 +143,38 @@
                   </div>
                   
                   
-                  <div class="flex items-center space-x-4 mt-4">
-                    <div class="flex items-center space-x-2">
-                      <input 
-                        id="supports_json" 
-                        v-model="modelForm.supports_json" 
-                        type="checkbox"
-                        class="h-4 w-4"
-                      />
-                      <label for="supports_json" class="text-sm text-neutral-700 dark:text-white">Supports JSON</label>
-                    </div>
-                    
-                    <div class="flex items-center space-x-2">
-                      <input 
-                        id="supports_tools" 
-                        v-model="modelForm.supports_tools" 
-                        type="checkbox"
-                        class="h-4 w-4"
-                      />
-                      <label for="supports_tools" class="text-sm text-neutral-700 dark:text-white">Supports Tools</label>
+                  <div class="mt-4">
+                    <h4 class="text-sm font-medium text-neutral-700 dark:text-white mb-2">Supported Model Features</h4>
+                    <div class="space-y-2">
+                      <div class="flex items-center space-x-2">
+                        <input 
+                          id="supports_json" 
+                          v-model="modelForm.supports_json" 
+                          type="checkbox"
+                          class="h-4 w-4"
+                        />
+                        <label for="supports_json" class="text-sm text-neutral-700 dark:text-white">Supports JSON</label>
+                      </div>
+                      
+                      <div class="flex items-center space-x-2">
+                        <input 
+                          id="supports_json_schema" 
+                          v-model="modelForm.supports_json_schema" 
+                          type="checkbox"
+                          class="h-4 w-4"
+                        />
+                        <label for="supports_json_schema" class="text-sm text-neutral-700 dark:text-white">Supports JSON Schema</label>
+                      </div>
+                      
+                      <div class="flex items-center space-x-2">
+                        <input 
+                          id="supports_tools" 
+                          v-model="modelForm.supports_tools" 
+                          type="checkbox"
+                          class="h-4 w-4"
+                        />
+                        <label for="supports_tools" class="text-sm text-neutral-700 dark:text-white">Supports Tools</label>
+                      </div>
                     </div>
                   </div>
                   
@@ -220,6 +236,7 @@ const modelForm = reactive<CreateModelPayload>({
   name: '',
   provider_id: 4, // Default to OpenRouter
   supports_json: false,
+  supports_json_schema: false,
   supports_tools: false
 })
 
@@ -234,6 +251,7 @@ function resetForm() {
   modelForm.name = ''
   modelForm.provider_id = 4
   modelForm.supports_json = false
+  modelForm.supports_json_schema = false
   modelForm.supports_tools = false
   currentModelId.value = null
 }
@@ -242,6 +260,7 @@ function editModel(model: Model) {
   modelForm.name = model.name
   modelForm.provider_id = model.provider_id
   modelForm.supports_json = model.supports_json
+  modelForm.supports_json_schema = model.supports_json_schema
   modelForm.supports_tools = model.supports_tools
   currentModelId.value = model.id
   showEditModelModal.value = true

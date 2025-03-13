@@ -6,6 +6,7 @@ pub struct ModelProviderRow {
     pub provider_id: i64, 
     pub model_name: String, 
     pub supports_json: bool, 
+    pub supports_json_schema: bool, 
     pub supports_tools: bool, 
     pub provider_name: LlmApiProvider, 
     pub provider_base_url: String, 

@@ -5,7 +5,7 @@ use crate::services::types::{
 };
 use anyhow::Result;
 use futures_util::StreamExt;
-use openrouter_api::models::tool::{Tool, ToolCall};
+use openrouter_api::models::tool::Tool;
 use openrouter_api::{OpenRouterClient, Ready};
 use openrouter_api::types::chat::ChatCompletionRequest;
 use tokio::sync::mpsc::Sender;
