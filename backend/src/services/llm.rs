@@ -11,12 +11,11 @@ use tracing;
 use super::{
     providers::openrouter::OpenrouterProvider,
     types::{
-        chat_request::LlmServiceRequest,
-        chat_response::{LlmServiceChatCompletionChunk, LlmServiceChatCompletionResponse},
+        llm_service::LlmServiceRequest,
         llm_error::{LlmError, LlmStreamingError},
     },
 };
-use crate::{common::types::models::LlmApiProvider, db::logs::LogRepository};
+use crate::{common::types::{chat_response::{LlmServiceChatCompletionChunk, LlmServiceChatCompletionResponse}, models::LlmApiProvider}, db::logs::LogRepository};
 
 pub struct Llm {
     props: LlmServiceRequest,

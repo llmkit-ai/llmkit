@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::common::types::message::ChatCompletionRequestMessage;
+use crate::common::types::chat_request::ChatCompletionRequestMessage;
 
 
 #[derive(Debug, Deserialize)]

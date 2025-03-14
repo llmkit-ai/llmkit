@@ -10,9 +10,10 @@ use super::types::{
         PromptEvalExecutionRunResponse, PromptEvalRunResponse, PromptEvalVersionPerformanceResponse,
     },
 };
+
 use crate::{
-    common::types::message::ChatCompletionRequest,
-    services::{llm::Llm, types::chat_request::LlmServiceRequest},
+    common::types::chat_request::ChatCompletionRequest,
+    services::{llm::Llm, types::llm_service::LlmServiceRequest},
     AppError, AppState,
 };
 
@@ -29,26 +30,26 @@ pub async fn execute_eval_run(
         // Parse system_prompt_input if present
         let system_content = match &e.system_prompt_input {
             Some(system_json_str) => system_json_str.clone(),
-            None => "{}".to_string() // Empty object if no system input
+            None => "{}".to_string(), // Empty object if no system input
         };
-        
+
         // Always use user_prompt_input
         let user_content = e.user_prompt_input.clone();
-        
+
         // Create a ChatCompletionRequest with the inputs
         let chat_request = ChatCompletionRequest {
             model: prompt.key.clone(),
             messages: vec![
                 // System message with context
-                crate::common::types::message::ChatCompletionRequestMessage::System {
+                crate::common::types::chat_request::ChatCompletionRequestMessage::System {
                     content: system_content,
-                    name: None
+                    name: None,
                 },
                 // User message with content
-                crate::common::types::message::ChatCompletionRequestMessage::User {
+                crate::common::types::chat_request::ChatCompletionRequestMessage::User {
                     content: user_content,
-                    name: None
-                }
+                    name: None,
+                },
             ],
             stream: None,
             response_format: None,

@@ -1,7 +1,7 @@
-use crate::services::types::chat_response::{LlmServiceChatCompletionChunk, LlmServiceChatCompletionResponse};
-use crate::common::types::message::ChatCompletionRequestMessage;
+use crate::common::types::chat_response::{LlmServiceChatCompletionChunk, LlmServiceChatCompletionResponse};
+use crate::common::types::chat_request::ChatCompletionRequestMessage;
 use crate::services::types::{
-    llm_error::LlmError, llm_error::LlmStreamingError, chat_request::LlmServiceRequest
+    llm_error::LlmError, llm_error::LlmStreamingError, llm_service::LlmServiceRequest
 };
 use anyhow::Result;
 use futures_util::StreamExt;

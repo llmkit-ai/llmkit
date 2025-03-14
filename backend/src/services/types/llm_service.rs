@@ -4,7 +4,7 @@ use tera::{Context, Tera};
 
 use crate::{
     common::types::{
-        message::{
+        chat_request::{
             ChatCompletionRequest, ChatCompletionRequestJsonSchema, ChatCompletionRequestMessage,
             ChatCompletionRequestResponseFormat,
         },
@@ -209,7 +209,7 @@ impl LlmServiceRequest {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::common::types::message::{
+    use crate::common::types::chat_request::{
         ChatCompletionRequestFunctionCall, ChatCompletionRequestFunctionDescription, 
         ChatCompletionRequestTool, ChatCompletionRequestToolCall,
     };

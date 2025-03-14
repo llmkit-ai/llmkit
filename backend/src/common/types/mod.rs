@@ -1,2 +1,3 @@
 pub mod models;
-pub mod message;
+pub mod chat_request;
+pub mod chat_response;

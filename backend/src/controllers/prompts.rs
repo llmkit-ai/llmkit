@@ -5,23 +5,16 @@ use axum::{
 };
 use futures::Stream;
 use hyper::StatusCode;
-use serde_json::json;
 use std::convert::Infallible;
 use tokio::sync::mpsc;
 
 use crate::{
-    common::types::message::{
-        ChatCompletionRequest, 
-        ChatCompletionRequestMessage, 
-        ChatCompletionRequestTool,
-        ChatCompletionRequestFunctionDescription
-    }, 
+    common::types::{chat_request::{
+        ChatCompletionRequest, ChatCompletionRequestFunctionDescription, ChatCompletionRequestTool
+    }, chat_response::LlmServiceChatCompletionResponse}, 
     services::{
         llm::Llm,
-        types::{
-            chat_request::LlmServiceRequest,
-            chat_response::LlmServiceChatCompletionResponse,
-        },
+        types::llm_service::LlmServiceRequest,
     }, 
     AppError, 
     AppState
