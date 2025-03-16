@@ -2,7 +2,8 @@
   <div v-if="!promptsLoading" class="font-mono">
     <!-- Sidebar -->
     <aside 
-      class="bg-neutral-50 dark:bg-neutral-800 fixed inset-y-0 left-72 w-96 overflow-y-auto border-r border-neutral-200 dark:border-neutral-700 px-4 py-6 sm:px-6 lg:px-8 xl:block"
+      v-if="isCurrentRoute"
+      class="bg-neutral-50 dark:bg-neutral-800 fixed inset-y-0 left-72 w-96 overflow-y-auto border-r border-neutral-200 dark:border-neutral-700 px-4 py-6 sm:px-6 lg:px-8 xl:block z-10"
     >
       <div class="flex justify-between items-center">
         <h2 class="font-mono font-bold text-black dark:text-white">Prompts</h2>
@@ -50,6 +51,9 @@ definePageMeta({
   layout: "logged-in",
   middleware: ['auth']
 })
+
+const route = useRoute();
+const isCurrentRoute = computed(() => route.name === 'evals');
 
 const selectedPrompt = ref<Prompt | null>(null);
 const selectedPromptCache = ref<Prompt | null>(null);
