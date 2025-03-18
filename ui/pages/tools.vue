@@ -1,5 +1,5 @@
 <template>
-  <div class="font-mono">
+  <div class="font-mono pl-12">
     <!-- List View -->
     <div v-if="currentView === 'list'">
       <div class="flex w-full items-center justify-between mb-6">

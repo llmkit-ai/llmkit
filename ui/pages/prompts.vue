@@ -2,7 +2,7 @@
   <div v-if="!promptsLoading" class="font-mono">
     <!-- Sidebar -->
     <aside 
-      class="bg-neutral-50 dark:bg-neutral-800 fixed inset-y-0 left-72 w-96 overflow-y-auto border-r border-neutral-200 dark:border-neutral-700 px-4 py-6 sm:px-6 lg:px-8 xl:block"
+      class="bg-neutral-50 dark:bg-neutral-800 fixed inset-y-0 left-12 w-96 overflow-y-auto border-r border-neutral-200 dark:border-neutral-700 px-4 py-6 sm:px-6 lg:px-8 xl:block"
     >
       <div class="flex justify-between items-center">
         <h2 class="font-mono font-bold text-black dark:text-white">Prompts</h2>
@@ -38,7 +38,7 @@
       </ul>
     </aside>
     <!-- Main Content -->
-    <div class="pl-96">
+    <div class="pl-[26rem]">
       <div class="font-mono">
         <div>
           <!-- Add or Edit Mode -->

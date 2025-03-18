@@ -1,5 +1,5 @@
 <template>
-  <div class="font-mono">
+  <div class="font-mono pl-12">
     <div class="flex w-full items-center justify-between mb-6">
       <h1 class="text-xl font-semibold text-neutral-900 dark:text-white">Models</h1>
       <PrimaryButton @click="showAddModelModal = true" buttonType="primary" size="sm">
