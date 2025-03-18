@@ -1,5 +1,5 @@
 <template>
-  <div class="p-6 font-mono">
+  <div class="pl-12 p-6 font-mono">
     <h1 class="text-xl font-semibold mb-6 text-neutral-900 dark:text-white">Settings</h1>
     
     <div class="mb-8">

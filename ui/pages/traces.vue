@@ -1,5 +1,5 @@
 <template>
-  <div class="font-mono">
+  <div class="font-mono pl-12">
     <div
       v-if="logsLoading"
       class="text-center text-neutral-500 dark:text-neutral-400 animate-pulse"
