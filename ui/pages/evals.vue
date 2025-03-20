@@ -21,9 +21,7 @@
             <p class="text-sm/6 text-black dark:text-white">{{ p.key }}</p>
             <div class="flex items-center gap-x-2 text-xs/5 text-neutral-500 dark:text-neutral-400">
               <p>{{ p.model }}</p>
-              <svg viewBox="0 0 2 2" class="size-0.5 fill-current">
-                <circle cx="1" cy="1" r="1" />
-              </svg>
+              &#8226;
               <p>{{ p.provider }}</p>
             </div>
           </button>
