@@ -1,46 +1,39 @@
-FROM rust:1.77 as builder
+# ========= Build stage =========
+FROM rust:1.81 as builder
 
 WORKDIR /app
 
-# Copy the Cargo files for dependency caching
+# 1) Copy just your cargo files and create a placeholder for dependencies
 COPY Cargo.toml Cargo.lock ./
+RUN mkdir src
+RUN echo "fn main() {}" > src/main.rs
 
-# Create a dummy main.rs to cache dependencies
-RUN mkdir -p src && echo "fn main() {}" > src/main.rs
-RUN cargo build --release
-RUN rm -rf src
+# 2) Pre-build to cache dependencies
+RUN cargo build --bin backend --release
+RUN rm -rf src  # remove the placeholder
 
-# Copy the actual source code
+# 3) Copy the actual source code and build
 COPY . .
+RUN mkdir /app/data
+RUN cargo install sqlx-cli
+RUN sqlx database create && sqlx migrate run
+#RUN mv ./llmkit.db /app/data/
+RUN cargo build --bin backend --release
 
-# Build the application
-RUN cargo build --release
-
-# Final stage
+# ========= Final minimal stage =========
 FROM debian:bookworm-slim
 
 WORKDIR /app
-
-# Install needed runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libssl-dev \
     ca-certificates \
+    libssl3 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy the binary from the builder stage
 COPY --from=builder /app/target/release/backend /app/backend
+COPY --from=builder /app/data/llmkit.db /app/data/
 COPY --from=builder /app/migrations /app/migrations
+COPY --from=builder /app/.env /app/
 
-# Add entrypoint script
-COPY --from=builder /app/docker-entrypoint.sh /app/
-RUN chmod +x /app/docker-entrypoint.sh
-
-# Set environment variables
-ENV RUST_LOG=info
-ENV DATABASE_URL=sqlite:/app/llmkit.db
-
-# Expose the port the app will run on
 EXPOSE 8000
 
-# Run the entrypoint script
-ENTRYPOINT ["/app/docker-entrypoint.sh"]
+CMD ["./backend"]

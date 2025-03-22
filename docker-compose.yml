@@ -5,23 +5,11 @@ services:
     build:
       context: ./backend
     container_name: llmkit-backend
-    environment:
-      - RUST_LOG=info
-      - DATABASE_URL=sqlite:/app/llmkit.db
-      - BIND_ADDRESS=0.0.0.0:8000
-      - JWT_SECRET=${JWT_SECRET}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
-      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - AZURE_ENDPOINT=${AZURE_ENDPOINT}
-      - AZURE_API_KEY=${AZURE_API_KEY}
+
     ports:
       - "8000:8000"
     volumes:
-      - db_data:/app
-      # Keep migrations mounted from the host for easier updates
-      - ./backend/migrations:/app/migrations
+      - db_data:/app/data
     restart: unless-stopped
 
   ui:
