@@ -2,43 +2,26 @@ version: '3.8'
 
 services:
   backend:
-    build:
-      context: ./backend
-    container_name: llmkit-backend
-    environment:
-      - RUST_LOG=info
-      - DATABASE_URL=sqlite:/app/llmkit.db
-      - BIND_ADDRESS=0.0.0.0:8000
-      - JWT_SECRET=${JWT_SECRET}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
-      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - AZURE_ENDPOINT=${AZURE_ENDPOINT}
-      - AZURE_API_KEY=${AZURE_API_KEY}
+    build: ./backend
     ports:
       - "8000:8000"
     volumes:
       - db_data:/app
-      # Keep migrations mounted from the host for easier updates
-      - ./backend/migrations:/app/migrations
-    restart: unless-stopped
+    environment:
+      - RUST_LOG=info
+      - DATABASE_URL=sqlite:/app/llmkit.db
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - JWT_SECRET=${JWT_SECRET}
 
   ui:
     build:
       context: ./ui
-    container_name: llmkit-ui
+      args:
+        - API_BASE_URL=http://localhost:8000
     ports:
       - "3000:3000"
-    environment:
-      - HOST=0.0.0.0
-      - API_BASE_URL=http://backend:8000
     depends_on:
       - backend
-    restart: unless-stopped
 
 volumes:
-  # Named volume for persistent database storage
-  # The SQLite database will be automatically created on first startup
-  # The app will run all necessary migrations automatically
   db_data:
