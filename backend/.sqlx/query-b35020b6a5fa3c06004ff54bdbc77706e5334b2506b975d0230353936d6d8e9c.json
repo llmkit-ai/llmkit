@@ -1,0 +1,152 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT\n                p.id,\n                p.key,\n                pv.system,\n                pv.user,\n                pv.model_id,\n                pv.max_tokens,\n                pv.temperature,\n                pv.json_mode,\n                pv.json_schema,\n                pv.prompt_type,\n                pv.is_chat,\n                m.name as model_name,\n                pr.name as provider_name,\n                pr.base_url as provider_base_url,\n                m.supports_json,\n                m.supports_json_schema,\n                m.supports_tools,\n                pv.system_diff,\n                pv.user_diff,\n                pv.version_number,\n                pv.id as version_id,\n                pv.created_at,\n                pv.updated_at\n            FROM prompt p\n            JOIN prompt_version pv ON p.current_prompt_version_id = pv.id\n            JOIN model m ON pv.model_id = m.id\n            JOIN provider pr ON m.provider_id = pr.id\n            ORDER BY pv.created_at DESC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "key",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "system",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "user",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "model_id",
+        "ordinal": 4,
+        "type_info": "Integer"
+      },
+      {
+        "name": "max_tokens",
+        "ordinal": 5,
+        "type_info": "Integer"
+      },
+      {
+        "name": "temperature",
+        "ordinal": 6,
+        "type_info": "Float"
+      },
+      {
+        "name": "json_mode",
+        "ordinal": 7,
+        "type_info": "Bool"
+      },
+      {
+        "name": "json_schema",
+        "ordinal": 8,
+        "type_info": "Text"
+      },
+      {
+        "name": "prompt_type",
+        "ordinal": 9,
+        "type_info": "Text"
+      },
+      {
+        "name": "is_chat",
+        "ordinal": 10,
+        "type_info": "Bool"
+      },
+      {
+        "name": "model_name",
+        "ordinal": 11,
+        "type_info": "Text"
+      },
+      {
+        "name": "provider_name",
+        "ordinal": 12,
+        "type_info": "Text"
+      },
+      {
+        "name": "provider_base_url",
+        "ordinal": 13,
+        "type_info": "Text"
+      },
+      {
+        "name": "supports_json",
+        "ordinal": 14,
+        "type_info": "Bool"
+      },
+      {
+        "name": "supports_json_schema",
+        "ordinal": 15,
+        "type_info": "Bool"
+      },
+      {
+        "name": "supports_tools",
+        "ordinal": 16,
+        "type_info": "Bool"
+      },
+      {
+        "name": "system_diff",
+        "ordinal": 17,
+        "type_info": "Text"
+      },
+      {
+        "name": "user_diff",
+        "ordinal": 18,
+        "type_info": "Text"
+      },
+      {
+        "name": "version_number",
+        "ordinal": 19,
+        "type_info": "Integer"
+      },
+      {
+        "name": "version_id",
+        "ordinal": 20,
+        "type_info": "Integer"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 21,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "updated_at",
+        "ordinal": 22,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "b35020b6a5fa3c06004ff54bdbc77706e5334b2506b975d0230353936d6d8e9c"
+}

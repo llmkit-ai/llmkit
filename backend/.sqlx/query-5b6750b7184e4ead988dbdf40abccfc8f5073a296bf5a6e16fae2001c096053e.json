@@ -1,0 +1,80 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT \n                id,\n                prompt_id,\n                model_id,\n                response_data,\n                status_code,\n                input_tokens,\n                output_tokens,\n                reasoning_tokens,\n                created_at,\n                request_body,\n                provider_response_id\n            FROM log\n            WHERE prompt_id = ?\n            ORDER BY created_at DESC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "prompt_id",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "model_id",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "response_data",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "status_code",
+        "ordinal": 4,
+        "type_info": "Integer"
+      },
+      {
+        "name": "input_tokens",
+        "ordinal": 5,
+        "type_info": "Integer"
+      },
+      {
+        "name": "output_tokens",
+        "ordinal": 6,
+        "type_info": "Integer"
+      },
+      {
+        "name": "reasoning_tokens",
+        "ordinal": 7,
+        "type_info": "Integer"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 8,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "request_body",
+        "ordinal": 9,
+        "type_info": "Text"
+      },
+      {
+        "name": "provider_response_id",
+        "ordinal": 10,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "5b6750b7184e4ead988dbdf40abccfc8f5073a296bf5a6e16fae2001c096053e"
+}

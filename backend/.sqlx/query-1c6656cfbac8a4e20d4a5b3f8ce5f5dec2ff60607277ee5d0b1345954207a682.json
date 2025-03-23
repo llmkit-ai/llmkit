@@ -1,0 +1,62 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO prompt_eval (prompt_id, system_prompt_input, user_prompt_input, name, evaluation_type)\n            VALUES (?, ?, ?, ?, ?)\n            RETURNING *\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "prompt_id",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "evaluation_type",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "name",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "system_prompt_input",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "user_prompt_input",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 6,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "updated_at",
+        "ordinal": 7,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 5
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "1c6656cfbac8a4e20d4a5b3f8ce5f5dec2ff60607277ee5d0b1345954207a682"
+}

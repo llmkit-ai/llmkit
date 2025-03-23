@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            UPDATE tool\n            SET name = ?,\n                tool_name = ?,\n                description = ?,\n                parameters = ?,\n                strict = ?,\n                updated_at = CURRENT_TIMESTAMP\n            WHERE id = ?\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "1fe21e16ea8694dd2d4950536dc713002999f75a229271ad61a3528e57a13366"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            UPDATE model\n            SET \n                provider_id = ?,\n                name = ?,\n                supports_json = ?,\n                supports_json_schema = ?,\n                supports_tools = ?\n            WHERE id = ?\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "0722fce8ff06562fdba858caaa6e4ccd4ea12af93843b0055b08eaf86adb5162"
+}

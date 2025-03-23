@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO api_key (name, key_hash, created_at, updated_at)\n            VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)\n            RETURNING id\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "1a5ba202edb9db6a00d30db49c5cc024c8502e93b3217c3ab283fb4c1e7d45dc"
+}

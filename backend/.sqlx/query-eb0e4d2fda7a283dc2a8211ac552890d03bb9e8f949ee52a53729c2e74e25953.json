@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO user (name, email, password_hash, created_at, updated_at)\n            VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)\n            RETURNING id\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "eb0e4d2fda7a283dc2a8211ac552890d03bb9e8f949ee52a53729c2e74e25953"
+}

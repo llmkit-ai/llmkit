@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT prompt_version_id\n            FROM prompt_version_tool_access\n            WHERE tool_id = ?\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "prompt_version_id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "01e9a276cd2dbfff40242e637f5b2921d1de88e2a03b99c8475c0dbead6f90ea"
+}

@@ -19,7 +19,7 @@ export default defineNuxtConfig({
       "/v1/**": { 
         proxy: process.env.API_BASE_URL ? 
           `${process.env.API_BASE_URL}/v1/**` : 
-          'http://backend:8000/v1/**' 
+          'http://127.0.0.1:8000/v1/**' 
       },
     }
   },
