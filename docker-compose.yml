@@ -17,9 +17,7 @@ services:
     build:
       context: ./ui
       args:
-        API_BASE_URL: http://backend:8000
-    environment:
-      - API_BASE_URL=http://backend:8000
+        API_BASE_URL: ${API_BASE_URL}
     ports:
       - "3000:3000"
     depends_on:

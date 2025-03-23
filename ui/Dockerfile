@@ -11,6 +11,10 @@ RUN bun install
 # Copy the rest of the application
 COPY . .
 
+# Set env var for nuxt.config.ts proxy
+ARG API_BASE_URL
+ENV API_BASE_URL=$API_BASE_URL
+
 # Build the application
 RUN bun run build
 
@@ -20,7 +24,6 @@ WORKDIR /app
 
 COPY --from=builder /app .
 
-#ENV HOST 0.0.0.0
 EXPOSE 3000
 
 CMD ["node", ".output/server/index.mjs"]
