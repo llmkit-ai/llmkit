@@ -6,10 +6,10 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - db_data:/app
+      - db_data:/app/data
     environment:
-      - RUST_LOG=info
-      - DATABASE_URL=sqlite:/app/llmkit.db
+      - RUST_LOG=${RUST_LOG}
+      - DATABASE_URL=${DATABASE_URL}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - JWT_SECRET=${JWT_SECRET}
 
@@ -17,7 +17,7 @@ services:
     build:
       context: ./ui
       args:
-        - API_BASE_URL=http://localhost:8000
+        API_BASE_URL: ${API_BASE_URL}
     ports:
       - "3000:3000"
     depends_on:
