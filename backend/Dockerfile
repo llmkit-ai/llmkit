@@ -18,8 +18,8 @@ RUN rm -rf src
 COPY . .
 
 # Create temporary database, run migrations, and prepare offline data
-#RUN sqlx database create --database-url sqlite:/tmp/build.db
-#RUN sqlx migrate run --database-url sqlite:/tmp/build.db
+RUN sqlx database create --database-url sqlite:/tmp/build.db
+RUN sqlx migrate run --database-url sqlite:/tmp/build.db
 #RUN cargo sqlx prepare --database-url sqlite:/tmp/build.db
 
 # Force SQLx offline mode and build the release binary
