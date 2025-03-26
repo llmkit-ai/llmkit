@@ -50,6 +50,7 @@ pub mod utils;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    println!("Starting up code...");
     dotenv::dotenv().ok();
 
     let database_url = std::env::var("DATABASE_URL")?;
