@@ -235,6 +235,7 @@ RUST_LOG=info
 DATABASE_URL="sqlite:absolute/path/to/backend/llmkit.db"
 OPENROUTER_API_KEY=your_openrouter_key_here
 JWT_SECRET=your_secure_random_string
+USE_SECURE_COOKIE=false  # Set to true for HTTPS deployments
 ```
 
 3. Start the server:
@@ -282,6 +283,7 @@ OPENROUTER_API_KEY=your_openrouter_key_here
 JWT_SECRET=your_secure_random_string
 DATABASE_URL=sqlite:/app/data/llmkit.db
 API_BASE_URL=http://backend:8000
+USE_SECURE_COOKIE=false  # Set to true for HTTPS deployments
 ```
 
 4. Build and start the containers:
