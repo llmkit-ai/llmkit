@@ -31,6 +31,12 @@ pub async fn register(
     cookies: Cookies,
     Json(payload): Json<RegisterRequest>
 ) -> Result<impl IntoResponse, AppError> {
+    let use_secure_cookie = std::env::var("USE_SECURE_COOKIE")
+        .map_err(|_| {
+            tracing::error!("Failed to get USE_SECURE_COOKIE env var");
+            return AppError::InternalServerError("Something went wrong with registration.".to_string());
+        })?;
+
     // Check if registration is already completed to provide better error message
     let registration_completed = state.db.user.check_registration_completed().await
         .map_err(|e| {
@@ -66,7 +72,11 @@ pub async fn register(
 
     let mut cookie = Cookie::new("llmkit_auth_token", token);
     cookie.set_http_only(true);
-    cookie.set_secure(true);
+
+    if use_secure_cookie.eq("true") {
+        cookie.set_secure(true);
+    }
+
     cookie.set_path("/");
     cookie.set_max_age(Duration::days(7));
     cookies.add(cookie);
@@ -79,6 +89,12 @@ pub async fn login(
     cookies: Cookies,
     Json(payload): Json<LoginRequest>,
 ) -> Result<impl IntoResponse, AppError> {
+    let use_secure_cookie = std::env::var("USE_SECURE_COOKIE")
+        .map_err(|_| {
+            tracing::error!("Failed to get USE_SECURE_COOKIE env var");
+            return AppError::InternalServerError("Something went wrong with registration.".to_string());
+        })?;
+
     let user = state.db.user.find_by_email(&payload.email).await
         .map_err(|e| {
             tracing::error!("Failed to find user in DB: | {}", e);
@@ -96,7 +112,11 @@ pub async fn login(
 
     let mut cookie = Cookie::new("llmkit_auth_token", token);
     cookie.set_http_only(true);
-    cookie.set_secure(true);
+
+    if use_secure_cookie.eq("true") {
+        cookie.set_secure(true);
+    }
+
     cookie.set_path("/");
     cookie.set_max_age(Duration::days(7));
     cookies.add(cookie);

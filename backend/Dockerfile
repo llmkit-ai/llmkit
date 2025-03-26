@@ -1,5 +1,5 @@
 # Builder stage
-FROM rust:1.85 as builder
+FROM rust:1.85 AS builder
 
 WORKDIR /app
 
@@ -15,7 +15,6 @@ RUN cargo build --release
 RUN rm -rf src
 
 # Copy migrations and source code
-COPY migrations /app/migrations
 COPY . .
 
 # Create temporary database, run migrations, and prepare offline data
@@ -42,16 +41,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=builder /app/target/release/backend /app/backend
 COPY --from=builder /app/migrations /app/migrations
 
-# Copy and set up the entrypoint script (assuming it exists)
-COPY --from=builder /app/docker-entrypoint.sh /app/
-RUN chmod +x /app/docker-entrypoint.sh
-
-# Set environment variables
-ENV RUST_LOG=info
-ENV DATABASE_URL=sqlite:/app/llmkit.db
-
 # Expose the port
 EXPOSE 8000
 
 # Run the app
-ENTRYPOINT ["/app/docker-entrypoint.sh"]
+CMD ["./backend"]
