@@ -280,8 +280,8 @@ cp .env.example .env
 # Required
 OPENROUTER_API_KEY=your_openrouter_key_here
 JWT_SECRET=your_secure_random_string
-DATABASE_URL="sqlite:/app/data/llmkit.db"
-API_BASE_URL="http://backend:8000"
+DATABASE_URL=sqlite:/app/data/llmkit.db
+API_BASE_URL=http://backend:8000
 ```
 
 4. Build and start the containers:

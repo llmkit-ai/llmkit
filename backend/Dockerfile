@@ -1,7 +1,10 @@
 # Builder stage
-FROM rust:1.85 as builder
+FROM rust:1.85 AS builder
 
 WORKDIR /app
+
+# Install sqlx-cli for migrations and preparation
+RUN cargo install sqlx-cli --no-default-features --features sqlite
 
 # Copy Cargo files first to cache dependencies
 COPY Cargo.toml Cargo.lock ./
@@ -13,6 +16,11 @@ RUN rm -rf src
 
 # Copy migrations and source code
 COPY . .
+
+# Create temporary database, run migrations, and prepare offline data
+RUN sqlx database create --database-url sqlite:/tmp/build.db
+RUN sqlx migrate run --database-url sqlite:/tmp/build.db
+RUN cargo sqlx prepare --database-url sqlite:/tmp/build.db
 
 # Force SQLx offline mode and build the release binary
 ENV SQLX_OFFLINE=true
