@@ -11,7 +11,6 @@ RUN bun install
 # Copy the rest of the application
 COPY . .
 
-# Set env var for nuxt.config.ts proxy
 ARG API_BASE_URL
 ENV API_BASE_URL=$API_BASE_URL
 
