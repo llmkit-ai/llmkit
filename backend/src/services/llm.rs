@@ -29,9 +29,9 @@ impl Llm {
 
     fn retry_strategy(&self) -> impl Iterator<Item = Duration> {
         ExponentialBackoff::from_millis(100)
-            .max_delay(Duration::from_secs(100))
+            .max_delay(Duration::from_secs(3))
             .map(jitter)
-            .take(1)
+            .take(5)
     }
 
     pub async fn text(&self) -> Result<(LlmServiceChatCompletionResponse, i64), LlmError> {

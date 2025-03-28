@@ -94,7 +94,7 @@
         </div>
         <div v-else class="mt-16">
           <div>
-            <p v-if="!executeLoading" class="text-center text-neutral-600 dark:text-neutral-400">Evals not yet run for <b>Prompt Version: {{ prompt.version_id }}</b></p>
+            <p v-if="!executeLoading" class="text-center text-neutral-600 dark:text-neutral-400">Evals not yet run for <b>Prompt Version: {{ prompt.version_number }}</b></p>
             <p v-else class="text-center text-neutral-600 dark:text-neutral-400 animate-pulse">Running evals now</p>
           </div>
         </div>
