@@ -49,6 +49,7 @@
               @handle-cancel="mode = 'view'"
               @handle-create="handleCreate"
               @handle-update="handleUpdate"
+              @handle-delete="handleDelete"
             />
             <PromptsAddEdit 
               v-if="mode === 'new'" 
@@ -127,6 +128,7 @@ const {
   prompts, 
   createPrompt,
   updatePrompt,
+  deletePrompt,
   loading: promptsLoading,
   fetchPrompts 
 } = usePrompts();
@@ -163,6 +165,24 @@ async function handleUpdate(payload: PromptUpdateDTO) {
     mode.value = "view"
   } catch(e) {
     console.error(e)
+  }
+}
+
+async function handleDelete(id: number) {
+  try {
+    console.log(`Deleting prompt with ID: ${id}`)
+    await deletePrompt(id)
+    console.log('Deletion completed, updating UI...')
+    
+    // Fetch prompts again to ensure we have the latest data
+    await fetchPrompts()
+    
+    // Set selectedPrompt to the first prompt in the list or null if there are no prompts
+    console.log(`Prompts after deletion: ${prompts.value.length}`)
+    selectedPrompt.value = prompts.value.length > 0 ? prompts.value[0] : null
+    mode.value = "view"
+  } catch(e) {
+    console.error('Error deleting prompt:', e)
   }
 }
 

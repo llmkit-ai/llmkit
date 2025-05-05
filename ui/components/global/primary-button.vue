@@ -29,7 +29,7 @@ defineProps({
     default: 'md'
   },
   buttonType: {
-    type: String as () => 'default' | 'primary' | 'primary-inverse' | 'secondary' | 'success' | 'error',
+    type: String as () => 'default' | 'primary' | 'primary-inverse' | 'secondary' | 'success' | 'error' | 'danger',
     default: 'default'
   },
   htmlType: {
@@ -52,6 +52,7 @@ const typeClasses = {
   'primary-inverse': 'border-black bg-transparent text-black hover:bg-neutral-100 dark:border-white dark:text-white dark:hover:bg-neutral-800',
   'secondary': 'border-neutral-300 bg-transparent text-neutral-700 hover:bg-neutral-50 dark:border-neutral-600 dark:text-neutral-300 dark:hover:bg-neutral-800',
   'success': 'border-green-600 bg-transparent text-green-600 hover:bg-green-50 dark:border-green-400 dark:text-green-400 dark:hover:bg-green-900/30',
-  'error': 'border-red-600 bg-transparent text-red-600 hover:bg-red-50 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-900/30'
+  'error': 'border-red-600 bg-transparent text-red-600 hover:bg-red-50 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-900/30',
+  'danger': 'border-red-600 bg-red-600 text-white hover:bg-red-700 dark:border-red-500 dark:bg-red-500 dark:hover:bg-red-600'
 };
 </script>

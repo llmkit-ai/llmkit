@@ -302,6 +302,14 @@
           Cancel
         </PrimaryButton>
         <PrimaryButton
+          v-if="mode === 'edit'"
+          buttonType="danger"
+          size="sm"
+          @click="handleDelete()"
+        >
+          Delete
+        </PrimaryButton>
+        <PrimaryButton
           buttonType="primary"
           size="sm"
           :disabled="!isFormValid"
@@ -331,6 +339,7 @@ const emit = defineEmits<{
   "handle-cancel": [];
   "handle-create": [prompt: PromptCreateDTO];
   "handle-update": [prompt: PromptUpdateDTO];
+  "handle-delete": [id: number];
 }>();
 
 // Initialize form values from props
@@ -568,6 +577,14 @@ watch(jsonMode, (newVal) => {
     schemaValidationErrors.value = [];
   }
 });
+
+const handleDelete = () => {
+  if (props.prompt?.id) {
+    if (confirm(`Are you sure you want to delete the prompt "${props.prompt.key}"? This action cannot be undone.`)) {
+      emit("handle-delete", props.prompt.id);
+    }
+  }
+};
 
 const handleSubmit = async () => {
   // If JSON mode is enabled with a schema, validate it immediately before proceeding

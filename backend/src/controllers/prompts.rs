@@ -1,11 +1,10 @@
 use axum::{
     extract::{Path, State},
-    response::sse::{Event, KeepAlive, Sse},
+    response::{sse::{Event, KeepAlive, Sse}, IntoResponse, Response},
     Json,
 };
 use futures::Stream;
-use hyper::StatusCode;
-use std::convert::Infallible;
+use std::{convert::Infallible, pin::Pin};
 use tokio::sync::mpsc;
 
 use crate::{
@@ -184,14 +183,25 @@ pub async fn delete_prompt(
     Path(id): Path<i64>,
     State(state): State<AppState>,
 ) -> Result<(), AppError> {
+    // Get the prompt before deletion to access its data
+    let prompt = match state.db.prompt.get_prompt(id).await {
+        Ok(p) => p,
+        Err(_) => return Err(AppError::NotFound("Prompt not found".into()))
+    };
+    
+    tracing::info!("Deleting prompt ID: {}, version ID: {}", id, prompt.version_id);
+    
+    // Delete the prompt
     let deleted = state.db.prompt.delete_prompt(id).await?;
 
     if !deleted {
         return Err(AppError::NotFound("Prompt not found".into()));
     }
 
+    // Remove from cache
     state.prompt_cache.remove(&id).await;
 
+    tracing::info!("Prompt {} deleted successfully", id);
     Ok(())
 }
 
@@ -245,7 +255,7 @@ pub async fn set_active_version(
 pub async fn api_completions(
     State(state): State<AppState>,
     Json(payload): Json<ChatCompletionRequest>,
-) -> Result<Json<LlmServiceChatCompletionResponse>, AppError> {
+) -> Result<CompletionResponse, AppError> {
     if payload.messages.is_empty() {
         return Err(AppError::BadRequest(
             "Messages array cannot be empty".into(),
@@ -280,103 +290,91 @@ pub async fn api_completions(
     // Insert into cache
     state.prompt_cache.insert(prompt.id, prompt.clone()).await;
 
-    // Create LlmServiceRequest with our new unified method
-    let llm_props = LlmServiceRequest::new(prompt, new_request)
-        .map_err(|e| {
-            tracing::error!("Error creating LlmServiceRequest: {}", e);
-            AppError::InternalServerError("Failed to process request".into())
-        })?;
+    // Check if the request is for streaming
+    let is_stream = payload.stream.unwrap_or(false);
 
-    let llm = Llm::new(llm_props.clone(), state.db.log.clone());
+    if is_stream {
+        // Handle streaming request
+        // Create LlmServiceRequest with streaming enabled
+        new_request.stream = Some(true);
+        
+        // Use our unified new() method
+        let llm_props = LlmServiceRequest::new(prompt, new_request)
+            .map_err(|e| {
+                tracing::error!("Error creating LlmServiceRequest: {}", e);
+                AppError::InternalServerError("Failed to process request".into())
+            })?;
 
-    let res = if json_mode {
-        llm.json().await.map_err(|e| {
-            tracing::error!("{}", e);
-            let error: AppError = e.into();
-            return error;
-        })?
+        let (tx, mut rx) = mpsc::channel(100);
+        let llm = Llm::new(llm_props, state.db.log);
+
+        tokio::spawn(async move {
+            let _ = llm.stream(tx).await;
+        });
+
+        let stream: SseStream = Box::pin(async_stream::stream! {
+            // Process regular stream messages
+            while let Some(result) = rx.recv().await {
+                match result {
+                    Ok(content) => {
+                        if content.is_done_sentinel() {
+                            yield Ok(Event::default().data(serde_json::to_string(&content).unwrap()));
+                            break;
+                        }
+
+                        yield Ok(Event::default().data(serde_json::to_string(&content).expect("Failed to turn chunk into string")));
+                    }
+                    Err(e) => {
+                        tracing::error!("error in stream: {:?}", e);
+                    }
+                }
+            }
+        });
+
+        Ok(CompletionResponse::Stream(
+            Sse::new(stream).keep_alive(KeepAlive::default())
+        ))
     } else {
-        llm.text().await.map_err(|e| {
-            tracing::error!("{}", e);
-            let error: AppError = e.into();
-            return error;
-        })?
-    };
+        // Handle non-streaming request
+        // Create LlmServiceRequest with our new unified method
+        let llm_props = LlmServiceRequest::new(prompt, new_request)
+            .map_err(|e| {
+                tracing::error!("Error creating LlmServiceRequest: {}", e);
+                AppError::InternalServerError("Failed to process request".into())
+            })?;
 
-    Ok(Json(res.0))
+        let llm = Llm::new(llm_props.clone(), state.db.log.clone());
+
+        let res = if json_mode {
+            llm.json().await.map_err(|e| {
+                tracing::error!("{}", e);
+                let error: AppError = e.into();
+                return error;
+            })?
+        } else {
+            llm.text().await.map_err(|e| {
+                tracing::error!("{}", e);
+                let error: AppError = e.into();
+                return error;
+            })?
+        };
+
+        Ok(CompletionResponse::Json(Json(res.0)))
+    }
 }
 
-#[axum::debug_handler]
-pub async fn api_completions_stream(
-    State(state): State<AppState>,
-    Json(payload): Json<ChatCompletionRequest>,
-) -> Result<Sse<impl Stream<Item = Result<Event, Infallible>>>, StatusCode> {
-    if payload.messages.is_empty() {
-        return Err(StatusCode::BAD_REQUEST);
+type SseStream = Pin<Box<dyn Stream<Item = Result<Event, Infallible>> + Send>>;
+
+pub enum CompletionResponse {
+    Json(Json<LlmServiceChatCompletionResponse>),
+    Stream(Sse<SseStream>),
+}
+
+impl IntoResponse for CompletionResponse {
+    fn into_response(self) -> Response {
+        match self {
+            CompletionResponse::Json(json) => json.into_response(),
+            CompletionResponse::Stream(sse) => sse.into_response(),
+        }
     }
-
-    // Look up the prompt by key (model field in the request)
-    let prompt_key = &payload.model;
-    let prompt = match state.db.prompt.get_prompt_by_key(prompt_key).await {
-        Ok(p) => p,
-        Err(_) => return Err(StatusCode::NOT_FOUND),
-    };
-
-    // Fetch associated tool versions
-    let tool_versions = state.db.tool.get_tools_by_prompt_version(prompt.version_id).await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let tools = tool_versions.into_iter().map(|tv| {
-        ChatCompletionRequestTool::Function {
-            function: ChatCompletionRequestFunctionDescription {
-                name: tv.tool_name,
-                description: Some(tv.description),
-                parameters: serde_json::from_str(&tv.parameters).unwrap_or_default(),
-            }
-        }
-    }).collect::<Vec<_>>();
-
-    // Insert into cache
-    state.prompt_cache.insert(prompt.id, prompt.clone()).await;
-
-    // Create LlmServiceRequest with streaming enabled
-    let mut request_payload = payload.clone();
-    request_payload.stream = Some(true);
-    request_payload.tools = Some(tools);
-    
-    // Use our unified new() method
-    let llm_props = match LlmServiceRequest::new(prompt, request_payload) {
-        Ok(props) => props,
-        Err(e) => {
-            tracing::error!("Error creating LlmServiceRequest: {}", e);
-            return Err(StatusCode::INTERNAL_SERVER_ERROR);
-        }
-    };
-
-    let (tx, mut rx) = mpsc::channel(100);
-    let llm = Llm::new(llm_props, state.db.log);
-
-    tokio::spawn(async move {
-        let _ = llm.stream(tx).await;
-    });
-
-    let stream = async_stream::stream! {
-        // Process regular stream messages
-        while let Some(result) = rx.recv().await {
-            match result {
-                Ok(content) => {
-                    if content.is_done_sentinel() {
-                        yield Ok(Event::default().data(serde_json::to_string(&content).unwrap()));
-                        break;
-                    }
-
-                    yield Ok(Event::default().data(serde_json::to_string(&content).expect("Failed to turn chunk into string")));
-                }
-                Err(e) => {
-                    tracing::error!("error in stream: {:?}", e);
-                }
-            }
-        }
-    };
-
-    Ok(Sse::new(stream).keep_alive(KeepAlive::default()))
 }
