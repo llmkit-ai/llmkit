@@ -278,6 +278,131 @@ impl PromptRepository {
     }
 
     pub async fn delete_prompt(&self, id: i64) -> Result<bool> {
+        let mut tx = self.pool.begin().await?;
+        
+        // First, get the prompt to check if it exists
+        let prompt = sqlx::query!(
+            r#"
+            SELECT current_prompt_version_id FROM prompt
+            WHERE id = ?
+            "#,
+            id
+        )
+        .fetch_optional(&mut *tx)
+        .await?;
+        
+        if prompt.is_none() {
+            return Ok(false); // Prompt doesn't exist
+        }
+        
+        // Get all prompt version IDs associated with this prompt
+        let prompt_versions = sqlx::query!(
+            r#"
+            SELECT id FROM prompt_version
+            WHERE prompt_id = ?
+            "#,
+            id
+        )
+        .fetch_all(&mut *tx)
+        .await?;
+        
+        // Get all prompt eval IDs associated with this prompt
+        let prompt_evals = sqlx::query!(
+            r#"
+            SELECT id FROM prompt_eval
+            WHERE prompt_id = ?
+            "#,
+            id
+        )
+        .fetch_all(&mut *tx)
+        .await?;
+        
+        // First handle the logs table - set prompt_id to NULL for all related logs
+        sqlx::query!(
+            r#"
+            UPDATE log
+            SET prompt_id = NULL
+            WHERE prompt_id = ?
+            "#,
+            id
+        )
+        .execute(&mut *tx)
+        .await?;
+        
+        // For each version, delete tool associations
+        for version in &prompt_versions {
+            sqlx::query!(
+                r#"
+                DELETE FROM prompt_version_tool_access
+                WHERE prompt_version_id = ?
+                "#,
+                version.id
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
+        
+        // Delete all prompt eval runs related to this prompt's evaluation tests
+        for eval in &prompt_evals {
+            sqlx::query!(
+                r#"
+                DELETE FROM prompt_eval_run
+                WHERE prompt_eval_id = ?
+                "#,
+                eval.id
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
+        
+        // Delete prompt eval runs for each version
+        for version in &prompt_versions {
+            sqlx::query!(
+                r#"
+                DELETE FROM prompt_eval_run
+                WHERE prompt_version_id = ?
+                "#,
+                version.id
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
+        
+        // Delete prompt evals for this prompt
+        sqlx::query!(
+            r#"
+            DELETE FROM prompt_eval
+            WHERE prompt_id = ?
+            "#,
+            id
+        )
+        .execute(&mut *tx)
+        .await?;
+        
+        // Set the current_prompt_version_id to NULL to break the circular reference
+        sqlx::query!(
+            r#"
+            UPDATE prompt
+            SET current_prompt_version_id = NULL
+            WHERE id = ?
+            "#,
+            id
+        )
+        .execute(&mut *tx)
+        .await?;
+        
+        // Delete prompt versions
+        sqlx::query!(
+            r#"
+            DELETE FROM prompt_version
+            WHERE prompt_id = ?
+            "#,
+            id
+        )
+        .execute(&mut *tx)
+        .await?;
+        
+        // Finally delete the prompt itself
         let rows_affected = sqlx::query!(
             r#"
             DELETE FROM prompt
@@ -285,9 +410,13 @@ impl PromptRepository {
             "#,
             id
         )
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await?
         .rows_affected();
+        
+        // Commit transaction
+        tx.commit().await?;
+        
         Ok(rows_affected > 0)
     }
     

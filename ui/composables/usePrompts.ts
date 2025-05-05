@@ -83,9 +83,23 @@ export const usePrompts = () => {
 
   const deletePrompt = async (id: number) => {
     try {
-      await $fetch(`/v1/ui/prompts/${id}`, { method: 'DELETE' })
+      console.log(`Making DELETE request to /v1/ui/prompts/${id}`)
+      const response = await $fetch(`/v1/ui/prompts/${id}`, { 
+        method: 'DELETE',
+        // Add proper error handling and response type
+        onResponse({ response }) {
+          console.log(`Delete response status: ${response.status}`)
+        },
+        onRequestError({ error }) {
+          console.error('Request error:', error)
+        }
+      })
+      console.log('Delete response:', response)
+      
+      // Update the local prompts list
       prompts.value = prompts.value.filter(p => p.id !== id)
     } catch (err) {
+      console.error('Error in deletePrompt:', err)
       error.value = 'Failed to delete prompt'
       throw err
     }
@@ -147,12 +161,13 @@ export const usePrompts = () => {
         }
       }
       
-      // Call the OpenAI compatible API
-      const response = await $fetch<ApiCompletionResponse>(`/v1/ui/prompts/execute/chat`, { 
+      // Call the OpenAI compatible API with unified endpoint
+      const response = await $fetch<ApiCompletionResponse>(`/v1/ui/prompts/execute`, { 
         method: 'POST',
         body: {
           model: prompt.key,
-          messages: messagesWithContext
+          messages: messagesWithContext,
+          stream: false
         }
       })
       
@@ -183,7 +198,7 @@ export const usePrompts = () => {
     }
   }
 
-  // OpenAI-compatible API execution
+  // OpenAI-compatible API execution (unified endpoint for streaming and non-streaming)
   const executeApiCompletion = async (
     modelKey: string, 
     messages: Message[], 
@@ -191,7 +206,8 @@ export const usePrompts = () => {
     try {
       const requestBody: any = {
         model: modelKey,
-        messages
+        messages,
+        stream: false
       };
       
       // Use the OpenAI-compatible API endpoint
@@ -231,7 +247,7 @@ export const usePrompts = () => {
       const { startStream } = useSSE();
       await startStream(
         requestBody,
-        `/v1/ui/prompts/execute/stream`,
+        `/v1/ui/prompts/execute`, // Use the unified endpoint
         {
           onMessage: onChunk,
           onError

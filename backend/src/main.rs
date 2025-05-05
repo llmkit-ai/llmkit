@@ -26,7 +26,7 @@ use controllers::{
         get_eval_runs_by_prompt_version, update_eval_run_score,
     },
     prompts::{
-        api_completions, api_completions_stream, create_prompt, delete_prompt, get_prompt, 
+        api_completions, create_prompt, delete_prompt, get_prompt, 
         get_prompt_versions, list_prompts, set_active_version, update_prompt
     }, 
     schema::validate_schema,
@@ -63,7 +63,6 @@ async fn main() -> Result<()> {
     // API routes that require API key auth
     let api_routes = Router::new()
         .route("/chat/completions", post(api_completions))
-        .route("/chat/completions/stream", post(api_completions_stream))
         .layer(axum_middleware::from_fn_with_state(
             app_state.clone(),
             auth::api_key_middleware,
@@ -88,9 +87,6 @@ async fn main() -> Result<()> {
         .route("/ui/prompts/{id}/prompt-evals", get(get_eval_test_by_prompt))
         .route("/ui/prompts/{id}/performance", get(get_eval_performance_by_prompt_id))
         .route("/ui/prompts/execute", post(api_completions))
-        .route("/ui/prompts/execute/stream", post(api_completions_stream))
-        .route("/ui/prompts/execute/chat", post(api_completions))
-        .route("/ui/prompts/execute/chat/stream", post(api_completions_stream))
         .route("/ui/prompt-evals", post(create_eval_test))
         .route("/ui/prompt-evals/{id}", get(get_eval_test_by_id).put(update_eval_test).delete(delete_eval_test))
         .route("/ui/prompt-eval-runs/{prompt_id}/version/{prompt_version_id}", post(execute_eval_run).get(get_eval_runs_by_prompt_version))

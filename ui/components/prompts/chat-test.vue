@@ -272,8 +272,8 @@ async function sendMessage() {
   streamingResponse.value = '';
   
   try {
-    // Create SSE connection for streaming using the OpenAI-compatible API
-    const source = new SSE(`/v1/ui/prompts/execute/chat/stream`, {
+    // Create SSE connection for streaming using the unified OpenAI-compatible API
+    const source = new SSE(`/v1/ui/prompts/execute`, {
       headers: { 'Content-Type': 'application/json' },
       payload: JSON.stringify({
         model: props.prompt.key,
