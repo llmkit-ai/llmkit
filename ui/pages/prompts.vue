@@ -40,9 +40,9 @@
       <div class="font-mono">
         <div>
           <!-- Add or Edit Mode -->
-          <div v-if="(mode === 'edit' || mode === 'new') && selectedPrompt">
+          <div v-if="mode === 'edit' || mode === 'new'">
             <PromptsAddEdit 
-              v-if="mode === 'edit'" 
+              v-if="mode === 'edit' && selectedPrompt" 
               :prompt="selectedPrompt"
               :models="models"
               :mode="mode"
