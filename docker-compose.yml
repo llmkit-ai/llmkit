@@ -2,7 +2,7 @@ services:
   backend:
     build: ./backend
     ports:
-      - "8000:8000"
+      - "${BACKEND_PORT:-8000}:8000"
     volumes:
       - db_data:/app/data
     environment:
@@ -18,7 +18,7 @@ services:
       args:
         API_BASE_URL: ${API_BASE_URL}
     ports:
-      - "3000:3000"
+      - "${UI_PORT:-3000}:3000"
     depends_on:
       - backend
 
