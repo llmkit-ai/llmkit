@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div :class="chatMode ? 'opacity-50 pointer-events-none select-none' : ''">
     <h3 class="text-base/7 font-semibold text-neutral-900 dark:text-white mb-4">
       Associated Tools <span v-if="tools.length > 0" class="text-sm font-normal text-neutral-500">({{ tools.length }})</span>
       <span v-if="tools.length > 0 && modelSupportsTools === false" class="ml-2 text-xs text-amber-500">(Warning: Model doesn't support tools)</span>
@@ -11,6 +11,9 @@
     
     <div v-else-if="tools.length === 0" class="p-4 text-sm text-neutral-600 dark:text-neutral-400 italic bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md">
       No tools associated with this prompt
+      <div v-if="chatMode" class="mt-2 text-xs text-red-500">
+        When Chat Mode is enabled, prompt processing with tools is disabled.
+      </div>
     </div>
     
     <div v-else>
@@ -55,19 +58,25 @@
           </div>
         </div>
       </div>
+      <div v-if="chatMode" class="mt-2 text-xs text-red-500">
+        When Chat Mode is enabled, prompt processing with tools is disabled.
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, watch, computed } from 'vue';
 import type { Tool } from '~/types/response/tools';
 
 const props = defineProps<{
   tools: Tool[];
   loading?: boolean;
   modelSupportsTools?: boolean;
+  chatMode?: boolean;
 }>();
+
+const chatMode = computed(() => !!props.chatMode);
 
 // UI state
 const expandedTools = ref<boolean[]>([]);
