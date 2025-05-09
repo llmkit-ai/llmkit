@@ -143,8 +143,9 @@
         
         <!-- Associated Tools Section -->
         <div class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-3 sm:px-0">
-          <ViewTools 
-            :tools="props.prompt.tools || []" 
+          <ViewTools
+            :tools="props.prompt.tools || []"
+            :chat-mode="props.prompt.is_chat"
             :model-supports-tools="props.prompt.supports_tools" 
           />
         </div>

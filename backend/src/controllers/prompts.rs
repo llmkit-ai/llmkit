@@ -283,15 +283,18 @@ pub async fn api_completions(
         }
     }).collect::<Vec<_>>();
 
-    // Clone and modify the request to include prompt-associated tools
+    // Clone and modify the request to include prompt-associated tools,
+    // but if streaming and tools are present, do NOT attach tools
     let mut new_request = payload.clone();
-    new_request.tools = Some(tools);
+    let is_stream = payload.stream.unwrap_or(false);
+    if is_stream && !tools.is_empty() {
+        new_request.tools = None;
+    } else {
+        new_request.tools = Some(tools);
+    }
 
     // Insert into cache
     state.prompt_cache.insert(prompt.id, prompt.clone()).await;
-
-    // Check if the request is for streaming
-    let is_stream = payload.stream.unwrap_or(false);
 
     if is_stream {
         // Handle streaming request
