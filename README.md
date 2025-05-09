@@ -191,34 +191,39 @@ Every LLM call has a detailed trace that you can view. directly in the llmkit UI
 
 ## Setup and Installation
 
-### Quick Start (Recommended)
+### Docker Deployment
 
-The easiest way to get started with Llmkit is using the `llmkit` command:
+#### Installation
 
-1. Install the command:
+1. Clone the repository:
 ```bash
-./install.sh
+git clone https://github.com/yourusername/llmkit.git
+cd llmkit
 ```
 
-2. Start the application:
+2. Create a `.env` file in the root directory:
 ```bash
-llmkit start
+cp .env.example .env
 ```
 
-3. **IMPORTANT**: Set your OpenRouter API Key
-   - Edit the `.env` file in the `backend` directory
-   - Add your OpenRouter API key: `OPENROUTER_API_KEY=your_key_here`
-   - Restart Llmkit if it's already running
+3. Edit the `.env` file with your API keys and a secure JWT secret:
+```bash
+# Required
+OPENROUTER_API_KEY=your_openrouter_key_here
+JWT_SECRET=your_secure_random_string
+DATABASE_URL=sqlite:/app/data/llmkit.db
+API_BASE_URL=http://backend:8000
+USE_SECURE_COOKIE=false  # Set to true for HTTPS deployments
+```
 
-This command will:
-- Create the SQLite database if it doesn't exist
-- Run all necessary migrations
-- Set up the .env file if it doesn't exist
-- Start both the backend and frontend servers
+4. Build and start the containers:
+```bash
+docker-compose up -d
+```
 
 The backend will be available at `http://localhost:8000` and the UI at `http://localhost:3000`.
 
-### Manual Setup
+### Manual Setup for Local Dev
 
 If you prefer to set things up manually, follow these steps:
 
@@ -261,37 +266,6 @@ npm run dev  # or bun run dev
 
 The UI will be available at `http://localhost:3000`.
 
-### Docker Deployment
-
-#### Installation
-
-1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/llmkit.git
-cd llmkit
-```
-
-2. Create a `.env` file in the root directory:
-```bash
-cp .env.example .env
-```
-
-3. Edit the `.env` file with your API keys and a secure JWT secret:
-```bash
-# Required
-OPENROUTER_API_KEY=your_openrouter_key_here
-JWT_SECRET=your_secure_random_string
-DATABASE_URL=sqlite:/app/data/llmkit.db
-API_BASE_URL=http://backend:8000
-USE_SECURE_COOKIE=false  # Set to true for HTTPS deployments
-```
-
-4. Build and start the containers:
-```bash
-docker-compose up -d
-```
-
-The backend will be available at `http://localhost:8000` and the UI at `http://localhost:3000`.
 
 
 ## Contributing
