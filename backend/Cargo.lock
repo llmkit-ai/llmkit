@@ -1757,7 +1757,7 @@ checksum = "1261fe7e33c73b354eab43b1273a57c8f967d0391e80353e51f764ac02cf6775"
 [[package]]
 name = "openrouter_api"
 version = "0.1.2"
-source = "git+https://github.com/danwritecode/openrouter_api#9c757ba466d1f6c21430f0d73103051cb012fd20"
+source = "git+https://github.com/danwritecode/openrouter_api#63d7746872c9fc834ee5fbc880d3ed0b115e0719"
 dependencies = [
  "async-stream",
  "chrono",
@@ -3452,9 +3452,9 @@ checksum = "b6c140620e7ffbb22c2dee59cafe6084a59b5ffc27a8859a5f0d494b5d52b6be"
 
 [[package]]
 name = "uuid"
-version = "1.13.2"
+version = "1.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8c1f41ffb7cf259f1ecc2876861a17e7142e63ead296f671f81f6ae85903e0d6"
+checksum = "458f7a779bf54acc9f347480ac654f68407d3aab21269a6e3c9f922acd9e2da9"
 dependencies = [
  "getrandom 0.3.1",
 ]
