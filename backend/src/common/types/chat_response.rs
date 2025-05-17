@@ -8,12 +8,14 @@ pub struct LlmServiceChatCompletionResponse {
     pub choices: Vec<LlmServiceChatCompletionResponseChoice>,
     pub created: i64,
     pub model: String,
+    pub object: String,
     pub usage: Option<LlmServiceChatCompletionResponseUsage>,
 }
 
 /// A choice returned by the chat API.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct LlmServiceChatCompletionResponseChoice {
+    pub index: u32,
     pub message: LlmServiceChatCompletionResponseMessage,
     pub finish_reason: Option<String>,
     #[serde(rename = "native_finish_reason")]
@@ -74,6 +76,7 @@ impl LlmServiceChatCompletionResponse {
     ) -> Self {
         // Create a single choice with the message content
         let choice = LlmServiceChatCompletionResponseChoice {
+            index: 0,
             message: LlmServiceChatCompletionResponseMessage {
                 role: "assistant".to_string(),
                 content: message_content,
@@ -100,6 +103,7 @@ impl LlmServiceChatCompletionResponse {
             created,
             model,
             usage,
+            object: "chat.completion".to_string(),
         }
     }
 }
@@ -109,8 +113,9 @@ impl From<ChatCompletionResponse> for LlmServiceChatCompletionResponse {
     fn from(value: ChatCompletionResponse) -> Self {
         LlmServiceChatCompletionResponse {
             id: value.id,
-            choices: value.choices.into_iter().map(|choice| {
+            choices: value.choices.into_iter().enumerate().map(|(index, choice)| {
                 LlmServiceChatCompletionResponseChoice {
+                    index: index as u32,
                     message: LlmServiceChatCompletionResponseMessage {
                         role: choice.message.role,
                         content: choice.message.content,
@@ -134,6 +139,7 @@ impl From<ChatCompletionResponse> for LlmServiceChatCompletionResponse {
             }).collect(),
             created: value.created,
             model: value.model,
+            object: "chat.completion".to_string(),
             usage: value.usage.map(|usage| {
                 LlmServiceChatCompletionResponseUsage {
                     prompt_tokens: usage.prompt_tokens,
