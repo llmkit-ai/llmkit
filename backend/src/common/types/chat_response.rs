@@ -44,10 +44,12 @@ pub struct LlmServiceChatCompletionResponseMessage {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct LlmServiceChatCompletionResponseToolCall {
     /// A unique identifier for the tool call.
-    pub id: String,
-    /// The type of call. It must be "function" for function calls.
+    pub id: Option<String>,
+    /// The index of the tool call in the list of tool calls
+    pub index: u32,
+    /// The type of call. When streaming, the first chunk only will contain "function".
     #[serde(rename = "type")]
-    pub kind: String,
+    pub kind: Option<String>,
     /// The details of the function call, including its function name and arguments.
     #[serde(rename = "function")]
     pub function_call: LlmServiceChatCompletionResponseFunctionCall,
@@ -56,7 +58,7 @@ pub struct LlmServiceChatCompletionResponseToolCall {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct LlmServiceChatCompletionResponseFunctionCall {
     /// The name of the function to call.
-    pub name: String,
+    pub name: Option<String>,
     /// A JSON string representing the arguments for the function call.
     pub arguments: String,
 }
@@ -124,6 +126,7 @@ impl From<ChatCompletionResponse> for LlmServiceChatCompletionResponse {
                             tool_calls.into_iter().map(|tool_call| {
                                 LlmServiceChatCompletionResponseToolCall {
                                     id: tool_call.id,
+                                    index: tool_call.index,
                                     kind: tool_call.kind,
                                     function_call: LlmServiceChatCompletionResponseFunctionCall {
                                         name: tool_call.function_call.name,
@@ -169,8 +172,9 @@ pub struct LlmServiceChoiceStream {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct LlmServiceStreamDelta {
-    pub role: String,
-    pub content: String,
+    pub role: Option<String>,
+    pub content: Option<String>,
+    pub tool_calls: Option<Vec<LlmServiceChatCompletionResponseToolCall>>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -188,8 +192,9 @@ impl LlmServiceChatCompletionChunk {
             choices: vec![LlmServiceChoiceStream {
                 index: 0,
                 delta: LlmServiceStreamDelta {
-                    role: "assistant".to_string(),
-                    content: "[DONE]".to_string(),
+                    role: Some("assistant".to_string()),
+                    content: Some("[DONE]".to_string()),
+                    tool_calls: None,
                 },
                 finish_reason: Some("stop".to_string()),
                 native_finish_reason: Some("stop".to_string()),
@@ -201,7 +206,7 @@ impl LlmServiceChatCompletionChunk {
     /// Checks if this chunk is a "DONE" sentinel.
     pub fn is_done_sentinel(&self) -> bool {
         self.choices.iter().any(|choice| 
-            choice.delta.content == "[DONE]" && 
+            choice.delta.content == Some("[DONE]".to_string()) && 
             choice.finish_reason.as_deref() == Some("stop")
         )
     }
@@ -217,6 +222,21 @@ impl From<ChatCompletionChunk> for LlmServiceChatCompletionChunk {
                     delta: LlmServiceStreamDelta {
                         role: choice.delta.role,
                         content: choice.delta.content,
+                        tool_calls: choice.delta.tool_calls
+                            .map(|tc|
+                                tc.into_iter().map(|tool_call| {
+                                    LlmServiceChatCompletionResponseToolCall {
+                                        id: tool_call.id,
+                                        index: tool_call.index,
+                                        kind: tool_call.kind,
+                                        function_call: LlmServiceChatCompletionResponseFunctionCall {
+                                            name: tool_call.function_call.name,
+                                            arguments: tool_call.function_call.arguments,
+                                        },
+                                    }
+                                }).collect()
+                            )
+                        
                     },
                     finish_reason: choice.finish_reason,
                     native_finish_reason: choice.native_finish_reason,

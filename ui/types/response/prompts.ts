@@ -34,16 +34,28 @@ export interface Message {
   content: string;
   tool_calls?: ToolCall[];
   tool_call_id?: string; // For tool responses
+  // Raw data handling - not sent to server but used for UI
+  rawData?: string;
+  showRawData?: boolean;
 }
 
 // Tool call structure
 export interface ToolCall {
-  id: string;
-  type: 'function';
-  function: {
-    name: string;
-    arguments: string;
-  };
+  // A unique identifier for the tool call, optional in streaming responses
+  id?: string;
+  // The index of the tool call in the list of tool calls
+  index?: number;
+  // The type of call. When streaming, the first chunk only will contain "function"
+  type?: string;
+  // The details of the function call
+  function: FunctionCall;
+}
+
+export interface FunctionCall {
+  // The name of the function to call, can be optional in streaming chunks
+  name?: string;
+  // A JSON string representing the arguments for the function call
+  arguments: string;
 }
 
 // PROMPT EXECUTION RESPONSE
