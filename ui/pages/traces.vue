@@ -121,7 +121,7 @@ const toggleLog = (id: number) => {
 const formatDate = (dateString: string | undefined) => {
   if (!dateString) return 'n/a'
   try {
-    return format(new Date(dateString), 'yyyy-mm-dd hh:mm:ss')
+    return format(new Date(dateString), 'yyyy-MM-dd HH:mm:ss')
   } catch (error) {
     console.error('error formatting date', error)
     return 'invalid date'
