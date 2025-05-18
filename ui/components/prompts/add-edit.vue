@@ -266,7 +266,7 @@
                   name="system-prompt"
                   id="system-prompt"
                   ref="systemPromptTextarea"
-                  :rows="getTextareaRows(systemPrompt, 5, 15)"
+                  :rows="getTextareaRows(systemPrompt, 5, 1000)"
                   class="block w-full border-2 border-black dark:border-white bg-white dark:bg-neutral-800 p-2 text-base text-neutral-900 dark:text-white focus:outline-none sm:text-sm/6"
                 />
               </div>
@@ -281,7 +281,7 @@
                   name="user-prompt"
                   id="user-prompt"
                   ref="userPromptTextarea"
-                  :rows="getTextareaRows(userPrompt, 1, 15)"
+                  :rows="getTextareaRows(userPrompt, 1, 1000)"
                   class="block w-full border-2 border-black dark:border-white bg-white dark:bg-neutral-800 p-2 text-base text-neutral-900 dark:text-white focus:outline-none sm:text-sm/6"
                 />
               </div>
