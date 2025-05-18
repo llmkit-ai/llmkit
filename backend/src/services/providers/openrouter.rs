@@ -124,7 +124,9 @@ impl<'a> OpenrouterProvider<'a> {
                     }
 
                     if let Some(c) = &c.choices.first() {
-                        content += &c.delta.content;
+                        if let Some(c) = &c.delta.content {
+                            content += &c;
+                        }
                     }
 
                     if let Err(_) = tx.send(Ok(c.into())).await {

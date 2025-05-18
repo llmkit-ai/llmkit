@@ -880,6 +880,7 @@ mod tests {
 
         let tool_calls = vec![ChatCompletionRequestToolCall {
             id: "call_123".to_string(),
+            index: 0,
             kind: "function".to_string(),
             function_call: ChatCompletionRequestFunctionCall {
                 name: "get_weather".to_string(),

@@ -64,8 +64,9 @@ impl From<ChatCompletionRequestTool> for openrouter_api::models::tool::Tool {
 impl Into<ToolCall> for ChatCompletionRequestToolCall {
     fn into(self) -> ToolCall {
         ToolCall {
-            id: self.id,
-            kind: self.kind,
+            id: Some(self.id),
+            index: self.index,
+            kind: Some(self.kind),
             function_call: self.function_call.into(),
         }
     }
@@ -75,7 +76,7 @@ impl Into<ToolCall> for ChatCompletionRequestToolCall {
 impl Into<FunctionCall> for ChatCompletionRequestFunctionCall {
     fn into(self) -> FunctionCall {
         FunctionCall {
-            name: self.name,
+            name: Some(self.name),
             arguments: self.arguments,
         }
     }

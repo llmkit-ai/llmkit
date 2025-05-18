@@ -56,14 +56,66 @@
             <div class="text-sm text-neutral-900 dark:text-neutral-200">
               {{ message.content }}
             </div>
+            
+            <!-- Function call indicator for saved messages -->
+            <div v-if="message.role === 'assistant' && message.rawData" class="mt-2">
+              <button 
+                @click="message.showRawData = !message.showRawData" 
+                class="text-xs py-1 px-2 my-1 bg-neutral-300 dark:bg-neutral-600 hover:bg-neutral-400 dark:hover:bg-neutral-500 rounded text-neutral-700 dark:text-neutral-300 transition-colors flex items-center"
+              >
+                <span v-if="!message.showRawData">
+                  Show Function Call Details
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </span>
+                <span v-else>
+                  Hide Function Call Details
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+                  </svg>
+                </span>
+              </button>
+              
+              <div v-if="message.showRawData" class="mt-1">
+                <pre class="text-xs overflow-x-auto bg-neutral-300 dark:bg-neutral-600 p-2 rounded font-mono text-neutral-800 dark:text-neutral-200">{{ message.rawData }}</pre>
+              </div>
+            </div>
           </div>
         </div>
         <div v-if="isStreaming" class="p-3 rounded-lg max-w-3/4 whitespace-pre-wrap bg-neutral-200 dark:bg-neutral-700">
           <div class="text-xs text-neutral-500 dark:text-neutral-400 mb-1">
             Assistant
           </div>
-          <div class="text-sm text-neutral-900 dark:text-neutral-200">
+          <!-- Regular content -->
+          <div v-if="streamingResponse" class="text-sm text-neutral-900 dark:text-neutral-200 mb-2">
             {{ streamingResponse }}
+          </div>
+          
+          <!-- Toggle button for raw data -->
+          <div v-if="rawStreamingData" class="mt-2 border-t border-neutral-300 dark:border-neutral-600 pt-2">
+            <button 
+              @click="showRawData = !showRawData" 
+              class="text-xs py-1 px-2 my-1 bg-neutral-300 dark:bg-neutral-600 hover:bg-neutral-400 dark:hover:bg-neutral-500 rounded text-neutral-700 dark:text-neutral-300 transition-colors flex items-center"
+            >
+              <span v-if="!showRawData">
+                Show Raw Function Call Data
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </span>
+              <span v-else>
+                Hide Raw Function Call Data
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+                </svg>
+              </span>
+            </button>
+            
+            <!-- Raw data content (only visible when toggle is on) -->
+            <div v-if="showRawData">
+              <pre class="text-xs overflow-x-auto bg-neutral-300 dark:bg-neutral-600 p-2 rounded font-mono text-neutral-800 dark:text-neutral-200">{{ rawStreamingData }}</pre>
+            </div>
           </div>
         </div>
       </div>
@@ -133,8 +185,7 @@
 
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted } from 'vue';
-import type { Prompt } from '~/types/response/prompts';
-import type { Message } from '~/types/response/prompts';
+import type { Prompt, Message, ToolCall, FunctionCall, ApiDelta } from '~/types/response/prompts';
 import { SSE } from 'sse.js';
 
 const props = defineProps<{
@@ -147,6 +198,8 @@ const chatContainer = ref<HTMLElement | null>(null);
 const userInput = ref('');
 const chatMessages = ref<Message[]>([]);
 const streamingResponse = ref('');
+const rawStreamingData = ref(''); // Store all raw streaming data for display
+const showRawData = ref(false); // Toggle for showing raw data
 const isStreaming = ref(false);
 const jsonContext = ref<Record<string, any>>({});
 const showJsonContext = ref(false);
@@ -215,6 +268,7 @@ function scrollToBottom() {
   });
 }
 
+
 // Function to create messages array including context in system message
 function createMessagesWithContext() {
   // For first message or when system context is needed
@@ -270,6 +324,7 @@ async function sendMessage() {
   // Start streaming response
   isStreaming.value = true;
   streamingResponse.value = '';
+  rawStreamingData.value = '';
   
   try {
     // Create SSE connection for streaming using the unified OpenAI-compatible API
@@ -286,9 +341,19 @@ async function sendMessage() {
     source.addEventListener('message', function(e: any) {
       const data = e.data;
       
+      // Debug the raw message data
+      console.log('Raw SSE message:', data);
+      
       try {
         // Parse the JSON chunk
         const chunk = JSON.parse(data);
+        
+        // Add the raw JSON to our raw streaming data display
+        if (rawStreamingData.value) {
+          rawStreamingData.value += '\n\n' + data;
+        } else {
+          rawStreamingData.value = data;
+        }
         
         // Check if this is the [DONE] sentinel
         if (chunk.choices && 
@@ -299,29 +364,48 @@ async function sendMessage() {
           isStreaming.value = false;
           
           // Add assistant message to chat history
-          if (streamingResponse.value) {
-            chatMessages.value.push({
+          if (streamingResponse.value || rawStreamingData.value) {
+            console.log('Preparing to add final message to chat history');
+            
+            // Create the message with all data we've collected
+            const message: Message = {
               role: 'assistant',
-              content: streamingResponse.value
-            });
+              content: streamingResponse.value || "[Function call response - see raw data]",
+              showRawData: false
+            };
+            
+            // If we have tool call data, add it
+            if (rawStreamingData.value) {
+              message.rawData = rawStreamingData.value;
+            }
+            
+            chatMessages.value.push(message);
           }
           source.close();
           return;
         }
         
-        // Check if this is a regular content delta
-        if (chunk.choices && chunk.choices.length > 0) {
-          const choice = chunk.choices[0];
+        // Check if this is a content delta
+        if (chunk.choices && 
+            chunk.choices.length > 0 && 
+            chunk.choices[0].delta && 
+            chunk.choices[0].delta.content) {
           
-          // Handle the actual content delta
-          if (choice.delta && choice.delta.content) {
-            // Append the content to our streaming response
-            streamingResponse.value += choice.delta.content;
-            scrollToBottom();
-          }
+          // Append the content to our streaming response
+          streamingResponse.value += chunk.choices[0].delta.content;
         }
+        
+        // Scroll after each update
+        scrollToBottom();
       } catch (err) {
         console.error("Error parsing streaming response:", err);
+        
+        // Even if we can't parse it, still show it
+        if (rawStreamingData.value) {
+          rawStreamingData.value += '\n\n' + data;
+        } else {
+          rawStreamingData.value = data;
+        }
       }
     });
     
@@ -341,6 +425,7 @@ async function sendMessage() {
 function resetChat() {
   chatMessages.value = [];
   streamingResponse.value = '';
+  rawStreamingData.value = '';
   isStreaming.value = false;
 }
 </script>

@@ -85,6 +85,8 @@ pub struct ChatCompletionRequestFunctionCall {
 pub struct ChatCompletionRequestToolCall {
     /// A unique identifier for the tool call.
     pub id: String,
+    /// The index of the tool call in the list of tool calls
+    pub index: u32,
     /// The type of call. It must be "function" for function calls.
     #[serde(rename = "type")]
     pub kind: String,

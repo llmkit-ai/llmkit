@@ -285,13 +285,10 @@ pub async fn api_completions(
 
     // Clone and modify the request to include prompt-associated tools,
     // but if streaming and tools are present, do NOT attach tools
-    let mut new_request = payload.clone();
+    let mut payload = payload.clone();
+    payload.tools = Some(tools);
+
     let is_stream = payload.stream.unwrap_or(false);
-    if is_stream && !tools.is_empty() {
-        new_request.tools = None;
-    } else {
-        new_request.tools = Some(tools);
-    }
 
     // Insert into cache
     state.prompt_cache.insert(prompt.id, prompt.clone()).await;
@@ -299,10 +296,10 @@ pub async fn api_completions(
     if is_stream {
         // Handle streaming request
         // Create LlmServiceRequest with streaming enabled
-        new_request.stream = Some(true);
+        payload.stream = Some(true);
         
         // Use our unified new() method
-        let llm_props = LlmServiceRequest::new(prompt, new_request)
+        let llm_props = LlmServiceRequest::new(prompt, payload)
             .map_err(|e| {
                 tracing::error!("Error creating LlmServiceRequest: {}", e);
                 AppError::InternalServerError("Failed to process request".into())
@@ -340,7 +337,7 @@ pub async fn api_completions(
     } else {
         // Handle non-streaming request
         // Create LlmServiceRequest with our new unified method
-        let llm_props = LlmServiceRequest::new(prompt, new_request)
+        let llm_props = LlmServiceRequest::new(prompt, payload)
             .map_err(|e| {
                 tracing::error!("Error creating LlmServiceRequest: {}", e);
                 AppError::InternalServerError("Failed to process request".into())
