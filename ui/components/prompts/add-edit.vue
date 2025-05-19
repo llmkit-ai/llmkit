@@ -276,14 +276,14 @@
             <div v-if="promptType === 'dynamic_both'" class="col-span-full">
               <label for="user-prompt" class="block text-sm/6 font-medium text-neutral-900 dark:text-white">User Prompt</label>
               <div class="mt-2">
-            <textarea
-              v-model="userPrompt"
-              name="user-prompt"
-              id="user-prompt"
-              ref="userPromptTextarea"
-              @input="autoResizeUserPrompt"
-              class="block w-full border-2 border-black dark:border-white bg-white dark:bg-neutral-800 p-2 text-base text-neutral-900 dark:text-white focus:outline-none sm:text-sm/6"
-            />
+                <textarea
+                  v-model="userPrompt"
+                  name="user-prompt"
+                  id="user-prompt"
+                  ref="userPromptTextarea"
+                  @input="autoResizeUserPrompt"
+                  class="block w-full border-2 border-black dark:border-white bg-white dark:bg-neutral-800 p-2 text-base text-neutral-900 dark:text-white focus:outline-none sm:text-sm/6"
+                />
               </div>
             </div>
             
