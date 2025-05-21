@@ -71,6 +71,10 @@ pub enum ChatCompletionRequestMessage{
         #[serde(skip_serializing_if = "Option::is_none")]
         name: Option<String>,
     },
+    Tool { 
+        content: String,
+        tool_call_id: String
+    },
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -125,6 +129,7 @@ impl ChatCompletionRequestMessage {
             ChatCompletionRequestMessage::System { content, .. } => content,
             ChatCompletionRequestMessage::User { content, .. } => content,
             ChatCompletionRequestMessage::Assistant { content, .. } => content,
+            ChatCompletionRequestMessage::Tool { content, .. } => content,
         }
     }
 
@@ -134,6 +139,7 @@ impl ChatCompletionRequestMessage {
             ChatCompletionRequestMessage::System { name, .. } => name.as_deref(),
             ChatCompletionRequestMessage::User { name, .. } => name.as_deref(),
             ChatCompletionRequestMessage::Assistant { name, .. } => name.as_deref(),
+            _ => None
         }
     }
 
@@ -143,6 +149,7 @@ impl ChatCompletionRequestMessage {
             ChatCompletionRequestMessage::System { .. } => "system",
             ChatCompletionRequestMessage::User { .. } => "user",
             ChatCompletionRequestMessage::Assistant { .. } => "assistant",
+            ChatCompletionRequestMessage::Tool { .. } => "tool",
         }
     }
 
