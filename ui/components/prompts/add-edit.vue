@@ -266,7 +266,7 @@
                   name="system-prompt"
                   id="system-prompt"
                   ref="systemPromptTextarea"
-                  :rows="getTextareaRows(systemPrompt, 5, 15)"
+                  @input="autoResizeSystemPrompt"
                   class="block w-full border-2 border-black dark:border-white bg-white dark:bg-neutral-800 p-2 text-base text-neutral-900 dark:text-white focus:outline-none sm:text-sm/6"
                 />
               </div>
@@ -281,7 +281,7 @@
                   name="user-prompt"
                   id="user-prompt"
                   ref="userPromptTextarea"
-                  :rows="getTextareaRows(userPrompt, 1, 15)"
+                  @input="autoResizeUserPrompt"
                   class="block w-full border-2 border-black dark:border-white bg-white dark:bg-neutral-800 p-2 text-base text-neutral-900 dark:text-white focus:outline-none sm:text-sm/6"
                 />
               </div>
@@ -328,6 +328,7 @@ import type { Model } from '~/types/response/models';
 import type { PromptCreateDTO, PromptUpdateDTO } from '~/types/components/prompt';
 import type { SchemaValidationResponse } from '~/types/response/schema';
 import { useDebounceFn } from '@vueuse/core';
+import { ref, watch, computed, nextTick, onMounted } from 'vue';
 
 const props = defineProps<{
   prompt: Prompt | null
@@ -502,13 +503,41 @@ function selectModel(model: Model) {
   }
 }
 
-// Auto-expand textarea based on content, respecting min and max rows
-function getTextareaRows(text: string, minRows: number, maxRows: number): number {
-  if (!text) return minRows;
-  
-  const lineCount = (text.match(/\n/g) || []).length + 1;
-  return Math.min(Math.max(lineCount, minRows), maxRows);
+// Auto-expand textarea height based on content
+const systemPromptTextarea = ref<HTMLTextAreaElement | null>(null);
+const userPromptTextarea = ref<HTMLTextAreaElement | null>(null);
+
+function autoResizeSystemPrompt() {
+  nextTick(() => {
+    const el = systemPromptTextarea.value;
+    if (el) {
+      el.style.height = 'auto';
+      el.style.height = el.scrollHeight + 'px';
+    }
+  });
 }
+
+function autoResizeUserPrompt() {
+  nextTick(() => {
+    const el = userPromptTextarea.value;
+    if (el) {
+      el.style.height = 'auto';
+      el.style.height = el.scrollHeight + 'px';
+    }
+  });
+}
+
+// Optionally, auto-resize on mount and when value changes
+onMounted(() => {
+  autoResizeSystemPrompt();
+  autoResizeUserPrompt();
+});
+watch(systemPrompt, () => {
+  autoResizeSystemPrompt();
+});
+watch(userPrompt, () => {
+  autoResizeUserPrompt();
+});
 
 
 // Computed property for validation errors
