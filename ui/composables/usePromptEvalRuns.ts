@@ -42,14 +42,14 @@ export const usePromptEvalRuns = () => {
   //   }
   // }
 
-  const createEvalRun = async (promptId: number, promptVersionId: number) => {
+  const createEvalRun = async (promptId: number, promptVersionId: number, rounds: number) => {
     try {
-      const newEval = await $fetch<PromptEvalExecutionRunResponse>(`/v1/ui/prompt-eval-runs/${promptId}/version/${promptVersionId}`, {
+      const newEval = await $fetch<PromptEvalExecutionRunResponse[]>(`/v1/ui/prompt-eval-runs/${promptId}/version/${promptVersionId}?rounds=${rounds}`, {
         method: 'POST',
       })
 
-      newEval.runs.forEach(r => {
-        evalRuns.value.push(r)
+      newEval.forEach(group => {
+        group.runs.forEach(r => evalRuns.value.push(r))
       })
 
       loading.value = false

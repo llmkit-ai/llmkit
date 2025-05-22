@@ -1,8 +1,14 @@
 use axum::{
-    extract::{Path, State},
+    extract::{Path, State, Query},
     Json,
 };
+use serde::Deserialize;
 use uuid::Uuid;
+
+#[derive(Deserialize)]
+pub struct EvalRunParams {
+    pub rounds: Option<i64>,
+}
 
 use super::types::{
     request::prompt_eval_run::UpdateEvalRunRequest,
@@ -20,73 +26,78 @@ use crate::{
 pub async fn execute_eval_run(
     Path((prompt_id, prompt_version_id)): Path<(i64, i64)>,
     State(state): State<AppState>,
-) -> Result<Json<PromptEvalExecutionRunResponse>, AppError> {
+    Query(params): Query<EvalRunParams>,
+) -> Result<Json<Vec<PromptEvalExecutionRunResponse>>, AppError> {
     let prompt = state.db.prompt.get_prompt(prompt_id).await?;
     let evals = state.db.prompt_eval.get_by_prompt(prompt_id).await?;
-    let run_id = Uuid::new_v4().to_string();
-    let mut eval_runs = vec![];
+    let rounds = params.rounds.unwrap_or(1);
+    let mut all_runs = Vec::new();
 
-    for e in evals.iter() {
-        // Parse system_prompt_input if present
-        let system_content = match &e.system_prompt_input {
-            Some(system_json_str) => system_json_str.clone(),
-            None => "{}".to_string(), // Empty object if no system input
-        };
+    for _ in 0..rounds {
+        let run_id = Uuid::new_v4().to_string();
+        let mut eval_runs = Vec::new();
 
-        // Always use user_prompt_input
-        let user_content = e.user_prompt_input.clone();
+        for e in evals.iter() {
+            // Parse system_prompt_input if present
+            let system_content = match &e.system_prompt_input {
+                Some(system_json_str) => system_json_str.clone(),
+                None => "{}".to_string(), // Empty object if no system input
+            };
 
-        // Create a ChatCompletionRequest with the inputs
-        let chat_request = ChatCompletionRequest {
-            model: prompt.key.clone(),
-            messages: vec![
-                // System message with context
-                crate::common::types::chat_request::ChatCompletionRequestMessage::System {
-                    content: system_content,
-                    name: None,
-                },
-                // User message with content
-                crate::common::types::chat_request::ChatCompletionRequestMessage::User {
-                    content: user_content,
-                    name: None,
-                },
-            ],
-            stream: None,
-            response_format: None,
-            tools: None,
-            provider: None,
-            models: None,
-            transforms: None,
-            max_tokens: None,
-            temperature: None,
-        };
+            // Always use user_prompt_input
+            let user_content = e.user_prompt_input.clone();
 
-        let llm_props = LlmServiceRequest::new(prompt.clone(), chat_request).map_err(|e| {
-            tracing::error!("{}", e);
-            AppError::InternalServerError("An error occured processing prompt template".to_string())
-        })?;
+            // Create a ChatCompletionRequest with the inputs
+            let chat_request = ChatCompletionRequest {
+                model: prompt.key.clone(),
+                messages: vec![
+                    crate::common::types::chat_request::ChatCompletionRequestMessage::System {
+                        content: system_content,
+                        name: None,
+                    },
+                    crate::common::types::chat_request::ChatCompletionRequestMessage::User {
+                        content: user_content,
+                        name: None,
+                    },
+                ],
+                stream: None,
+                response_format: None,
+                tools: None,
+                provider: None,
+                models: None,
+                transforms: None,
+                max_tokens: None,
+                temperature: None,
+            };
 
-        let llm = Llm::new(llm_props, state.db.log.clone());
-        let res = llm
-            .text()
-            .await
-            .map_err(|_| AppError::InternalServerError("Something went wrong".to_string()))?;
+            let llm_props = LlmServiceRequest::new(prompt.clone(), chat_request).map_err(|e| {
+                tracing::error!("{}", e);
+                AppError::InternalServerError("An error occured processing prompt template".to_string())
+            })?;
 
-        if let Some(c) = res.0.choices.first() {
-            // TODO: We should make the DB field nullable so we don't have to hack this
-            let content = c.message.content.clone().map(|c| c.to_string()).unwrap_or("".to_string());
+            let llm = Llm::new(llm_props, state.db.log.clone());
+            let res = llm
+                .text()
+                .await
+                .map_err(|_| AppError::InternalServerError("Something went wrong".to_string()))?;
 
-            let eval_run = state
-                .db
-                .prompt_eval_run
-                .create(&run_id, prompt_version_id, e.id, None, &content)
-                .await?;
+            if let Some(c) = res.0.choices.first() {
+                let content = c.message.content.clone().map(|c| c.to_string()).unwrap_or("".to_string());
 
-            eval_runs.push(eval_run);
+                let eval_run = state
+                    .db
+                    .prompt_eval_run
+                    .create(&run_id, prompt_version_id, e.id, None, &content)
+                    .await?;
+
+                eval_runs.push(eval_run);
+            }
         }
+
+        all_runs.push(eval_runs.into());
     }
 
-    Ok(Json(eval_runs.into()))
+    Ok(Json(all_runs))
 }
 
 pub async fn get_eval_run_by_id(
