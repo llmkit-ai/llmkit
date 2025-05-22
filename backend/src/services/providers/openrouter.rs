@@ -39,8 +39,9 @@ impl<'a> OpenrouterProvider<'a> {
         let messages = self.props.request.messages.iter().map(|msg| {
             openrouter_api::types::chat::Message {
                 role: msg.role().to_string(),
-                content: msg.content().to_string(),
+                content: msg.content(),
                 name: msg.name().map(|n| n.to_string()),
+                tool_call_id: msg.tool_call_id(),
                 tool_calls: match msg {
                     ChatCompletionRequestMessage::Assistant { tool_calls, .. } => {
                         match tool_calls {
@@ -77,8 +78,9 @@ impl<'a> OpenrouterProvider<'a> {
         let messages: Vec<openrouter_api::types::chat::Message> = self.props.request.messages.iter().map(|msg| {
             openrouter_api::types::chat::Message {
                 role: msg.role().to_string(),
-                content: msg.content().to_string(),
+                content: msg.content(),
                 name: msg.name().map(|n| n.to_string()),
+                tool_call_id: msg.tool_call_id(),
                 tool_calls: match msg {
                     ChatCompletionRequestMessage::Assistant { tool_calls, .. } => {
                         match tool_calls {
@@ -105,14 +107,14 @@ impl<'a> OpenrouterProvider<'a> {
         };
 
         let mut stream = self.client.chat()?.chat_completion_stream(request);
-        let mut content = String::new();
+        let mut content: Option<String> = None;
         let mut prompt_tokens = 0;
         let mut completion_tokens = 0;
         let mut total_tokens = 0;
         let mut id = String::new();
 
         while let Some(chunk) = stream.next().await {
-            tracing::info!("chunk: {:?}", chunk);
+            tracing::debug!("chunk: {:?}", chunk);
             match chunk {
                 Ok(c) => {
                     id = c.id.clone();
@@ -125,9 +127,14 @@ impl<'a> OpenrouterProvider<'a> {
 
                     if let Some(c) = &c.choices.first() {
                         if let Some(c) = &c.delta.content {
-                            content += &c;
+                            match &mut content {
+                                Some(cnt) => cnt.push_str(&c),
+                                None => content = Some(c.to_string())
+                            }
                         }
                     }
+
+                    // TODO: Capture tool calls
 
                     if let Err(_) = tx.send(Ok(c.into())).await {
                         break;

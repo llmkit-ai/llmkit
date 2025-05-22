@@ -33,12 +33,16 @@ pub struct LlmServiceChatCompletionResponseUsage {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct LlmServiceChatCompletionResponseMessage {
     pub role: String,
-    pub content: String,
+
+    pub content: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
     // Optionally include tool_calls when the assistant message contains a tool call.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tool_calls: Option<Vec<LlmServiceChatCompletionResponseToolCall>>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_call_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -46,7 +50,7 @@ pub struct LlmServiceChatCompletionResponseToolCall {
     /// A unique identifier for the tool call.
     pub id: Option<String>,
     /// The index of the tool call in the list of tool calls
-    pub index: u32,
+    pub index: Option<u32>,
     /// The type of call. When streaming, the first chunk only will contain "function".
     #[serde(rename = "type")]
     pub kind: Option<String>,
@@ -69,7 +73,7 @@ impl LlmServiceChatCompletionResponse {
     /// Useful for handling streamed responses which are typically simpler.
     pub fn new_streamed(
         id: String,
-        message_content: String,
+        message_content: Option<String>,
         model: String,
         created: i64,
         prompt_tokens: Option<u32>,
@@ -84,6 +88,7 @@ impl LlmServiceChatCompletionResponse {
                 content: message_content,
                 name: None,
                 tool_calls: None,
+                tool_call_id: None,
             },
             finish_reason: Some("stop".to_string()),
             native_finish_reason: None,
@@ -122,6 +127,7 @@ impl From<ChatCompletionResponse> for LlmServiceChatCompletionResponse {
                         role: choice.message.role,
                         content: choice.message.content,
                         name: choice.message.name,
+                        tool_call_id: choice.message.tool_call_id,
                         tool_calls: choice.message.tool_calls.map(|tool_calls| {
                             tool_calls.into_iter().map(|tool_call| {
                                 LlmServiceChatCompletionResponseToolCall {

@@ -59,6 +59,8 @@ pub enum LlmError {
     PromptTooLong(usize, usize),
     #[error("Content policy violation: {0}")]
     ContentPolicy(String),
+    #[error("Missing assistant content when expected")]
+    MissingAssistantContent,
     
     // Concurrency/Task errors
     #[error("MPSC Sender failed to send message in channel: {0}")]
@@ -96,7 +98,7 @@ pub enum LlmError {
     #[error("Serialization error: {0}")]
     SerializationError(String),
     #[error("Deserialization error: {0}")]
-    DeserializationError(String)
+    DeserializationError(String),
 }
 
 impl From<openrouter_api::Error> for LlmError {

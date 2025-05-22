@@ -73,10 +73,13 @@ pub async fn execute_eval_run(
             .map_err(|_| AppError::InternalServerError("Something went wrong".to_string()))?;
 
         if let Some(c) = res.0.choices.first() {
+            // TODO: We should make the DB field nullable so we don't have to hack this
+            let content = c.message.content.clone().map(|c| c.to_string()).unwrap_or("".to_string());
+
             let eval_run = state
                 .db
                 .prompt_eval_run
-                .create(&run_id, prompt_version_id, e.id, None, &c.message.content)
+                .create(&run_id, prompt_version_id, e.id, None, &content)
                 .await?;
 
             eval_runs.push(eval_run);

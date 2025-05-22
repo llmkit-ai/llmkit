@@ -48,7 +48,7 @@ impl LlmServiceRequest {
             .messages
             .iter()
             .find(|msg| msg.is_system())
-            .and_then(|msg| serde_json::from_str::<Value>(&msg.content()).ok())
+            .and_then(|msg| serde_json::from_str::<Value>(&msg.system_content()).ok())
             .unwrap_or(Value::Object(serde_json::Map::new()));
 
         // Render system prompt with context
@@ -103,7 +103,7 @@ impl LlmServiceRequest {
                 .messages
                 .iter()
                 .find(|msg| msg.is_user())
-                .map(|msg| msg.content().to_string())
+                .map(|msg| msg.user_content().to_string())
                 .unwrap_or("".to_string());
 
             // Simple mode - system + user message with template
@@ -322,12 +322,12 @@ mod tests {
         if service_request.request.messages.len() >= 2
             && service_request.request.messages[0].is_system()
         {
-            assert_eq!(service_request.request.messages[0].content(), ""); // Empty system prompt
-            assert_eq!(service_request.request.messages[1].content(), "Hello"); // User content
+            assert_eq!(service_request.request.messages[0].content(), Some("".to_string())); // Empty system prompt
+            assert_eq!(service_request.request.messages[1].content(), Some("Hello".to_string())); // User content
         } else {
             // If no system message was added, make sure we have the user message
             assert!(service_request.request.messages[0].is_user());
-            assert_eq!(service_request.request.messages[0].content(), "Hello"); // User content
+            assert_eq!(service_request.request.messages[0].content(), Some("Hello".to_string())); // User content
         }
     }
 
@@ -363,6 +363,7 @@ mod tests {
             let service_request = result.unwrap();
             assert!(service_request.request.messages[0]
                 .content()
+                .unwrap()
                 .contains("System prompt with ."));
         }
     }
@@ -393,11 +394,11 @@ mod tests {
             // Check that the templates were properly rendered
             assert_eq!(
                 service_request.request.messages[0].content(),
-                "System prompt with shared value."
+                Some("System prompt with shared value.".to_string())
             );
             assert_eq!(
                 service_request.request.messages[1].content(),
-                "User prompt with user value."
+                Some("User prompt with user value.".to_string())
             );
         } else {
             // If it failed, make sure it's at least a template error
@@ -461,11 +462,11 @@ mod tests {
         // For static prompts, template variables shouldn't be processed
         assert_eq!(
             service_request.request.messages[0].content(),
-            "Static system prompt."
+            Some("Static system prompt.".to_string())
         );
         assert_eq!(
             service_request.request.messages[1].content(),
-            "User message"
+            Some("User message".to_string())
         );
     }
 
@@ -504,16 +505,18 @@ mod tests {
         assert!(service_request.request.messages[0].is_system());
         assert!(service_request.request.messages[0]
             .content()
+            .unwrap()
             .contains("System prompt with"));
         assert!(service_request.request.messages[0]
             .content()
+            .unwrap()
             .contains("system value"));
 
         // User content should remain unchanged
         assert!(service_request.request.messages[1].is_user());
         assert_eq!(
             service_request.request.messages[1].content(),
-            "User message"
+            Some("User message".to_string())
         );
     }
 
@@ -537,7 +540,7 @@ mod tests {
                 name: None,
             },
             ChatCompletionRequestMessage::Assistant {
-                content: "Assistant response".to_string(),
+                content: Some("Assistant response".to_string()),
                 tool_calls: None,
                 name: None,
             },
@@ -561,23 +564,25 @@ mod tests {
         assert!(service_request.request.messages[0].is_system());
         assert!(service_request.request.messages[0]
             .content()
+            .unwrap()
             .contains("System prompt with"));
         assert!(service_request.request.messages[0]
             .content()
+            .unwrap()
             .contains("system value"));
 
         // Check that other messages remained intact
         assert_eq!(
             service_request.request.messages[1].content(),
-            "User message 1"
+            Some("User message 1".to_string())
         );
         assert_eq!(
             service_request.request.messages[2].content(),
-            "Assistant response"
+            Some("Assistant response".to_string())
         );
         assert_eq!(
             service_request.request.messages[3].content(),
-            "User message 2"
+            Some("User message 2".to_string())
         );
     }
 
@@ -592,7 +597,7 @@ mod tests {
                 name: None,
             },
             ChatCompletionRequestMessage::Assistant {
-                content: "Assistant response".to_string(),
+                content: Some("Assistant response".to_string()),
                 tool_calls: None,
                 name: None,
             },
@@ -614,26 +619,26 @@ mod tests {
         assert!(service_request.request.messages[0].is_system());
         assert_eq!(
             service_request.request.messages[0].content(),
-            "System prompt."
+            Some("System prompt.".to_string())
         );
 
         // Verify the original messages are still in the right order after the system message
         assert!(service_request.request.messages[1].is_user());
         assert_eq!(
             service_request.request.messages[1].content(),
-            "User message 1"
+            Some("User message 1".to_string())
         );
 
         assert!(service_request.request.messages[2].is_assistant());
         assert_eq!(
             service_request.request.messages[2].content(),
-            "Assistant response"
+            Some("Assistant response".to_string())
         );
 
         assert!(service_request.request.messages[3].is_user());
         assert_eq!(
             service_request.request.messages[3].content(),
-            "User message 2"
+            Some("User message 2".to_string())
         );
     }
 
@@ -661,7 +666,7 @@ mod tests {
         if service_request.request.messages.len() >= 2 {
             assert!(service_request.request.messages[0].is_system());
             assert!(service_request.request.messages[1].is_user());
-            assert_eq!(service_request.request.messages[1].content(), "");
+            assert_eq!(service_request.request.messages[1].content(), Some("".to_string()));
         } else {
             // If there's just one message (not expected), make sure it's correctly handled
             assert!(
@@ -739,11 +744,11 @@ mod tests {
 
         // Check that the system message contains the expected text fragments from the template
         let system_content = service_request.request.messages[0].content();
-        assert!(system_content.trim().len() > 0);
+        assert!(system_content.clone().unwrap().trim().len() > 0);
 
         // In case the template system behaves differently in test vs. production,
         // we'll check for pattern fragments rather than exact content
-        if system_content.contains("Hello John") || system_content.contains("Hello guest") {
+        if system_content.clone().unwrap().contains("Hello John") || system_content.unwrap().contains("Hello guest") {
             // Success - template has processed conditionals
         } else {
             panic!("System prompt doesn't contain expected template output");
@@ -753,7 +758,7 @@ mod tests {
         assert!(service_request.request.messages[1].is_user());
         assert_eq!(
             service_request.request.messages[1].content(),
-            "User message"
+            Some("User message".to_string())
         );
     }
 
@@ -801,14 +806,14 @@ mod tests {
 
         // The actual template rendering may vary, so we'll check for general patterns
         let system_content_1 = service_request_1.request.messages[0].content();
-        assert!(system_content_1.trim().len() > 0);
+        assert!(system_content_1.unwrap().trim().len() > 0);
 
         // Instead of specific patterns, check that template is rendering differently
         // for different inputs (detailed verification in a real integration test would be better)
         assert!(service_request_1.request.messages[1].is_user());
         assert_eq!(
             service_request_1.request.messages[1].content(),
-            "User message"
+            Some("User message".to_string())
         );
     }
 
@@ -838,6 +843,7 @@ mod tests {
             // The template var will be missing in the rendered output
             assert!(service_request.request.messages[0]
                 .content()
+                .unwrap()
                 .contains("System prompt with"));
         } else {
             // If it failed, make sure it's due to template rendering
@@ -880,7 +886,6 @@ mod tests {
 
         let tool_calls = vec![ChatCompletionRequestToolCall {
             id: "call_123".to_string(),
-            index: 0,
             kind: "function".to_string(),
             function_call: ChatCompletionRequestFunctionCall {
                 name: "get_weather".to_string(),
@@ -894,7 +899,7 @@ mod tests {
                 name: None,
             },
             ChatCompletionRequestMessage::Assistant {
-                content: "Let me check the weather for you.".to_string(),
+                content: Some("Let me check the weather for you.".to_string()),
                 tool_calls: Some(tool_calls),
                 name: None,
             },
@@ -940,7 +945,7 @@ mod tests {
                 name: None,
             },
             ChatCompletionRequestMessage::Assistant {
-                content: "Assistant response".to_string(),
+                content: Some("Assistant response".to_string()),
                 tool_calls: None,
                 name: None,
             },
@@ -987,6 +992,7 @@ mod tests {
         assert!(service_request_case2.request.messages[0].is_system());
         assert!(service_request_case2.request.messages[0]
             .content()
+            .unwrap()
             .contains("System template with system value"));
         assert!(service_request_case2.request.messages[1].is_user());
 
@@ -1001,7 +1007,7 @@ mod tests {
                 name: None,
             },
             ChatCompletionRequestMessage::Assistant {
-                content: "Assistant response".to_string(),
+                content: Some("Assistant response".to_string()),
                 tool_calls: None,
                 name: None,
             },
@@ -1017,6 +1023,7 @@ mod tests {
         assert!(service_request_case3.request.messages[0].is_system());
         assert!(service_request_case3.request.messages[0]
             .content()
+            .unwrap()
             .contains("System template with system value"));
         assert!(service_request_case3.request.messages[1].is_user());
         assert!(service_request_case3.request.messages[2].is_assistant());
@@ -1032,7 +1039,7 @@ mod tests {
                 name: None,
             },
             ChatCompletionRequestMessage::Assistant {
-                content: "Assistant response 1".to_string(),
+                content: Some("Assistant response 1".to_string()),
                 tool_calls: None,
                 name: None,
             },
@@ -1041,7 +1048,7 @@ mod tests {
                 name: None,
             },
             ChatCompletionRequestMessage::Assistant {
-                content: "Assistant response 2".to_string(),
+                content: Some("Assistant response 2".to_string()),
                 tool_calls: None,
                 name: None,
             },
@@ -1057,6 +1064,7 @@ mod tests {
         assert!(service_request_case4.request.messages[0].is_system());
         assert!(service_request_case4.request.messages[0]
             .content()
+            .unwrap()
             .contains("System template with system value"));
 
         // Case 5: Just user and system, no assistant yet
@@ -1081,6 +1089,7 @@ mod tests {
         assert!(service_request_case5.request.messages[0].is_system());
         assert!(service_request_case5.request.messages[0]
             .content()
+            .unwrap()
             .contains("System template with system value"));
     }
 
