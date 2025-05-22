@@ -52,7 +52,7 @@ impl Llm {
 
                 let content = match &c.message.content {
                     Some(c) => c.to_string(),
-                    None => unreachable!("Encountered a situation where we don't have response content but are expected to validate the JSON output.")
+                    None => return Err(LlmError::MissingAssistantContent)
                 };
 
                 // if we have a JSON schema available lets use it
