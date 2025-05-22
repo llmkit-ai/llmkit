@@ -45,20 +45,30 @@ impl Llm {
             let res = self.send_request().await?;
 
             if let Some(c) = res.0.choices.first() {
+                // We don't need to validate the tool response
+                if c.message.role == "tool" {
+                    return Ok(res);
+                }
+
+                let content = match &c.message.content {
+                    Some(c) => c.to_string(),
+                    None => unreachable!("Encountered a situation where we don't have response content but are expected to validate the JSON output.")
+                };
+
                 // if we have a JSON schema available lets use it
                 // Otherwise just make sure it's valid JSON and return
                 match &self.props.request.response_format {
                     Some(rf) => {
                         match &rf.json_schema {
                             Some(js) => {
-                                let is_valid = &self.validate_schema(&c.message.content, &js.schema)?;
+                                let is_valid = &self.validate_schema(&content, &js.schema)?;
                                 if !is_valid {
                                     tracing::error!("The schema was not valid");
                                     return Err(LlmError::InvalidJsonSchema);
                                 }
                             },
                             None => {
-                                let _json: serde_json::Value = serde_json::from_str(&c.message.content)?;
+                                let _json: serde_json::Value = serde_json::from_str(&content)?;
                             } 
                         }
                     },

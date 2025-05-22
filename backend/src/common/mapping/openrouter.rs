@@ -65,7 +65,7 @@ impl Into<ToolCall> for ChatCompletionRequestToolCall {
     fn into(self) -> ToolCall {
         ToolCall {
             id: Some(self.id),
-            index: self.index,
+            index: None,
             kind: Some(self.kind),
             function_call: self.function_call.into(),
         }

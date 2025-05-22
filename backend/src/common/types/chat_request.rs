@@ -63,12 +63,9 @@ pub enum ChatCompletionRequestMessage{
         #[serde(skip_serializing_if = "Option::is_none")]
         name: Option<String>,
     },
-    #[serde(rename_all = "camelCase")]
     Assistant { 
-        content: String,
-        #[serde(skip_serializing_if = "Option::is_none")]
+        content: Option<String>,
         tool_calls: Option<Vec<ChatCompletionRequestToolCall>>,
-        #[serde(skip_serializing_if = "Option::is_none")]
         name: Option<String>,
     },
     Tool { 
@@ -89,8 +86,6 @@ pub struct ChatCompletionRequestFunctionCall {
 pub struct ChatCompletionRequestToolCall {
     /// A unique identifier for the tool call.
     pub id: String,
-    /// The index of the tool call in the list of tool calls
-    pub index: u32,
     /// The type of call. It must be "function" for function calls.
     #[serde(rename = "type")]
     pub kind: String,
@@ -124,12 +119,47 @@ pub struct ChatCompletionRequestFunctionDescription {
 // Helper Methods for easy extraction
 impl ChatCompletionRequestMessage {
     /// Returns the content of the message regardless of its role
-    pub fn content(&self) -> &str {
+    pub fn content(&self) -> Option<String> {
         match self {
-            ChatCompletionRequestMessage::System { content, .. } => content,
-            ChatCompletionRequestMessage::User { content, .. } => content,
-            ChatCompletionRequestMessage::Assistant { content, .. } => content,
-            ChatCompletionRequestMessage::Tool { content, .. } => content,
+            ChatCompletionRequestMessage::System { content, .. } => Some(content.clone()),
+            ChatCompletionRequestMessage::User { content, .. } => Some(content.clone()),
+            ChatCompletionRequestMessage::Assistant { content, .. } => content.clone().map(|c| c),
+            ChatCompletionRequestMessage::Tool { content, .. } => Some(content.clone()),
+        }
+    }
+
+    pub fn system_content(&self) -> String {
+        match self {
+            ChatCompletionRequestMessage::System { content, .. } => content.clone(),
+            _ => "".to_string()
+        }
+    }
+
+    pub fn user_content(&self) -> String {
+        match self {
+            ChatCompletionRequestMessage::User { content, .. } => content.clone(),
+            _ => "".to_string()
+        }
+    }
+
+    pub fn assistant_content(&self) -> Option<String> {
+        match self {
+            ChatCompletionRequestMessage::Assistant { content, .. } => content.clone(),
+            _ => None
+        }
+    }
+
+    pub fn tool_content(&self) -> String {
+        match self {
+            ChatCompletionRequestMessage::Tool { content, .. } => content.clone(),
+            _ => "".to_string()
+        }
+    }
+
+    pub fn tool_call_id(&self) -> Option<String> {
+        match self {
+            ChatCompletionRequestMessage::Tool { tool_call_id, .. } => Some(tool_call_id.clone()),
+            _ => None
         }
     }
 

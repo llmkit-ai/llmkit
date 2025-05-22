@@ -39,8 +39,9 @@ impl<'a> OpenrouterProvider<'a> {
         let messages = self.props.request.messages.iter().map(|msg| {
             openrouter_api::types::chat::Message {
                 role: msg.role().to_string(),
-                content: msg.content().to_string(),
+                content: msg.content(),
                 name: msg.name().map(|n| n.to_string()),
+                tool_call_id: msg.tool_call_id(),
                 tool_calls: match msg {
                     ChatCompletionRequestMessage::Assistant { tool_calls, .. } => {
                         match tool_calls {
@@ -77,8 +78,9 @@ impl<'a> OpenrouterProvider<'a> {
         let messages: Vec<openrouter_api::types::chat::Message> = self.props.request.messages.iter().map(|msg| {
             openrouter_api::types::chat::Message {
                 role: msg.role().to_string(),
-                content: msg.content().to_string(),
+                content: msg.content(),
                 name: msg.name().map(|n| n.to_string()),
+                tool_call_id: msg.tool_call_id(),
                 tool_calls: match msg {
                     ChatCompletionRequestMessage::Assistant { tool_calls, .. } => {
                         match tool_calls {
@@ -112,7 +114,7 @@ impl<'a> OpenrouterProvider<'a> {
         let mut id = String::new();
 
         while let Some(chunk) = stream.next().await {
-            tracing::info!("chunk: {:?}", chunk);
+            tracing::debug!("chunk: {:?}", chunk);
             match chunk {
                 Ok(c) => {
                     id = c.id.clone();
@@ -128,6 +130,8 @@ impl<'a> OpenrouterProvider<'a> {
                             content += &c;
                         }
                     }
+
+                    // TODO: Capture tool calls
 
                     if let Err(_) = tx.send(Ok(c.into())).await {
                         break;
@@ -146,7 +150,7 @@ impl<'a> OpenrouterProvider<'a> {
 
         Ok(LlmServiceChatCompletionResponse::new_streamed(
             id, 
-            content, 
+            Some(content), 
             self.props.request.model.clone(),
             created, 
             Some(prompt_tokens), 
