@@ -52,6 +52,7 @@
             <p class="mt-2 text-sm text-neutral-700 dark:text-neutral-300">View eval performance for the current version of your prompt.</p>
           </div>
           <div class="mt-4 sm:ml-16 sm:mt-0 sm:flex-none flex items-center space-x-2">
+            <input type="number" min="1" v-model.number="rounds" class="w-16 border px-1 py-0.5 mr-2" />
             <PrimaryButton
               @click="executeEvalRun()"
               v-if="requiresEvalRun"
@@ -146,6 +147,7 @@ const emits = defineEmits<{
 }>();
 
 const mode = ref<"view" | "score-eval-run">("view")
+const rounds = ref(1)
 
 const { createEvalRun, fetchEvalRunByPromptVersion, evalRuns, loading: evalRunsLoading } = usePromptEvalRuns();
 await fetchEvalRunByPromptVersion(props.prompt.id, props.prompt.version_id)
@@ -193,7 +195,7 @@ const executeLoading = ref(false)
 
 async function executeEvalRun() {
   executeLoading.value = true
-  await createEvalRun(props.prompt.id, props.prompt.version_id)
+  await createEvalRun(props.prompt.id, props.prompt.version_id, rounds.value)
   mode.value = 'score-eval-run'
   executeLoading.value = false
 }
