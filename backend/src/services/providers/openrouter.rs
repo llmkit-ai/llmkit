@@ -107,7 +107,7 @@ impl<'a> OpenrouterProvider<'a> {
         };
 
         let mut stream = self.client.chat()?.chat_completion_stream(request);
-        let mut content = String::new();
+        let mut content: Option<String> = None;
         let mut prompt_tokens = 0;
         let mut completion_tokens = 0;
         let mut total_tokens = 0;
@@ -127,7 +127,10 @@ impl<'a> OpenrouterProvider<'a> {
 
                     if let Some(c) = &c.choices.first() {
                         if let Some(c) = &c.delta.content {
-                            content += &c;
+                            match &mut content {
+                                Some(cnt) => cnt.push_str(&c),
+                                None => content = Some(c.to_string())
+                            }
                         }
                     }
 
@@ -150,7 +153,7 @@ impl<'a> OpenrouterProvider<'a> {
 
         Ok(LlmServiceChatCompletionResponse::new_streamed(
             id, 
-            Some(content), 
+            content, 
             self.props.request.model.clone(),
             created, 
             Some(prompt_tokens), 
