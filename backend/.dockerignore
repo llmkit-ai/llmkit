@@ -1,0 +1,44 @@
+# Rust build artifacts
+target/
+**/*.rs.bk
+*.pdb
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Development files
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Documentation
+README.md
+docs/
+
+# Test files
+tests/
+**/*_test.rs
+**/*_tests.rs
+
+# Git
+.git/
+.gitignore
+
+# Other
+*.log
+curls 
