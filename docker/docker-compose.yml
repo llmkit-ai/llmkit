@@ -1,6 +1,6 @@
 services:
   backend:
-    build: ./backend
+    build: ../backend
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     volumes:
@@ -14,7 +14,7 @@ services:
 
   ui:
     build:
-      context: ./ui
+      context: ../ui
       args:
         API_BASE_URL: ${API_BASE_URL}
     ports:

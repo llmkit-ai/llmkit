@@ -1,0 +1,49 @@
+# Root level .dockerignore for project builds
+
+# Git and version control
+.git/
+.gitignore
+.gitattributes
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.orig
+*.bak
+*~
+.#*
+\#*#
+.vimrc
+.emacs*
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Documentation and non-essential files
+README.md
+*.md
+LICENSE
+*.txt
+
+# Test and development files
+tests/
+coverage/
+.env.local
+.env.development
+*.log
+*.tmp
+
+# Build outputs and caches
+**/target/
+**/node_modules/
+**/.nuxt/
+**/.output/
+**/dist/
+
+# Assets and media (if not needed in containers)
+assets/
+landing.html 
