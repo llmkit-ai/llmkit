@@ -20,11 +20,16 @@ use crate::{common::types::{chat_response::{LlmServiceChatCompletionChunk, LlmSe
 pub struct Llm {
     props: LlmServiceRequest,
     db_log: LogRepository,
+    run_id: Option<String>,
 }
 
 impl Llm {
     pub fn new(props: LlmServiceRequest, db_log: LogRepository) -> Self {
-        Llm { props, db_log }
+        Llm { props, db_log, run_id: None }
+    }
+
+    pub fn new_with_run_id(props: LlmServiceRequest, db_log: LogRepository, run_id: String) -> Self {
+        Llm { props, db_log, run_id: Some(run_id) }
     }
 
     fn retry_strategy(&self) -> impl Iterator<Item = Duration> {
@@ -173,6 +178,7 @@ impl Llm {
                 reasoning_tokens,
                 &request_body,
                 &provider_response_id,
+                self.run_id.as_deref(),
             )
             .await?;
 
@@ -215,7 +221,8 @@ impl Llm {
                 output_tokens,
                 reasoning_tokens,
                 &request_body,
-                &provider_response_id
+                &provider_response_id,
+                self.run_id.as_deref(),
             )
             .await?;
 
@@ -274,7 +281,8 @@ impl Llm {
                 output_tokens,
                 reasoning_tokens,
                 &request_body,
-                &provider_response_id
+                &provider_response_id,
+                self.run_id.as_deref(),
             )
             .await?;
 
@@ -295,6 +303,7 @@ impl Llm {
         reasoning_tokens: Option<i64>,
         request_body: &str,
         provider_response_id: &str,
+        run_id: Option<&str>,
     ) -> Result<i64, LlmError> {
         self.db_log
             .create_log(
@@ -307,6 +316,7 @@ impl Llm {
                 reasoning_tokens,
                 Some(request_body),
                 provider_response_id,
+                run_id,
             )
             .await
             .map_err(|e| LlmError::DbLoggingError(e.to_string()))

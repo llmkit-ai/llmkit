@@ -75,11 +75,14 @@ pub async fn execute_eval_run(
                 AppError::InternalServerError("An error occured processing prompt template".to_string())
             })?;
 
-            let llm = Llm::new(llm_props, state.db.log.clone());
+            let llm = Llm::new_with_run_id(llm_props, state.db.log.clone(), run_id.clone());
             let res = llm
                 .text()
                 .await
-                .map_err(|_| AppError::InternalServerError("Something went wrong".to_string()))?;
+                .map_err(|e| {
+                    tracing::error!("LLM service error: {}", e);
+                    AppError::InternalServerError(format!("LLM service error: {}", e))
+                })?;
 
             if let Some(c) = res.0.choices.first() {
                 let content = c.message.content.clone().map(|c| c.to_string()).unwrap_or("".to_string());
