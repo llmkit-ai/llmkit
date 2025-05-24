@@ -153,7 +153,12 @@ main() {
     
     # Run tests with timeout
     if ! run_tests "$test_mode" "$specific_suite" "$parallel_mode"; then
-        log_error "Tests failed"
+        echo ""
+        echo -e "${BOLD}${RED}================================${NC}"
+        echo -e "${BOLD}${RED}❌ ERROR - Docker Tests FAILED! ❌${NC}"
+        echo -e "${BOLD}${RED}================================${NC}"
+        echo ""
+        log_error "Tests failed - check output above for details"
         
         # Post-failure cleanup
         if [[ "$cleanup_mode" != "none" ]]; then
@@ -424,6 +429,8 @@ print_final_summary() {
     echo -e "${BOLD}${GREEN}================================${NC}"
     echo -e "${BOLD}${GREEN}     Test Execution Complete${NC}"
     echo -e "${BOLD}${GREEN}================================${NC}"
+    echo ""
+    echo -e "${BOLD}${GREEN}🎉 ALL GOOD - Docker Pipeline Tests PASSED! 🎉${NC}"
     echo ""
     echo "Test execution completed successfully!"
     echo "Check individual test outputs above for detailed results."
