@@ -52,7 +52,8 @@
             <p class="mt-2 text-sm text-neutral-700 dark:text-neutral-300">View eval performance for the current version of your prompt.</p>
           </div>
           <div class="mt-4 sm:ml-16 sm:mt-0 sm:flex-none flex items-center space-x-2">
-            <input type="number" min="1" v-model.number="rounds" class="w-16 border px-1 py-0.5 mr-2" />
+            <label class="text-sm text-neutral-700 dark:text-neutral-300">Rounds:</label>
+            <input type="number" min="1" v-model.number="rounds" class="w-16 border border-neutral-300 dark:border-neutral-600 px-2 py-1 rounded text-sm" />
             <PrimaryButton
               @click="executeEvalRun()"
               v-if="requiresEvalRun"
@@ -70,6 +71,7 @@
               <table class="min-w-full divide-y divide-neutral-300 dark:divide-neutral-700">
                 <thead>
                   <tr>
+                    <th scope="col" class="pr-3 py-3.5 text-left text-sm font-semibold text-neutral-900 dark:text-neutral-100">Round</th>
                     <th scope="col" class="pr-3 py-3.5 text-left text-sm font-semibold text-neutral-900 dark:text-neutral-100">Score</th>
                     <th scope="col" class="py-3.5 px-3 text-left text-sm font-semibold text-neutral-900 dark:text-neutral-100 sm:pl-0">Eval Name</th>
                     <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-neutral-900 dark:text-neutral-100">Output</th>
@@ -78,6 +80,9 @@
                 </thead>
                 <tbody class="divide-y divide-neutral-200 dark:divide-neutral-800">
                   <tr v-for="r in evalRuns">
+                    <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-neutral-900 dark:text-neutral-100 sm:pl-0">
+                      {{ r.round_number || 1 }}
+                    </td>
                     <td 
                       class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium sm:pl-0"
                       :class="getScoreColor(r.score)"

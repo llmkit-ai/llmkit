@@ -21,7 +21,34 @@ export const usePromptEvalRuns = () => {
   const fetchEvalRunsByPromptVersion = async (promptId: number, promptVersionId: number) => {
     try {
       loading.value = true
-      evalRuns.value = await $fetch<PromptEvalRunResponse[]>(`/v1/ui/prompt-eval-runs/${promptId}/version/${promptVersionId}`)
+      const runs = await $fetch<PromptEvalRunResponse[]>(`/v1/ui/prompt-eval-runs/${promptId}/version/${promptVersionId}`)
+      
+      // Group by run_id and assign round numbers
+      const runIdGroups = new Map<string, PromptEvalRunResponse[]>()
+      runs.forEach(run => {
+        if (!runIdGroups.has(run.run_id)) {
+          runIdGroups.set(run.run_id, [])
+        }
+        runIdGroups.get(run.run_id)!.push(run)
+      })
+      
+      // Assign round numbers based on creation time of run_ids
+      const sortedRunIds = Array.from(runIdGroups.keys()).sort((a, b) => {
+        const aFirstRun = runIdGroups.get(a)![0]
+        const bFirstRun = runIdGroups.get(b)![0]
+        return new Date(aFirstRun.created_at).getTime() - new Date(bFirstRun.created_at).getTime()
+      })
+      
+      evalRuns.value = []
+      sortedRunIds.forEach((runId, roundIndex) => {
+        const runsInGroup = runIdGroups.get(runId)!
+        runsInGroup.forEach(run => {
+          evalRuns.value.push({
+            ...run,
+            round_number: roundIndex + 1
+          })
+        })
+      })
     } catch (err) {
       console.error(err)
       error.value = 'Failed to fetch samples'
@@ -48,8 +75,16 @@ export const usePromptEvalRuns = () => {
         method: 'POST',
       })
 
-      newEval.forEach(group => {
-        group.runs.forEach(r => evalRuns.value.push(r))
+      newEval.forEach((group, roundIndex) => {
+        group.runs.forEach(r => {
+          // Add round information to each run
+          const runWithRound = {
+            ...r,
+            round_number: roundIndex + 1,
+            run_id: group.run_id
+          }
+          evalRuns.value.push(runWithRound)
+        })
       })
 
       loading.value = false
