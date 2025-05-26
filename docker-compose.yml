@@ -1,8 +1,6 @@
 services:
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile.fast
+    build: ./backend
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     volumes:
