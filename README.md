@@ -137,7 +137,7 @@ Llmkit's evaluation system allows you to:
 
 1. Create evaluation test sets with specific inputs
 ![Evaluation Creation](assets/eval_create.png)
-2. Run those inputs against different prompt versions
+2. Run those inputs against different prompt versions. You can repeat a run multiple times using the `rounds` option to gather varied outputs.
 3. Score and compare performance
 ![Evaluation Scoring](assets/eval_score.png)
 4. Track improvements over time
