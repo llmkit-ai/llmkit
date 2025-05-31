@@ -178,7 +178,6 @@ impl Llm {
                 reasoning_tokens,
                 &request_body,
                 &provider_response_id,
-                self.run_id.as_deref(),
             )
             .await?;
 
@@ -222,7 +221,6 @@ impl Llm {
                 reasoning_tokens,
                 &request_body,
                 &provider_response_id,
-                self.run_id.as_deref(),
             )
             .await?;
 
@@ -282,7 +280,6 @@ impl Llm {
                 reasoning_tokens,
                 &request_body,
                 &provider_response_id,
-                self.run_id.as_deref(),
             )
             .await?;
 
@@ -303,7 +300,6 @@ impl Llm {
         reasoning_tokens: Option<i64>,
         request_body: &str,
         provider_response_id: &str,
-        run_id: Option<&str>,
     ) -> Result<i64, LlmError> {
         self.db_log
             .create_log(
@@ -316,7 +312,6 @@ impl Llm {
                 reasoning_tokens,
                 Some(request_body),
                 provider_response_id,
-                run_id,
             )
             .await
             .map_err(|e| LlmError::DbLoggingError(e.to_string()))

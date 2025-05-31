@@ -26,8 +26,7 @@ impl LogRepository {
         output_tokens: Option<i64>,
         reasoning_tokens: Option<i64>,
         request_body: Option<&str>,
-        provider_response_id: &str,
-        run_id: Option<&str>
+        provider_response_id: &str
     ) -> Result<i64> {
         let mut conn = self.pool.acquire().await?;
         let id = sqlx::query!(
@@ -42,9 +41,8 @@ impl LogRepository {
                 reasoning_tokens,
                 request_body,
                 provider_response_id,
-                run_id,
                 created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             "#,
             prompt_id,
             model_id,
@@ -55,7 +53,6 @@ impl LogRepository {
             reasoning_tokens,
             request_body,
             provider_response_id,
-            run_id,
         )
         .execute(&mut *conn)
         .await?

@@ -75,7 +75,7 @@ pub async fn execute_eval_run(
                 AppError::InternalServerError("An error occured processing prompt template".to_string())
             })?;
 
-            let llm = Llm::new_with_run_id(llm_props, state.db.log.clone(), run_id.clone());
+            let llm = Llm::new(llm_props, state.db.log.clone());
             let res = llm
                 .text()
                 .await
