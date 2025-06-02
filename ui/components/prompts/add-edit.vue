@@ -527,15 +527,9 @@ function autoResizeUserPrompt() {
   });
 }
 
-// Optionally, auto-resize on mount and when value changes
+// Auto-resize only on mount (when entering edit mode)
 onMounted(() => {
   autoResizeSystemPrompt();
-  autoResizeUserPrompt();
-});
-watch(systemPrompt, () => {
-  autoResizeSystemPrompt();
-});
-watch(userPrompt, () => {
   autoResizeUserPrompt();
 });
 
