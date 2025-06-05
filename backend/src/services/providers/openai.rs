@@ -33,7 +33,9 @@ pub struct OpenAiProvider<'a> {
 
 impl<'a> OpenAiProvider<'a> {
     pub fn new(props: &'a LlmServiceRequest) -> Result<Self, LlmError> {
-        let api_key = std::env::var("OPENAI_API_KEY").expect("Missing OPENAI_API_KEY");
+        let api_key = std::env::var("OPENAI_API_KEY")
+            .map_err(|_| LlmError::InvalidConfig("Missing OPENAI_API_KEY".to_string()))?;
+
         let config = config::OpenAIConfig::new().with_api_key(api_key);
 
         let client = Client::with_config(config);
