@@ -161,9 +161,10 @@ impl LlmServiceRequest {
         };
 
         // Override input with inputs from Prompt table
-        service_request.request.max_tokens = Some(prompt.max_tokens);
+        // TODO: We should make the DB fields match the struct field types if possible
+        service_request.request.max_tokens = prompt.max_tokens as u32;
+        service_request.request.temperature = prompt.temperature as f32;
         service_request.request.model = prompt.model_name.clone();
-        service_request.request.temperature = Some(prompt.temperature);
 
         if prompt.json_mode && prompt.supports_json {
             if prompt.supports_json_schema {
@@ -259,8 +260,8 @@ mod tests {
             provider: None,
             models: None,
             transforms: None,
-            max_tokens: None,
-            temperature: None,
+            max_tokens: 2500,
+            temperature: 0.7,
         }
     }
     
@@ -280,6 +281,7 @@ mod tests {
                     },
                     "required": ["location"]
                 }),
+                strict: None
             },
         };
 
@@ -292,8 +294,8 @@ mod tests {
             provider: None,
             models: None,
             transforms: None,
-            max_tokens: None,
-            temperature: None,
+            max_tokens: 2500,
+            temperature: 0.7,
         }
     }
 
@@ -866,7 +868,7 @@ mod tests {
 
         let mut request = create_chat_request(messages);
         request.model = "different-model".to_string();
-        request.temperature = Some(0.9);
+        request.temperature = 0.9;
 
         let result = LlmServiceRequest::new(prompt, request);
         assert!(result.is_ok());
@@ -875,8 +877,8 @@ mod tests {
 
         // Check that values were properly overridden
         assert_eq!(service_request.request.model, "gpt-4");
-        assert_eq!(service_request.request.temperature, Some(0.7));
-        assert_eq!(service_request.request.max_tokens, Some(1000));
+        assert_eq!(service_request.request.temperature, 0.7);
+        assert_eq!(service_request.request.max_tokens, 1000);
     }
 
     #[test]

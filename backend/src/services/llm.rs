@@ -9,10 +9,9 @@ use tokio_retry::{
 use tracing;
 
 use super::{
-    providers::openrouter::OpenrouterProvider,
+    providers::{openai::OpenAiProvider, openrouter::OpenrouterProvider},
     types::{
-        llm_service::LlmServiceRequest,
-        llm_error::{LlmError, LlmStreamingError},
+        llm_error::{LlmError, LlmStreamingError}, llm_service::LlmServiceRequest
     },
 };
 use crate::{common::types::{chat_response::{LlmServiceChatCompletionChunk, LlmServiceChatCompletionResponse}, models::LlmApiProvider}, db::logs::LogRepository};
@@ -122,7 +121,11 @@ impl Llm {
         // Execute request and capture result
         let result = match &self.props.provider {
             LlmApiProvider::Openrouter => {
-                let provider = OpenrouterProvider::new(&self.props, false)?;
+                let provider = OpenrouterProvider::new(&self.props)?;
+                provider.execute_chat().await
+            }
+            LlmApiProvider::OpenAi => {
+                let provider = OpenAiProvider::new(&self.props)?;
                 provider.execute_chat().await
             }
         };
@@ -225,7 +228,11 @@ impl Llm {
         // Execute request and capture result
         let result = match &self.props.provider {
             LlmApiProvider::Openrouter => {
-                let provider = OpenrouterProvider::new(&self.props, true)?;
+                let provider = OpenrouterProvider::new(&self.props)?;
+                provider.execute_chat_stream(tx).await
+            }
+            LlmApiProvider::OpenAi => {
+                let provider = OpenAiProvider::new(&self.props)?;
                 provider.execute_chat_stream(tx).await
             }
         };

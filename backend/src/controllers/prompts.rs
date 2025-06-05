@@ -279,6 +279,7 @@ pub async fn api_completions(
                 name: t.tool_name,
                 description: Some(t.description),
                 parameters: serde_json::from_str(&t.parameters).unwrap_or_default(),
+                strict: Some(t.strict)
             }
         }
     }).collect::<Vec<_>>();

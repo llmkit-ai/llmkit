@@ -332,6 +332,8 @@ async function sendMessage() {
       headers: { 'Content-Type': 'application/json' },
       payload: JSON.stringify({
         model: props.prompt.key,
+        max_tokens: props.prompt.max_tokens,
+        temperature: props.prompt.temperature,
         messages: createMessagesWithContext(),
         stream: true,
         ...(props.prompt.json_mode ? { response_format: { type: "json_object" } } : {})
