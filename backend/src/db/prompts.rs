@@ -29,6 +29,7 @@ impl PromptRepository {
         json_schema: Option<&str>,
         prompt_type: &str,
         is_chat: bool,
+        reasoning_effort: Option<&str>,
     ) -> Result<i64> {
         let mut conn = self.pool.acquire().await?;
 
@@ -64,9 +65,10 @@ impl PromptRepository {
                 json_mode,
                 json_schema,
                 prompt_type,
-                is_chat
+                is_chat,
+                reasoning_effort
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             "#,
             prompt_id,
             next_version,
@@ -80,7 +82,8 @@ impl PromptRepository {
             json_mode,
             json_schema,
             prompt_type,
-            is_chat
+            is_chat,
+            reasoning_effort
         )
         .execute(&mut *conn)
         .await?;
@@ -124,6 +127,8 @@ impl PromptRepository {
                 m.supports_json,
                 m.supports_json_schema,
                 m.supports_tools,
+                m.is_reasoning,
+                pv.reasoning_effort,
                 pv.system_diff,
                 pv.user_diff,
                 pv.version_number,
@@ -165,6 +170,8 @@ impl PromptRepository {
                 m.supports_json,
                 m.supports_json_schema,
                 m.supports_tools,
+                m.is_reasoning,
+                pv.reasoning_effort,
                 pv.system_diff,
                 pv.user_diff,
                 pv.version_number,
@@ -196,6 +203,7 @@ impl PromptRepository {
         json_schema: Option<&str>,
         prompt_type: &str,
         is_chat: bool,
+        reasoning_effort: Option<&str>,
     ) -> Result<bool> {
         let mut conn = self.pool.acquire().await?;
 
@@ -236,9 +244,10 @@ impl PromptRepository {
                 json_mode,
                 json_schema,
                 prompt_type,
-                is_chat
+                is_chat,
+                reasoning_effort
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             "#,
             id,
             next_version,
@@ -252,7 +261,8 @@ impl PromptRepository {
             json_mode,
             json_schema,
             prompt_type,
-            is_chat
+            is_chat,
+            reasoning_effort
         )
         .execute(&mut *conn)
         .await?;
@@ -442,6 +452,8 @@ impl PromptRepository {
                 m.supports_json,
                 m.supports_json_schema,
                 m.supports_tools,
+                m.is_reasoning,
+                pv.reasoning_effort,
                 pv.system_diff,
                 pv.user_diff,
                 pv.version_number,
@@ -483,6 +495,8 @@ impl PromptRepository {
                 m.supports_json,
                 m.supports_json_schema,
                 m.supports_tools,
+                m.is_reasoning,
+                pv.reasoning_effort,
                 pv.system_diff,
                 pv.user_diff,
                 pv.version_number,

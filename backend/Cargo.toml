@@ -6,7 +6,11 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.95"
 argon2 = { version = "0.5.3", features = ["std"] }
-async-openai = "0.28.2"
+# async-openai = "0.28.2"
+
+# temporary until async-openai fixes their latest release
+async-openai = { git = "https://github.com/64bit/async-openai" }
+
 async-stream = "0.3.6"
 axum =  { version = "0.8.1", features = ["macros"] }
 axum-macros = "0.5.0"

@@ -8,8 +8,7 @@ use crate::services::types::{
 };
 
 use async_openai::types::{
-    ChatCompletionMessageToolCall, ChatCompletionRequestToolMessageArgs,
-    ChatCompletionRequestToolMessageContent, ChatCompletionTool, ResponseFormat,
+    ChatCompletionMessageToolCall, ChatCompletionRequestToolMessageArgs, ChatCompletionRequestToolMessageContent, ChatCompletionTool, ReasoningEffort, ResponseFormat
 };
 
 use async_openai::{
@@ -116,8 +115,22 @@ impl<'a> OpenAiProvider<'a> {
 
         let mut request = CreateChatCompletionRequestArgs::default();
 
-        request.max_tokens(self.props.request.max_tokens);
-        request.temperature(self.props.request.temperature);
+        if self.props.is_reasoning {
+            request.max_completion_tokens(self.props.request.max_tokens * 2);
+            
+            // Set reasoning effort based on prompt configuration
+            let reasoning_effort = match self.props.reasoning_effort.as_deref() {
+                Some("low") => ReasoningEffort::Low,
+                Some("medium") => ReasoningEffort::Medium,
+                Some("high") => ReasoningEffort::High,
+                _ => ReasoningEffort::Low, // Default to low if not specified
+            };
+            request.reasoning_effort(reasoning_effort);
+        } else {
+            request.max_tokens(self.props.request.max_tokens);
+            request.temperature(self.props.request.temperature);
+        }
+
         request.model(self.props.request.model.clone());
         request.messages(messages);
         request.stream(false);
@@ -132,7 +145,7 @@ impl<'a> OpenAiProvider<'a> {
 
         let request = request.build()?;
 
-        println!("{}", serde_json::to_string(&request).unwrap());
+        println!("request: {}", serde_json::to_string(&request).unwrap());
 
         let response = self.client.chat().create(request).await?;
 
@@ -202,6 +215,7 @@ impl<'a> OpenAiProvider<'a> {
                 .map(|t| t.into())
                 .collect::<Vec<ChatCompletionTool>>()
         });
+
         let repsonse_format: Option<ResponseFormat> = self
             .props
             .request
@@ -211,8 +225,22 @@ impl<'a> OpenAiProvider<'a> {
 
         let mut request = CreateChatCompletionRequestArgs::default();
 
-        request.max_tokens(self.props.request.max_tokens);
-        request.temperature(self.props.request.temperature);
+        if self.props.is_reasoning {
+            request.max_completion_tokens(self.props.request.max_tokens * 2);
+            
+            // Set reasoning effort based on prompt configuration
+            let reasoning_effort = match self.props.reasoning_effort.as_deref() {
+                Some("low") => ReasoningEffort::Low,
+                Some("medium") => ReasoningEffort::Medium,
+                Some("high") => ReasoningEffort::High,
+                _ => ReasoningEffort::Low, // Default to low if not specified
+            };
+            request.reasoning_effort(reasoning_effort);
+        } else {
+            request.max_tokens(self.props.request.max_tokens);
+            request.temperature(self.props.request.temperature);
+        }
+
         request.model(self.props.request.model.clone());
         request.messages(messages);
         request.stream(true);
@@ -262,7 +290,10 @@ impl<'a> OpenAiProvider<'a> {
                         break;
                     }
                 }
-                Err(e) => eprintln!("Error during streaming: {}", e),
+                Err(e) => {
+                    tracing::error!("OpenAI Error during streaming: {}", e);
+                    return Err(e.into());
+                },
             }
         }
 

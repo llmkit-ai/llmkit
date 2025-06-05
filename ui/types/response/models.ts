@@ -7,4 +7,5 @@ export interface Model {
   supports_json: boolean,
   supports_json_schema: boolean,
   supports_tools: boolean,
+  is_reasoning: boolean,
 }

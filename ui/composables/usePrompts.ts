@@ -44,7 +44,8 @@ export const usePrompts = () => {
           json_mode: prompt.json_mode,
           json_schema: prompt.json_schema,
           prompt_type: prompt.prompt_type,
-          is_chat: prompt.is_chat
+          is_chat: prompt.is_chat,
+          reasoning_effort: prompt.reasoning_effort
         }
       })
       prompts.value.push(newPrompt)
@@ -69,7 +70,8 @@ export const usePrompts = () => {
           json_mode: prompt.json_mode,
           json_schema: prompt.json_schema,
           prompt_type: prompt.prompt_type,
-          is_chat: prompt.is_chat
+          is_chat: prompt.is_chat,
+          reasoning_effort: prompt.reasoning_effort
         }
       })
       const index = prompts.value.findIndex(p => p.id === id)

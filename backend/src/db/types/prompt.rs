@@ -12,6 +12,7 @@ pub struct PromptRow {
     pub json_mode: bool,
     pub prompt_type: String,
     pub is_chat: bool,
+    pub reasoning_effort: Option<String>,
     pub created_at: chrono::NaiveDateTime,
     pub updated_at: chrono::NaiveDateTime,
 }
@@ -35,6 +36,8 @@ pub struct PromptRowWithModel {
     pub supports_json: bool,
     pub supports_json_schema: bool,
     pub supports_tools: bool,
+    pub is_reasoning: bool,
+    pub reasoning_effort: Option<String>,
     pub version_number: i64,
     pub version_id: i64,
     pub system_diff: Option<String>,

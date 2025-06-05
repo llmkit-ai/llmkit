@@ -29,6 +29,8 @@ pub struct LlmServiceRequest {
     pub base_url: String,
     pub prompt_id: i64,
     pub model_id: i64,
+    pub is_reasoning: bool,
+    pub reasoning_effort: Option<String>,
     pub request: ChatCompletionRequest,
 }
 
@@ -157,6 +159,8 @@ impl LlmServiceRequest {
             model_id: prompt.model_id,
             provider: prompt.provider_name.clone().into(),
             base_url: prompt.provider_base_url.clone(),
+            is_reasoning: prompt.is_reasoning,
+            reasoning_effort: prompt.reasoning_effort.clone(),
             request: new_request,
         };
 
@@ -239,6 +243,8 @@ mod tests {
             supports_json: true,
             supports_tools: true,
             supports_json_schema: true,
+            is_reasoning: false,
+            reasoning_effort: None,
             provider_base_url: "https://api.openrouter.ai/api/v1".to_string(),
             version_number: 1,
             version_id: 1,

@@ -42,6 +42,7 @@ pub async fn create_prompt(
             payload.json_schema.as_deref(),
             &payload.prompt_type,
             payload.is_chat,
+            payload.reasoning_effort.as_deref(),
         )
         .await?;
     let prompt = state
@@ -144,6 +145,7 @@ pub async fn update_prompt(
             payload.json_schema.as_deref(),
             &payload.prompt_type,
             payload.is_chat,
+            payload.reasoning_effort.as_deref(),
         )
         .await?;
 

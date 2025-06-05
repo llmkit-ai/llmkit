@@ -67,6 +67,9 @@
                   <span v-if="model.supports_tools" class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-800 dark:bg-green-900/20 dark:text-green-400">
                     Tools
                   </span>
+                  <span v-if="model.is_reasoning" class="inline-flex items-center rounded-full bg-orange-100 px-2 py-0.5 text-xs text-orange-800 dark:bg-orange-900/20 dark:text-orange-400">
+                    Reasoning
+                  </span>
                 </div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
@@ -117,7 +120,10 @@
                       type="text"
                     />
                     <p class="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                      Use the full model name from <a href="https://openrouter.ai/models" target="_blank" class="text-blue-500 underline">OpenRouter models</a>
+                      <NuxtLink href="https://platform.openai.com/docs/models" target="_blank" class="text-blue-500 underline">OpenAI models</NuxtLink>
+                    </p>
+                    <p class="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                      <NuxtLink href="https://openrouter.ai/models" target="_blank" class="text-blue-500 underline">OpenRouter models</NuxtLink>
                     </p>
                   </div>
                   
@@ -131,7 +137,7 @@
                       required
                       class="block w-full bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 p-2 text-base focus:outline-none text-neutral-900 dark:text-white"
                     >
-                      <option value="" disabled>Select a provider</option>
+                      <option :value="0" disabled>Select a provider</option>
                       <option 
                         v-for="provider in providers" 
                         :key="provider.id" 
@@ -174,6 +180,16 @@
                           class="h-4 w-4"
                         />
                         <label for="supports_tools" class="text-sm text-neutral-700 dark:text-white">Supports Tools</label>
+                      </div>
+                      
+                      <div class="flex items-center space-x-2">
+                        <input 
+                          id="is_reasoning" 
+                          v-model="modelForm.is_reasoning" 
+                          type="checkbox"
+                          class="h-4 w-4"
+                        />
+                        <label for="is_reasoning" class="text-sm text-neutral-700 dark:text-white">Reasoning Model</label>
                       </div>
                     </div>
                   </div>
@@ -224,7 +240,7 @@ definePageMeta({
 })
 
 const { models, loading, error: modelsError, fetchModels, createModel, updateModel } = useModels()
-const { providers, loading: providersLoading, fetchProviders } = useProviders()
+const { providers, fetchProviders } = useProviders()
 
 const showAddModelModal = ref(false)
 const showEditModelModal = ref(false)
@@ -234,10 +250,11 @@ const formError = ref<string | null>(null)
 
 const modelForm = reactive<CreateModelPayload>({
   name: '',
-  provider_id: 4, // Default to OpenRouter
+  provider_id: 0, // No default - user must select
   supports_json: false,
   supports_json_schema: false,
-  supports_tools: false
+  supports_tools: false,
+  is_reasoning: false
 })
 
 onMounted(async () => {
@@ -249,10 +266,11 @@ onMounted(async () => {
 
 function resetForm() {
   modelForm.name = ''
-  modelForm.provider_id = 4
+  modelForm.provider_id = 0
   modelForm.supports_json = false
   modelForm.supports_json_schema = false
   modelForm.supports_tools = false
+  modelForm.is_reasoning = false
   currentModelId.value = null
 }
 
@@ -262,6 +280,7 @@ function editModel(model: Model) {
   modelForm.supports_json = model.supports_json
   modelForm.supports_json_schema = model.supports_json_schema
   modelForm.supports_tools = model.supports_tools
+  modelForm.is_reasoning = model.is_reasoning
   currentModelId.value = model.id
   showEditModelModal.value = true
 }

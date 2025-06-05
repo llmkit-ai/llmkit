@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use openrouter_api::{types::chat::ChatCompletionResponse, ChatCompletionChunk};
 
 /// Chat completion response.
 #[derive(Debug, Deserialize, Serialize)]
