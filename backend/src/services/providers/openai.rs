@@ -32,9 +32,8 @@ pub struct OpenAiProvider<'a> {
 }
 
 impl<'a> OpenAiProvider<'a> {
-    /// Creates a new instance of `OpenrouterProvider` with the given properties and streaming flag.
     pub fn new(props: &'a LlmServiceRequest) -> Result<Self, LlmError> {
-        let api_key = std::env::var("OPENAI_API_KEY").expect("Missing OPENROUTER_API_KEY");
+        let api_key = std::env::var("OPENAI_API_KEY").expect("Missing OPENAI_API_KEY");
         let config = config::OpenAIConfig::new().with_api_key(api_key);
 
         let client = Client::with_config(config);
@@ -45,7 +44,6 @@ impl<'a> OpenAiProvider<'a> {
         })
     }
 
-    /// Builds an HTTP request using the OpenRouter API library's client configuration.
     pub async fn execute_chat(&self) -> Result<LlmServiceChatCompletionResponse, LlmError> {
         let mut messages: Vec<async_openai::types::ChatCompletionRequestMessage> = vec![];
 
