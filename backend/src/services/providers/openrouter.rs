@@ -21,7 +21,9 @@ pub struct OpenrouterProvider<'a> {
 impl<'a> OpenrouterProvider<'a> {
     /// Creates a new instance of `OpenrouterProvider` with the given properties and streaming flag.
     pub fn new(props: &'a LlmServiceRequest) -> Result<Self, LlmError> {
-        let api_key = std::env::var("OPENROUTER_API_KEY").expect("Missing OPENROUTER_API_KEY");
+        let api_key = std::env::var("OPENROUTER_API_KEY")
+            .map_err(|_| LlmError::InvalidConfig("Missing OPENROUTER_API_KEY".to_string()))?;
+
         let client = OpenRouterClient::new()
             .with_base_url("https://openrouter.ai/api/v1/")?
             .with_api_key(api_key)?;
