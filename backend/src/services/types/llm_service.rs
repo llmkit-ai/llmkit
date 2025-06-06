@@ -266,8 +266,8 @@ mod tests {
             provider: None,
             models: None,
             transforms: None,
-            max_tokens: 2500,
-            temperature: 0.7,
+            max_tokens: Some(2500),
+            temperature: Some(0.7),
         }
     }
     
@@ -300,8 +300,8 @@ mod tests {
             provider: None,
             models: None,
             transforms: None,
-            max_tokens: 2500,
-            temperature: 0.7,
+            max_tokens: Some(2500),
+            temperature: Some(0.7),
         }
     }
 
@@ -874,7 +874,7 @@ mod tests {
 
         let mut request = create_chat_request(messages);
         request.model = "different-model".to_string();
-        request.temperature = 0.9;
+        request.temperature = Some(0.9);
 
         let result = LlmServiceRequest::new(prompt, request);
         assert!(result.is_ok());
