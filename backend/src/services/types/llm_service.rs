@@ -26,7 +26,7 @@ pub enum LlmServiceRequestError {
 #[derive(Serialize, Clone, Debug)]
 pub struct LlmServiceRequest {
     pub provider: LlmApiProvider,
-    pub base_url: String,
+    pub base_url: Option<String>,
     pub prompt_id: i64,
     pub model_id: i64,
     pub is_reasoning: bool,
@@ -158,7 +158,7 @@ impl LlmServiceRequest {
             prompt_id: prompt.id,
             model_id: prompt.model_id,
             provider: prompt.provider_name.clone().into(),
-            base_url: prompt.provider_base_url.clone(),
+            base_url: prompt.provider_base_url,
             is_reasoning: prompt.is_reasoning,
             reasoning_effort: prompt.reasoning_effort.clone(),
             request: new_request,
@@ -245,7 +245,7 @@ mod tests {
             supports_json_schema: true,
             is_reasoning: false,
             reasoning_effort: None,
-            provider_base_url: "https://api.openrouter.ai/api/v1".to_string(),
+            provider_base_url: Some("https://api.openrouter.ai/api/v1".to_string()),
             version_number: 1,
             version_id: 1,
             system_diff: None,

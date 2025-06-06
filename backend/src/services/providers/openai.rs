@@ -8,6 +8,7 @@ use crate::services::types::{
     llm_error::LlmError, llm_error::LlmStreamingError, llm_service::LlmServiceRequest,
 };
 
+use async_openai::config::AzureConfig;
 use async_openai::types::{
     ChatCompletionMessageToolCall, ChatCompletionRequestToolMessageArgs, ChatCompletionRequestToolMessageContent,
     ChatCompletionStreamOptions, ChatCompletionTool, ReasoningEffort, ResponseFormat
@@ -28,9 +29,14 @@ use tokio::sync::mpsc::Sender;
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
+enum ClientConfigs { 
+    OpenAi(async_openai::Client<config::OpenAIConfig>),
+    Azure(async_openai::Client<config::AzureConfig>),
+}
+
 pub struct OpenAiProvider<'a> {
     props: &'a LlmServiceRequest,
-    client: async_openai::Client<config::OpenAIConfig>,
+    client: ClientConfigs,
 }
 
 impl<'a> OpenAiProvider<'a> {
@@ -44,7 +50,35 @@ impl<'a> OpenAiProvider<'a> {
 
         Ok(OpenAiProvider {
             props,
-            client,
+            client: ClientConfigs::OpenAi(client),
+        })
+    }
+
+    pub fn new_azure(props: &'a LlmServiceRequest) -> Result<Self, LlmError> {
+        let api_key = std::env::var("AZURE_API_KEY")
+            .map_err(|_| LlmError::InvalidConfig("Missing AZURE_API_KEY".to_string()))?;
+
+        let base_url = props.base_url.clone()
+            .ok_or_else(|| LlmError::InvalidConfig("Missing AZURE_BASE_URL".to_string()))?;
+
+        let mut model_parts = props.request.model.split("|");
+        let model_name = model_parts.next()
+            .ok_or_else(|| LlmError::InvalidConfig("Invalid model name config missing name".to_string()))?;
+
+        let model_api_version = model_parts.next()
+            .ok_or_else(|| LlmError::InvalidConfig("Invalid model name config missing version".to_string()))?;
+
+        let config = AzureConfig::new()
+            .with_api_base(base_url)
+            .with_api_key(api_key)
+            .with_deployment_id(model_name)
+            .with_api_version(model_api_version);
+
+        let client = Client::with_config(config);
+
+        Ok(OpenAiProvider {
+            props,
+            client: ClientConfigs::Azure(client),
         })
     }
 
@@ -155,9 +189,16 @@ impl<'a> OpenAiProvider<'a> {
 
         println!("request: {}", serde_json::to_string(&request).unwrap());
 
-        let response = self.client.chat().create(request).await?;
-
-        Ok(response.into())
+        match &self.client {
+            ClientConfigs::OpenAi(c) => {
+                let response = c.chat().create(request).await?;
+                Ok(response.into())
+            },
+            ClientConfigs::Azure(c) => {
+                let response = c.chat().create(request).await?;
+                Ok(response.into())
+            },
+        }
     }
 
     pub async fn execute_chat_stream(
@@ -272,7 +313,14 @@ impl<'a> OpenAiProvider<'a> {
 
         let request = request.build()?;
 
-        let mut stream = self.client.chat().create_stream(request).await?;
+        let mut stream = match &self.client {
+            ClientConfigs::OpenAi(c) => {
+                c.chat().create_stream(request).await?
+            },
+            ClientConfigs::Azure(c) => {
+                c.chat().create_stream(request).await?
+            },
+        };
 
         let mut content: Option<String> = None;
         let mut prompt_tokens = 0;

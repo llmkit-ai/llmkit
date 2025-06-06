@@ -128,6 +128,10 @@ impl Llm {
                 let provider = OpenAiProvider::new(&self.props)?;
                 provider.execute_chat().await
             }
+            LlmApiProvider::Azure => {
+                let provider = OpenAiProvider::new_azure(&self.props)?;
+                provider.execute_chat().await
+            }
         };
 
         // Process the result or prepare error
@@ -241,6 +245,10 @@ impl Llm {
             }
             LlmApiProvider::OpenAi => {
                 let provider = OpenAiProvider::new(&self.props)?;
+                provider.execute_chat_stream(tx).await
+            }
+            LlmApiProvider::Azure => {
+                let provider = OpenAiProvider::new_azure(&self.props)?;
                 provider.execute_chat_stream(tx).await
             }
         };
