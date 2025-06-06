@@ -29,6 +29,7 @@ pub async fn create_model(
             payload.supports_json,
             payload.supports_json_schema,
             payload.supports_tools,
+            payload.is_reasoning
         )
         .await?;
 
@@ -57,6 +58,7 @@ pub async fn update_model(
             payload.supports_json,
             payload.supports_json_schema,
             payload.supports_tools,
+            payload.is_reasoning
         )
         .await?;
 

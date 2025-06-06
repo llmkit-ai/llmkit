@@ -14,7 +14,8 @@ pub struct CreatePromptRequest {
     pub json_mode: bool,
     pub json_schema: Option<String>,
     pub prompt_type: String,
-    pub is_chat: bool
+    pub is_chat: bool,
+    pub reasoning_effort: Option<String>
 }
 
 #[derive(Debug, Deserialize)]
@@ -28,7 +29,8 @@ pub struct UpdatePromptRequest {
     pub json_mode: bool,
     pub json_schema: Option<String>,
     pub prompt_type: String,
-    pub is_chat: bool
+    pub is_chat: bool,
+    pub reasoning_effort: Option<String>
 }
 
 #[derive(Debug, Serialize)]

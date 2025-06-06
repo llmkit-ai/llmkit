@@ -27,11 +27,9 @@ pub struct ChatCompletionRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub transforms: Option<Vec<String>>,
     /// Maximum number of tokens to generate
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub max_tokens: Option<i64>,
+    pub max_tokens: Option<u32>,
     /// What sampling temperature to use, between 0 and 2
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub temperature: Option<f64>,
+    pub temperature: Option<f32>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
@@ -114,6 +112,9 @@ pub struct ChatCompletionRequestFunctionDescription {
     /// A JSON Schema object representing the function parameters.
     /// This should be a valid JSON object describing the expected arguments.
     pub parameters: serde_json::Value,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub strict: Option<bool>
 }
 
 // Helper Methods for easy extraction

@@ -16,7 +16,7 @@ use controllers::{
     api_keys::{create_api_key, delete_api_key, list_api_keys},
     logs::{get_log, get_log_by_provider_id, get_logs_count, list_logs},
     models::{list_models, create_model, update_model},
-    providers::list_providers,
+    providers::{list_providers, update_provider},
     prompt_eval::{
         create_eval_test, delete_eval_test, get_eval_test_by_id, get_eval_test_by_prompt,
         update_eval_test,
@@ -94,6 +94,7 @@ async fn main() -> Result<()> {
         .route("/ui/models", get(list_models).post(create_model))
         .route("/ui/models/{id}", put(update_model))
         .route("/ui/providers", get(list_providers))
+        .route("/ui/providers/{id}", put(update_provider))
         .route("/ui/logs", get(list_logs))
         .route("/ui/logs/count", get(get_logs_count))
         .route("/ui/logs/provider/{provider_id}", get(get_log_by_provider_id))

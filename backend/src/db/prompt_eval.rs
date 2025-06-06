@@ -1,5 +1,4 @@
 use anyhow::Result;
-use serde_json::Value;
 
 use super::types::prompt_eval::PromptEval;
 

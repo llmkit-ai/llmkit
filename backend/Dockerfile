@@ -1,48 +1,66 @@
-# Builder stage
-FROM rust:1.85 AS builder
+# Use slim image for faster downloads
+FROM rust:1.85-slim AS chef
+RUN cargo install cargo-chef
+WORKDIR /app
+
+FROM chef AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+FROM chef AS builder
 
 WORKDIR /app
 
-# Install sqlx-cli for migrations and preparation
-RUN cargo install sqlx-cli --no-default-features --features sqlite
+# Install required build dependencies and sccache
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    pkg-config \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy Cargo files first to cache dependencies
+# Install sqlx-cli for migrations and cargo-watch for development hot reload (cache this layer)
+RUN cargo install sqlx-cli --no-default-features --features sqlite && \
+    cargo install cargo-watch
+
+# Copy recipe and cook dependencies
+COPY --from=planner /app/recipe.json recipe.json
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/usr/local/cargo/git \
+    --mount=type=cache,target=/var/cache/sccache \
+    apt-get update && apt-get install -y sccache && \
+    export RUSTC_WRAPPER=sccache && \
+    cargo chef cook --release --recipe-path recipe.json
+
+# Copy source code
+COPY src src/
+COPY migrations migrations/
 COPY Cargo.toml Cargo.lock ./
 
-# Create a dummy main.rs to build dependencies
-RUN mkdir -p src && echo "fn main() {}" > src/main.rs
-RUN cargo build --release
-RUN rm -rf src
+# Create temporary database and prepare SQLx
+RUN sqlx database create --database-url sqlite:/tmp/build.db && \
+    sqlx migrate run --database-url sqlite:/tmp/build.db && \
+    cargo sqlx prepare --database-url sqlite:/tmp/build.db
 
-# Copy migrations and source code
-COPY . .
-
-# Create temporary database, run migrations, and prepare offline data
-RUN sqlx database create --database-url sqlite:/tmp/build.db
-RUN sqlx migrate run --database-url sqlite:/tmp/build.db
-RUN cargo sqlx prepare --database-url sqlite:/tmp/build.db
-
-# Force SQLx offline mode and build the release binary
+# Build with SQLx offline mode and sccache
 ENV SQLX_OFFLINE=true
-RUN cargo build --release
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/usr/local/cargo/git \
+    --mount=type=cache,target=/var/cache/sccache \
+    export RUSTC_WRAPPER=sccache && \
+    cargo build --release
 
-# Final stage
+# Runtime stage with minimal image
 FROM debian:bookworm-slim
 
 WORKDIR /app
 
-# Install runtime dependencies
+# Install only runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libssl-dev \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy the built binary and migrations from the builder
+# Copy only the necessary files
 COPY --from=builder /app/target/release/backend /app/backend
 COPY --from=builder /app/migrations /app/migrations
 
-# Expose the port
 EXPOSE 8000
-
-# Run the app
 CMD ["./backend"]

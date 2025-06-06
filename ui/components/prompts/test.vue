@@ -435,6 +435,8 @@ const executeStream = async () => {
     props.prompt.key,
     // @ts-ignore
     messages,
+    props.prompt.max_tokens,
+    props.prompt.temperature,
     props.prompt.json_mode,
     async (chunk) => {
       // Handle each chunk of the stream

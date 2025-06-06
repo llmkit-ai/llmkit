@@ -9,6 +9,7 @@ export interface PromptCreateDTO {
   json_schema: string | null;
   prompt_type: string;
   is_chat: boolean;
+  reasoning_effort?: string | null;
   tool_version_ids?: number[];
 }
 
@@ -24,6 +25,7 @@ export interface PromptUpdateDTO {
   json_schema: string | null;
   prompt_type: string;
   is_chat: boolean;
+  reasoning_effort?: string | null;
   tool_version_ids?: number[];
 }
 

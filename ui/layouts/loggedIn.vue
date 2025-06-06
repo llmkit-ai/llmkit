@@ -112,6 +112,28 @@
                   </li>
                   <li>
                     <NuxtLink 
+                      to="/providers" 
+                      :class="[
+                        'group flex gap-x-3 rounded-none pt-2 pr-2 pb-2 text-sm/6 font-semibold',
+                        route.name === 'providers' ? 'text-black dark:text-white bg-neutral-200 dark:bg-neutral-800' : 'text-neutral-700 dark:text-neutral-300'
+                      ]"
+                    >
+                      <svg 
+                        class="size-6 shrink-0"
+                        :class="route.name === 'providers' ? 'text-black dark:text-white':'text-neutral-700 group-hover:text-black dark:text-neutral-300 dark:group-hover:text-white'"
+                        xmlns="http://www.w3.org/2000/svg" 
+                        fill="none" 
+                        viewBox="0 0 24 24" 
+                        stroke-width="1.5" 
+                        stroke="currentColor" 
+                      >
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 14.25h13.5m-13.5 0a3 3 0 0 1-3-3m3 3a3 3 0 1 0 0 6h13.5a3 3 0 1 0 0-6m-16.5-3a3 3 0 0 1 3-3h13.5a3 3 0 0 1 3 3m-19.5 0a4.5 4.5 0 0 1 .9-2.7L5.737 5.1a3.375 3.375 0 0 1 2.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 0 1 .9 2.7m0 0a3 3 0 0 1-3 3m0 3h.008v.008h-.008v-.008Zm0-6h.008v.008h-.008v-.008Zm-3 6h.008v.008h-.008v-.008Zm0-6h.008v.008h-.008v-.008Z" />
+                      </svg>
+                      <span :class="isOutside ? 'opacity-0':''">Providers</span>
+                    </NuxtLink>
+                  </li>
+                  <li>
+                    <NuxtLink 
                       to="/tools" 
                       :class="[
                         'group flex gap-x-3 rounded-none pt-2 pr-2 pb-2 text-sm/6 font-semibold',

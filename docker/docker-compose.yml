@@ -1,6 +1,6 @@
 services:
   backend:
-    build: ./backend
+    build: ../backend
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     volumes:
@@ -9,12 +9,14 @@ services:
       - RUST_LOG=${RUST_LOG}
       - DATABASE_URL=${DATABASE_URL}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - AZURE_API_KEY=${AZURE_API_KEY}
       - JWT_SECRET=${JWT_SECRET}
       - USE_SECURE_COOKIE=${USE_SECURE_COOKIE}
 
   ui:
     build:
-      context: ./ui
+      context: ../ui
       args:
         API_BASE_URL: ${API_BASE_URL}
     ports:

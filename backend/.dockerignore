@@ -1,0 +1,32 @@
+# Rust target directory
+target/
+# IDE files
+.vscode/
+.idea/
+# OS files
+.DS_Store
+Thumbs.db
+# Git
+.git/
+.gitignore
+# Documentation
+README.md
+*.md
+# Tests (if not needed in container)
+tests/
+# Temporary files
+*.tmp
+*.log
+# Development tools
+curls
+# Rust backup and temporary files
+*.rs.bk
+*.orig
+*.swp
+*.swo
+*~
+.#*
+\#*#
+# Editor files
+.vimrc
+.emacs* 

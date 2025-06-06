@@ -6,6 +6,7 @@ export interface CreateModelPayload {
   supports_json: boolean
   supports_json_schema: boolean
   supports_tools: boolean
+  is_reasoning: boolean
 }
 
 export const useModels = () => {

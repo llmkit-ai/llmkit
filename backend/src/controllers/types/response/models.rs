@@ -8,10 +8,11 @@ pub struct ModelResponse {
     pub provider_id: i64,
     pub name: String,
     pub provider_name: String,
-    pub provider_base_url: String,
+    pub provider_base_url: Option<String>,
     pub supports_json: bool,
     pub supports_json_schema: bool,
     pub supports_tools: bool,
+    pub is_reasoning: bool,
 }
 
 impl From<ModelProviderRow> for ModelResponse {
@@ -25,6 +26,7 @@ impl From<ModelProviderRow> for ModelResponse {
             supports_json: row.supports_json,
             supports_json_schema: row.supports_json_schema,
             supports_tools: row.supports_tools,
+            is_reasoning: row.is_reasoning,
         }
     }
 }

@@ -28,7 +28,7 @@ Llmkit is a comprehensive toolkit for managing, testing, and deploying LLM promp
     - [Required](#required)
     - [Optional Dependencies](#optional-dependencies)
   - [Setup and Installation](#setup-and-installation)
-    - [Quick Start (Recommended)](#quick-start-recommended)
+    - [⚡ Quick Start with Optimized Builds](#quick-start-with-optimized-builds)
     - [Manual Setup](#manual-setup)
       - [Backend Setup](#backend-setup)
       - [Frontend Setup](#frontend-setup)
@@ -39,7 +39,7 @@ Llmkit is a comprehensive toolkit for managing, testing, and deploying LLM promp
 
 ## Overview
 
-Llmkit provides the best way to dynamically craft prompts with modern template syntax, manage, version, test, and run evals on your prompts across any provider and any model. 
+Llmkit provides the best way to dynamically craft prompts with modern template syntax, manage, version, test, and run evals on your prompts across any provider and any model.
 
 ![Llmkit Banner](assets/app_screenshot.png)
 
@@ -55,6 +55,40 @@ Our mission is to make prompt crafting dynamic, prompt management safe, and prom
 - **OpenAI Compatible API**: Use with existing OpenAI client libraries
 - **Provider Integration**: Support for multiple LLM providers with a unified API
 
+## Supported Providers
+
+Llmkit supports the following LLM providers:
+
+- **OpenRouter**: Access to 100+ models through a unified API
+- **OpenAI**: Direct integration with OpenAI's GPT models  
+- **Azure OpenAI**: Microsoft's Azure-hosted OpenAI models
+- **Anthropic**: Claude models (coming soon)
+- **Google Gemini**: Google's Gemini models (coming soon)
+- **DeepSeek**: DeepSeek's models (coming soon)
+
+### Provider Configuration
+
+Providers need to be configured before they can be used. Each provider requires:
+1. An API key set as an environment variable (see `.env.example` for all required variables)
+2. A base URL configuration (some providers have default URLs, Azure requires manual configuration)
+
+To configure providers:
+1. Navigate to the **Providers** page in the UI
+2. Click "Configure" on the provider you want to set up
+3. Enter the base URL if required (especially for Azure)
+4. Providers will show as "Available" when both API key and base URL are configured
+
+### Azure OpenAI Setup
+
+Azure OpenAI requires additional configuration:
+
+1. **Set the API Key**: Add `AZURE_API_KEY=your_azure_api_key` to your `.env` file
+2. **Configure Base URL**: In the Providers page, set your Azure endpoint (e.g., `https://your-resource.openai.azure.com/`)
+3. **Model Configuration**: When adding Azure models:
+   - Enter your deployment name (not the full model name)
+   - Specify the API version (e.g., `2024-08-01-preview`)
+   - These will be automatically combined in the format: `deployment_name|api_version`
+
 ## How It Works
 
 ### Prompt Architecture
@@ -62,10 +96,12 @@ Our mission is to make prompt crafting dynamic, prompt management safe, and prom
 Llmkit supports three types of prompts:
 
 1. **Static System Prompt**: Basic prompt with fixed system instructions
+
    - Great for simple chat interfaces
    - No dynamic content needed
 
 2. **Dynamic System Prompt**: System prompt with variable substitution
+
    - Variables are inserted into the system prompt
    - User messages can be free-form
 
@@ -80,12 +116,14 @@ Llmkit supports three types of prompts:
 Llmkit uses a jinja style templating system syntax:
 
 #### Variable Substitution
+
 ```
 You are a helpful assistant named {{ assistant_name }}.
 The user's name is {{ user_name }}.
 ```
 
 #### Conditional Logic
+
 ```
 {% if formal_tone %}
 Please maintain a professional tone in your responses.
@@ -95,13 +133,13 @@ Feel free to be casual and friendly.
 ```
 
 #### Loops
+
 ```
 Here are the topics to discuss:
 {% for topic in topics %}
 - {{ topic }}
 {% endfor %}
 ```
-
 
 ### OpenAI Compatibility
 
@@ -136,14 +174,13 @@ response = client.chat.completions.create(
 Llmkit's evaluation system allows you to:
 
 1. Create evaluation test sets with specific inputs
-![Evaluation Creation](assets/eval_create.png)
+   ![Evaluation Creation](assets/eval_create.png)
 2. Run those inputs against different prompt versions
    - **Rounds Support**: Execute evaluations multiple times (rounds) to test output variance and consistency - each round generates a unique run_id for grouped analysis
 3. Score and compare performance
-![Evaluation Scoring](assets/eval_score.png)
+   ![Evaluation Scoring](assets/eval_score.png)
 4. Track improvements over time
-![Evaluation Dashboard](assets/eval_dashboard.png)
-
+   ![Evaluation Dashboard](assets/eval_dashboard.png)
 
 ### Prompt Testing
 
@@ -181,7 +218,7 @@ Every LLM call has a detailed trace that you can view. directly in the llmkit UI
 ### Required
 
 - **Rust Toolchain**: Latest stable version of Rust and Cargo
-- **OpenRouter API Key**: You must have an OpenRouter API key to use Llmkit
+- **API Keys**: You need API keys for the providers you want to use (see `.env.example`)
 - **SQLite**: For database functionality
 
 ### Optional Dependencies
@@ -192,32 +229,68 @@ Every LLM call has a detailed trace that you can view. directly in the llmkit UI
 
 ## Setup and Installation
 
+### ⚡ Quick Start with Optimized Builds
+
+**New!** Llmkit now includes optimized Docker builds that are **70-90% faster** with hot reloading for development:
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/llmkit.git
+cd llmkit
+
+# Create environment file
+cp .env.example .env
+# Edit .env with your OPENROUTER_API_KEY and other settings
+
+# Fast development mode with hot reloading (recommended)
+./docker/build.sh --dev
+
+# Or production mode
+./docker/build.sh --prod
+```
+
+**Development mode features:**
+
+- ⚡ **Instant hot reloading** - no rebuilds needed for code changes
+- 🏗️ **Aggressive dependency caching** - only rebuild what changed
+- 📦 **Minimal build context** - 90% smaller Docker builds
+
+See [`docker/BUILD_OPTIMIZATION.md`](docker/BUILD_OPTIMIZATION.md) for complete optimization details.
+
 ### Docker Deployment
 
 #### Installation
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/yourusername/llmkit.git
 cd llmkit
 ```
 
 2. Create a `.env` file in the root directory:
+
 ```bash
 cp .env.example .env
 ```
 
 3. Edit the `.env` file with your API keys and a secure JWT secret:
+
 ```bash
 # Required
-OPENROUTER_API_KEY=your_openrouter_key_here
 JWT_SECRET=your_secure_random_string
 DATABASE_URL=sqlite:/app/data/llmkit.db
 API_BASE_URL=http://backend:8000
 USE_SECURE_COOKIE=false  # Set to true for HTTPS deployments
+
+# Provider API Keys (add the ones you need)
+OPENROUTER_API_KEY=your_openrouter_key_here
+OPENAI_API_KEY=your_openai_key_here
+AZURE_API_KEY=your_azure_key_here
 ```
 
 4. Build and start the containers:
+
 ```bash
 docker-compose up -d
 ```
@@ -231,20 +304,28 @@ If you prefer to set things up manually, follow these steps:
 #### Backend Setup
 
 1. Create a `.env` file in the backend directory:
+
 ```bash
 cp .env.example backend/.env
 ```
 
-2. Edit the `.env` file with your OpenRouter API key and other settings:
+2. Edit the `.env` file with your API keys and other settings:
+
 ```bash
 RUST_LOG=info
 DATABASE_URL="sqlite:absolute/path/to/backend/llmkit.db"
-OPENROUTER_API_KEY=your_openrouter_key_here
 JWT_SECRET=your_secure_random_string
 USE_SECURE_COOKIE=false  # Set to true for HTTPS deployments
+
+# Provider API Keys (add the ones you need)
+OPENROUTER_API_KEY=your_openrouter_key_here
+OPENAI_API_KEY=your_openai_key_here  # Required for OpenAI and OpenRouter providers
 ```
 
+**Note**: Providers will show as "Not Available" in the UI if their API keys are not set. You can check provider status and configure base URLs on the Providers page.
+
 3. Start the server:
+
 ```bash
 cd backend
 cargo run
@@ -255,19 +336,19 @@ The server will start on `http://localhost:8000`.
 #### Frontend Setup
 
 1. Install dependencies:
+
 ```bash
 cd ui
 npm install  # or bun install
 ```
 
 2. Start the development server:
+
 ```bash
 npm run dev  # or bun run dev
 ```
 
 The UI will be available at `http://localhost:3000`.
-
-
 
 ## Contributing
 
