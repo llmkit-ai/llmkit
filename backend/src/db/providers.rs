@@ -66,4 +66,21 @@ impl ProviderRepository {
         .await?;
         Ok(provider)
     }
+
+    pub async fn update_provider(&self, id: i32, base_url: Option<String>) -> Result<ProviderRow> {
+        let provider = sqlx::query_as!(
+            ProviderRow,
+            r#"
+            UPDATE provider
+            SET base_url = ?
+            WHERE id = ?
+            RETURNING id, name, base_url, created_at
+            "#,
+            base_url,
+            id
+        )
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(provider)
+    }
 }

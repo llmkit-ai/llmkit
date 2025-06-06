@@ -90,7 +90,7 @@
     <!-- Add/Edit Model Modal -->
     <div 
       v-if="showAddModelModal || showEditModelModal" 
-      class="fixed inset-0 z-10 overflow-y-auto" 
+      class="fixed inset-0 z-50 overflow-y-auto" 
       aria-labelledby="modal-title" 
       role="dialog" 
       aria-modal="true"
@@ -109,26 +109,6 @@
                 <form  class="space-y-4">
                   <div>
                     <label class="block text-sm font-medium text-neutral-700 dark:text-white mb-1">
-                      Model Name
-                      <span class="ml-1 text-red-500">*</span>
-                    </label>
-                    <input 
-                      v-model="modelForm.name" 
-                      required
-                      placeholder="e.g., openai/gpt-4-turbo"
-                      class="block w-full bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 p-2 text-base focus:outline-none text-neutral-900 dark:text-white"
-                      type="text"
-                    />
-                    <p class="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                      <NuxtLink href="https://platform.openai.com/docs/models" target="_blank" class="text-blue-500 underline">OpenAI models</NuxtLink>
-                    </p>
-                    <p class="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                      <NuxtLink href="https://openrouter.ai/models" target="_blank" class="text-blue-500 underline">OpenRouter models</NuxtLink>
-                    </p>
-                  </div>
-                  
-                  <div>
-                    <label class="block text-sm font-medium text-neutral-700 dark:text-white mb-1">
                       Provider
                       <span class="ml-1 text-red-500">*</span>
                     </label>
@@ -139,13 +119,53 @@
                     >
                       <option :value="0" disabled>Select a provider</option>
                       <option 
-                        v-for="provider in providers" 
+                        v-for="provider in availableProviders" 
                         :key="provider.id" 
                         :value="provider.id"
                       >
                         {{ provider.name }}
                       </option>
                     </select>
+                    <div v-if="selectedProviderName === 'azure'" class="mt-2 p-3 bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800 text-xs text-teal-800 dark:text-teal-300">
+                      <strong>Azure Configuration:</strong> For Azure OpenAI, enter your deployment name (not the full model name) and API version separately. These will be combined automatically.
+                    </div>
+                  </div>
+                  
+                  <div v-if="modelForm.provider_id > 0">
+                    <label class="block text-sm font-medium text-neutral-700 dark:text-white mb-1">
+                      {{ selectedProviderName === 'azure' ? 'Deployment Name' : 'Model Name' }}
+                      <span class="ml-1 text-red-500">*</span>
+                    </label>
+                    <input 
+                      v-model="modelNameInput" 
+                      required
+                      :placeholder="selectedProviderName === 'azure' ? 'e.g., gpt-4-turbo' : 'e.g., openai/gpt-4-turbo'"
+                      class="block w-full bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 p-2 text-base focus:outline-none text-neutral-900 dark:text-white"
+                      type="text"
+                    />
+                    <p v-if="selectedProviderName === 'openai'" class="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                      <NuxtLink href="https://platform.openai.com/docs/models" target="_blank" class="text-blue-500 underline">View available OpenAI models</NuxtLink>
+                    </p>
+                    <p v-if="selectedProviderName === 'openrouter'" class="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                      <NuxtLink href="https://openrouter.ai/models" target="_blank" class="text-blue-500 underline">View available OpenRouter models</NuxtLink>
+                    </p>
+                  </div>
+                  
+                  <div v-if="selectedProviderName === 'azure' && modelForm.provider_id > 0">
+                    <label class="block text-sm font-medium text-neutral-700 dark:text-white mb-1">
+                      API Version
+                      <span class="ml-1 text-red-500">*</span>
+                    </label>
+                    <input 
+                      v-model="azureApiVersion" 
+                      required
+                      placeholder="e.g., 2024-08-01-preview"
+                      class="block w-full bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 p-2 text-base focus:outline-none text-neutral-900 dark:text-white"
+                      type="text"
+                    />
+                    <p class="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                      Azure OpenAI API version (e.g., 2024-08-01-preview for latest features)
+                    </p>
                   </div>
                   
                   
@@ -257,6 +277,30 @@ const modelForm = reactive<CreateModelPayload>({
   is_reasoning: false
 })
 
+// Separate fields for Azure model configuration
+const modelNameInput = ref('')
+const azureApiVersion = ref('')
+
+// Computed property to get the selected provider name
+const selectedProviderName = computed(() => {
+  const provider = providers.value.find(p => p.id === modelForm.provider_id)
+  return provider?.name?.toLowerCase() || ''
+})
+
+// Computed property to get only available providers (those with base_url configured)
+const availableProviders = computed(() => {
+  return providers.value.filter(p => p.base_url !== null)
+})
+
+// Watch for changes to construct the model name appropriately
+watch([modelNameInput, azureApiVersion, selectedProviderName], () => {
+  if (selectedProviderName.value === 'azure' && modelNameInput.value && azureApiVersion.value) {
+    modelForm.name = `${modelNameInput.value}|${azureApiVersion.value}`
+  } else {
+    modelForm.name = modelNameInput.value
+  }
+})
+
 onMounted(async () => {
   await Promise.all([
     fetchModels(),
@@ -272,6 +316,8 @@ function resetForm() {
   modelForm.supports_tools = false
   modelForm.is_reasoning = false
   currentModelId.value = null
+  modelNameInput.value = ''
+  azureApiVersion.value = ''
 }
 
 function editModel(model: Model) {
@@ -282,6 +328,11 @@ function editModel(model: Model) {
   modelForm.supports_tools = model.supports_tools
   modelForm.is_reasoning = model.is_reasoning
   currentModelId.value = model.id
+  
+  // For editing, just show the full model name as stored
+  modelNameInput.value = model.name
+  azureApiVersion.value = ''
+  
   showEditModelModal.value = true
 }
 

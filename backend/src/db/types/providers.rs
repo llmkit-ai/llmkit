@@ -4,6 +4,6 @@ use sqlx::prelude::FromRow;
 pub struct ProviderRow {
     pub id: i64,
     pub name: String,
-    pub base_url: String,
+    pub base_url: Option<String>,
     pub created_at: Option<chrono::NaiveDateTime>,
 }

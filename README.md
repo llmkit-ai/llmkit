@@ -60,11 +60,34 @@ Our mission is to make prompt crafting dynamic, prompt management safe, and prom
 Llmkit supports the following LLM providers:
 
 - **OpenRouter**: Access to 100+ models through a unified API
-- **OpenAI**: Direct integration with OpenAI's GPT models
+- **OpenAI**: Direct integration with OpenAI's GPT models  
+- **Azure OpenAI**: Microsoft's Azure-hosted OpenAI models
 - **Anthropic**: Claude models (coming soon)
-- **Azure OpenAI**: Microsoft's Azure-hosted OpenAI models (coming soon)
 - **Google Gemini**: Google's Gemini models (coming soon)
 - **DeepSeek**: DeepSeek's models (coming soon)
+
+### Provider Configuration
+
+Providers need to be configured before they can be used. Each provider requires:
+1. An API key set as an environment variable (see `.env.example` for all required variables)
+2. A base URL configuration (some providers have default URLs, Azure requires manual configuration)
+
+To configure providers:
+1. Navigate to the **Providers** page in the UI
+2. Click "Configure" on the provider you want to set up
+3. Enter the base URL if required (especially for Azure)
+4. Providers will show as "Available" when both API key and base URL are configured
+
+### Azure OpenAI Setup
+
+Azure OpenAI requires additional configuration:
+
+1. **Set the API Key**: Add `AZURE_API_KEY=your_azure_api_key` to your `.env` file
+2. **Configure Base URL**: In the Providers page, set your Azure endpoint (e.g., `https://your-resource.openai.azure.com/`)
+3. **Model Configuration**: When adding Azure models:
+   - Enter your deployment name (not the full model name)
+   - Specify the API version (e.g., `2024-08-01-preview`)
+   - These will be automatically combined in the format: `deployment_name|api_version`
 
 ## How It Works
 
@@ -191,9 +214,7 @@ Every LLM call has a detailed trace that you can view. directly in the llmkit UI
 ### Required
 
 - **Rust Toolchain**: Latest stable version of Rust and Cargo
-- **API Keys**: You need API keys for the providers you want to use:
-  - **OpenRouter**: Required if using OpenRouter provider
-  - **OpenAI**: Required if using OpenAI or OpenRouter provider (set via `OPENAI_API_KEY`)
+- **API Keys**: You need API keys for the providers you want to use (see `.env.example`)
 - **SQLite**: For database functionality
 
 ### Optional Dependencies
@@ -229,7 +250,8 @@ USE_SECURE_COOKIE=false  # Set to true for HTTPS deployments
 
 # Provider API Keys (add the ones you need)
 OPENROUTER_API_KEY=your_openrouter_key_here
-OPENAI_API_KEY=your_openai_key_here  # Required for OpenAI and OpenRouter providers
+OPENAI_API_KEY=your_openai_key_here
+AZURE_API_KEY=your_azure_key_here
 ```
 
 4. Build and start the containers:
@@ -262,7 +284,7 @@ OPENROUTER_API_KEY=your_openrouter_key_here
 OPENAI_API_KEY=your_openai_key_here  # Required for OpenAI and OpenRouter providers
 ```
 
-**Note**: If you don't set the required API keys for a provider, the backend will fail when you try to use that provider.
+**Note**: Providers will show as "Not Available" in the UI if their API keys are not set. You can check provider status and configure base URLs on the Providers page.
 
 3. Start the server:
 ```bash

@@ -8,7 +8,7 @@ pub struct ModelResponse {
     pub provider_id: i64,
     pub name: String,
     pub provider_name: String,
-    pub provider_base_url: String,
+    pub provider_base_url: Option<String>,
     pub supports_json: bool,
     pub supports_json_schema: bool,
     pub supports_tools: bool,

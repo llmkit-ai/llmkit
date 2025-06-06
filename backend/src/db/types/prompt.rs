@@ -32,7 +32,7 @@ pub struct PromptRowWithModel {
     pub is_chat: bool,
     pub model_name: String,
     pub provider_name: String,
-    pub provider_base_url: String,
+    pub provider_base_url: Option<String>,
     pub supports_json: bool,
     pub supports_json_schema: bool,
     pub supports_tools: bool,

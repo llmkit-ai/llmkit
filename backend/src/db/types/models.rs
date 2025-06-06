@@ -9,7 +9,7 @@ pub struct ModelProviderRow {
     pub supports_json_schema: bool, 
     pub supports_tools: bool, 
     pub provider_name: LlmApiProvider, 
-    pub provider_base_url: String, 
+    pub provider_base_url: Option<String>, 
     pub is_reasoning: bool,
     pub created_at: chrono::NaiveDateTime
 }
