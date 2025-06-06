@@ -48,7 +48,10 @@
                 <span v-if="props.prompt.supports_tools" class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-800 dark:bg-green-900/20 dark:text-green-400">
                   Tools
                 </span>
-                <span v-if="!props.prompt.supports_json && !props.prompt.supports_json_schema && !props.prompt.supports_tools" class="text-neutral-500 dark:text-neutral-400 text-xs">
+                <span v-if="props.prompt.is_reasoning" class="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800 dark:bg-amber-900/20 dark:text-amber-400">
+                  Reasoning
+                </span>
+                <span v-if="!props.prompt.supports_json && !props.prompt.supports_json_schema && !props.prompt.supports_tools && !props.prompt.is_reasoning" class="text-neutral-500 dark:text-neutral-400 text-xs">
                   No capabilities
                 </span>
               </div>
@@ -72,6 +75,12 @@
         <div class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-1 sm:px-0">
           <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">Chat Mode</dt>
           <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 sm:mt-2">{{ props.prompt.is_chat ? 'Enabled' : 'Disabled' }}</dd>
+        </div>
+        
+        <!-- Reasoning Effort (only for reasoning models) -->
+        <div v-if="props.prompt.is_reasoning" class="border-t border-neutral-100 dark:border-neutral-700 px-4 py-6 sm:col-span-1 sm:px-0">
+          <dt class="text-sm/6 font-medium text-neutral-900 dark:text-white">Reasoning Effort</dt>
+          <dd class="mt-1 text-sm/6 text-neutral-700 dark:text-neutral-300 sm:mt-2">{{ props.prompt.reasoning_effort || 'Default' }}</dd>
         </div>
         
         <!-- Max Tokens -->

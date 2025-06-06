@@ -29,6 +29,8 @@ pub struct LlmServiceRequest {
     pub base_url: String,
     pub prompt_id: i64,
     pub model_id: i64,
+    pub is_reasoning: bool,
+    pub reasoning_effort: Option<String>,
     pub request: ChatCompletionRequest,
 }
 
@@ -157,13 +159,16 @@ impl LlmServiceRequest {
             model_id: prompt.model_id,
             provider: prompt.provider_name.clone().into(),
             base_url: prompt.provider_base_url.clone(),
+            is_reasoning: prompt.is_reasoning,
+            reasoning_effort: prompt.reasoning_effort.clone(),
             request: new_request,
         };
 
         // Override input with inputs from Prompt table
-        service_request.request.max_tokens = Some(prompt.max_tokens);
+        // TODO: We should make the DB fields match the struct field types if possible
+        service_request.request.max_tokens = Some(prompt.max_tokens as u32);
+        service_request.request.temperature = Some(prompt.temperature as f32);
         service_request.request.model = prompt.model_name.clone();
-        service_request.request.temperature = Some(prompt.temperature);
 
         if prompt.json_mode && prompt.supports_json {
             if prompt.supports_json_schema {
@@ -238,6 +243,8 @@ mod tests {
             supports_json: true,
             supports_tools: true,
             supports_json_schema: true,
+            is_reasoning: false,
+            reasoning_effort: None,
             provider_base_url: "https://api.openrouter.ai/api/v1".to_string(),
             version_number: 1,
             version_id: 1,
@@ -259,8 +266,8 @@ mod tests {
             provider: None,
             models: None,
             transforms: None,
-            max_tokens: None,
-            temperature: None,
+            max_tokens: Some(2500),
+            temperature: Some(0.7),
         }
     }
     
@@ -280,6 +287,7 @@ mod tests {
                     },
                     "required": ["location"]
                 }),
+                strict: None
             },
         };
 
@@ -292,8 +300,8 @@ mod tests {
             provider: None,
             models: None,
             transforms: None,
-            max_tokens: None,
-            temperature: None,
+            max_tokens: Some(2500),
+            temperature: Some(0.7),
         }
     }
 

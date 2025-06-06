@@ -18,6 +18,7 @@ impl ModelRepository {
         supports_json: bool,
         supports_json_schema: bool,
         supports_tools: bool,
+        is_reasoning: bool,
     ) -> Result<i64> {
         let mut conn = self.pool.acquire().await?;
         let id = sqlx::query!(
@@ -27,14 +28,16 @@ impl ModelRepository {
                 name,
                 supports_json,
                 supports_json_schema,
-                supports_tools
-            ) VALUES (?, ?, ?, ?, ?)
+                supports_tools,
+                is_reasoning
+            ) VALUES (?, ?, ?, ?, ?, ?)
             "#,
             provider_id,
             name,
             supports_json,
             supports_json_schema,
-            supports_tools
+            supports_tools,
+            is_reasoning
         )
         .execute(&mut *conn)
         .await?
@@ -50,6 +53,7 @@ impl ModelRepository {
         supports_json: bool,
         supports_json_schema: bool,
         supports_tools: bool,
+        is_reasoning: bool,
     ) -> Result<bool> {
         let rows_affected = sqlx::query!(
             r#"
@@ -59,7 +63,8 @@ impl ModelRepository {
                 name = ?,
                 supports_json = ?,
                 supports_json_schema = ?,
-                supports_tools = ?
+                supports_tools = ?,
+                is_reasoning = ?
             WHERE id = ?
             "#,
             provider_id,
@@ -67,6 +72,7 @@ impl ModelRepository {
             supports_json,
             supports_json_schema,
             supports_tools,
+            is_reasoning,
             id
         )
         .execute(&self.pool)
@@ -88,6 +94,7 @@ impl ModelRepository {
                 m.supports_json,
                 m.supports_json_schema,
                 m.supports_tools,
+                m.is_reasoning,
                 p.base_url as provider_base_url,
                 m.created_at
             FROM model m
@@ -113,6 +120,7 @@ impl ModelRepository {
                 m.supports_json,
                 m.supports_json_schema,
                 m.supports_tools,
+                m.is_reasoning,
                 p.base_url as provider_base_url,
                 m.created_at
             FROM model m
@@ -138,6 +146,7 @@ impl ModelRepository {
                 m.supports_json,
                 m.supports_json_schema,
                 m.supports_tools,
+                m.is_reasoning,
                 p.base_url as provider_base_url,
                 m.created_at
             FROM model m

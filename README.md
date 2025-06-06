@@ -55,6 +55,17 @@ Our mission is to make prompt crafting dynamic, prompt management safe, and prom
 - **OpenAI Compatible API**: Use with existing OpenAI client libraries
 - **Provider Integration**: Support for multiple LLM providers with a unified API
 
+## Supported Providers
+
+Llmkit supports the following LLM providers:
+
+- **OpenRouter**: Access to 100+ models through a unified API
+- **OpenAI**: Direct integration with OpenAI's GPT models
+- **Anthropic**: Claude models (coming soon)
+- **Azure OpenAI**: Microsoft's Azure-hosted OpenAI models (coming soon)
+- **Google Gemini**: Google's Gemini models (coming soon)
+- **DeepSeek**: DeepSeek's models (coming soon)
+
 ## How It Works
 
 ### Prompt Architecture
@@ -180,7 +191,9 @@ Every LLM call has a detailed trace that you can view. directly in the llmkit UI
 ### Required
 
 - **Rust Toolchain**: Latest stable version of Rust and Cargo
-- **OpenRouter API Key**: You must have an OpenRouter API key to use Llmkit
+- **API Keys**: You need API keys for the providers you want to use:
+  - **OpenRouter**: Required if using OpenRouter provider
+  - **OpenAI**: Required if using OpenAI or OpenRouter provider (set via `OPENAI_API_KEY`)
 - **SQLite**: For database functionality
 
 ### Optional Dependencies
@@ -209,11 +222,14 @@ cp .env.example .env
 3. Edit the `.env` file with your API keys and a secure JWT secret:
 ```bash
 # Required
-OPENROUTER_API_KEY=your_openrouter_key_here
 JWT_SECRET=your_secure_random_string
 DATABASE_URL=sqlite:/app/data/llmkit.db
 API_BASE_URL=http://backend:8000
 USE_SECURE_COOKIE=false  # Set to true for HTTPS deployments
+
+# Provider API Keys (add the ones you need)
+OPENROUTER_API_KEY=your_openrouter_key_here
+OPENAI_API_KEY=your_openai_key_here  # Required for OpenAI and OpenRouter providers
 ```
 
 4. Build and start the containers:
@@ -234,14 +250,19 @@ If you prefer to set things up manually, follow these steps:
 cp .env.example backend/.env
 ```
 
-2. Edit the `.env` file with your OpenRouter API key and other settings:
+2. Edit the `.env` file with your API keys and other settings:
 ```bash
 RUST_LOG=info
 DATABASE_URL="sqlite:absolute/path/to/backend/llmkit.db"
-OPENROUTER_API_KEY=your_openrouter_key_here
 JWT_SECRET=your_secure_random_string
 USE_SECURE_COOKIE=false  # Set to true for HTTPS deployments
+
+# Provider API Keys (add the ones you need)
+OPENROUTER_API_KEY=your_openrouter_key_here
+OPENAI_API_KEY=your_openai_key_here  # Required for OpenAI and OpenRouter providers
 ```
+
+**Note**: If you don't set the required API keys for a provider, the backend will fail when you try to use that provider.
 
 3. Start the server:
 ```bash

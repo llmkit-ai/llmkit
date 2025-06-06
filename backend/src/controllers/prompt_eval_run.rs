@@ -57,8 +57,8 @@ pub async fn execute_eval_run(
             provider: None,
             models: None,
             transforms: None,
-            max_tokens: None,
-            temperature: None,
+            max_tokens: Some(prompt.max_tokens as u32),
+            temperature: Some(prompt.temperature as f32),
         };
 
         let llm_props = LlmServiceRequest::new(prompt.clone(), chat_request).map_err(|e| {

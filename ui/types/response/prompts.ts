@@ -25,6 +25,8 @@ export interface Prompt {
   supports_json: boolean
   supports_json_schema: boolean
   supports_tools: boolean
+  is_reasoning: boolean
+  reasoning_effort: string | null
 }
 
 

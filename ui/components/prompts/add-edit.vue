@@ -189,6 +189,25 @@
               </div>
             </div>
             
+            <!-- Reasoning Effort (only for reasoning models) -->
+            <div v-if="selectedModel && selectedModel.is_reasoning" class="sm:col-span-2">
+              <label class="block text-sm/6 font-medium text-neutral-900 dark:text-white">Reasoning Effort</label>
+              <div class="mt-2">
+                <select 
+                  v-model="reasoningEffort"
+                  class="block w-full border-2 border-black dark:border-white bg-white dark:bg-neutral-800 p-2 text-base text-neutral-900 dark:text-white focus:outline-none sm:text-sm/6"
+                >
+                  <option :value="null">Default</option>
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </div>
+              <p class="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                Controls the amount of reasoning for {{ selectedModel.name }}
+              </p>
+            </div>
+            
             <!-- Max Tokens -->
             <div class="sm:col-span-2">
               <label for="max-tokens" class="block text-sm/6 font-medium text-neutral-900 dark:text-white">Max Tokens</label>
@@ -355,6 +374,7 @@ const schemaValidationErrors = ref<string[]>([]);
 const promptType = ref(props.prompt?.prompt_type || 'static');
 // Private backing field for chat mode
 const _isChat = ref(props.prompt?.json_mode ? false : props.prompt?.is_chat || false);
+const reasoningEffort = ref<string | null>(props.prompt?.reasoning_effort || null);
 const isOpen = ref(false);
 // Tools are now managed outside the edit view
 
@@ -442,9 +462,6 @@ function handlePromptTypeChange() {
   if (promptType.value !== 'dynamic_both') {
     userPrompt.value = '';
   }
-  
-  // Reset validation error display when type changes
-  showValidationErrors.value = false;
 }
 
 // Computed
@@ -495,7 +512,7 @@ function selectModel(model: Model) {
     console.warn("Selected model doesn't support JSON Schema but a schema is defined");
   }
   
-  if (props.prompt?.tools?.length > 0 && !model.supports_tools) {
+  if (props.prompt?.tools && props.prompt.tools.length > 0 && !model.supports_tools) {
     // Add a warning notification about tools incompatibility
     console.warn("Selected model doesn't support tools but tools are associated with this prompt");
   }
@@ -640,7 +657,8 @@ const handleSubmit = async () => {
       json_mode: jsonMode.value,
       json_schema: finalJsonSchema,
       prompt_type: promptType.value,
-      is_chat: finalChatMode
+      is_chat: finalChatMode,
+      reasoning_effort: selectedModel.value?.is_reasoning ? reasoningEffort.value : null
     });
   } else {
     emit("handle-update", {
@@ -654,7 +672,8 @@ const handleSubmit = async () => {
       json_mode: jsonMode.value,
       json_schema: finalJsonSchema,
       prompt_type: promptType.value,
-      is_chat: finalChatMode
+      is_chat: finalChatMode,
+      reasoning_effort: selectedModel.value?.is_reasoning ? reasoningEffort.value : null
     });
   }
 };

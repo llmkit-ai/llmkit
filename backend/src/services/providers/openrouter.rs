@@ -15,21 +15,21 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 pub struct OpenrouterProvider<'a> {
     props: &'a LlmServiceRequest,
-    streaming: bool,
     client: OpenRouterClient<Ready>,
 }
 
 impl<'a> OpenrouterProvider<'a> {
     /// Creates a new instance of `OpenrouterProvider` with the given properties and streaming flag.
-    pub fn new(props: &'a LlmServiceRequest, streaming: bool) -> Result<Self, LlmError> {
-        let api_key = std::env::var("OPENROUTER_API_KEY").expect("Missing OPENROUTER_API_KEY");
+    pub fn new(props: &'a LlmServiceRequest) -> Result<Self, LlmError> {
+        let api_key = std::env::var("OPENROUTER_API_KEY")
+            .map_err(|_| LlmError::InvalidConfig("Missing OPENROUTER_API_KEY".to_string()))?;
+
         let client = OpenRouterClient::new()
             .with_base_url("https://openrouter.ai/api/v1/")?
             .with_api_key(api_key)?;
 
         Ok(OpenrouterProvider {
             props,
-            streaming,
             client,
         })
     }
@@ -59,7 +59,7 @@ impl<'a> OpenrouterProvider<'a> {
         let request = ChatCompletionRequest {
             model: self.props.request.model.clone(),
             messages,
-            stream: if self.streaming { Some(true) } else { None },
+            stream: Some(false),
             response_format: self.props.request.response_format.clone().map(|rf| rf.into()),
             tools: self.props.request.tools.clone().map(|vt| vt.into_iter().map(|t| t.into()).collect::<Vec<Tool>>()),
             provider: None,
@@ -98,7 +98,7 @@ impl<'a> OpenrouterProvider<'a> {
         let request = ChatCompletionRequest {
             model: self.props.request.model.clone(),
             messages,
-            stream: if self.streaming { Some(true) } else { None },
+            stream: Some(true),
             response_format: self.props.request.response_format.clone().map(|rf| rf.into()),
             tools: self.props.request.tools.clone().map(|vt| vt.into_iter().map(|t| t.into()).collect::<Vec<Tool>>()),
             provider: None,
@@ -158,7 +158,9 @@ impl<'a> OpenrouterProvider<'a> {
             created, 
             Some(prompt_tokens), 
             Some(completion_tokens), 
-            Some(total_tokens)
+            Some(total_tokens),
+            None, // OpenRouter doesn't provide prompt_tokens_details yet
+            None, // OpenRouter doesn't provide completion_tokens_details yet
         ))
     }
 }

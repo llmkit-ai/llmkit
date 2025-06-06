@@ -9,10 +9,9 @@ use tokio_retry::{
 use tracing;
 
 use super::{
-    providers::openrouter::OpenrouterProvider,
+    providers::{openai::OpenAiProvider, openrouter::OpenrouterProvider},
     types::{
-        llm_service::LlmServiceRequest,
-        llm_error::{LlmError, LlmStreamingError},
+        llm_error::{LlmError, LlmStreamingError}, llm_service::LlmServiceRequest
     },
 };
 use crate::{common::types::{chat_response::{LlmServiceChatCompletionChunk, LlmServiceChatCompletionResponse}, models::LlmApiProvider}, db::logs::LogRepository};
@@ -111,7 +110,7 @@ impl Llm {
         // Initialize variables to capture data even in error cases
         let mut input_tokens = None;
         let mut output_tokens = None;
-        let reasoning_tokens = None;
+        let mut reasoning_tokens = None;
         let mut raw_response: Option<String> = None;
         let mut status = Some(500); // Default to error status
 
@@ -122,7 +121,11 @@ impl Llm {
         // Execute request and capture result
         let result = match &self.props.provider {
             LlmApiProvider::Openrouter => {
-                let provider = OpenrouterProvider::new(&self.props, false)?;
+                let provider = OpenrouterProvider::new(&self.props)?;
+                provider.execute_chat().await
+            }
+            LlmApiProvider::OpenAi => {
+                let provider = OpenAiProvider::new(&self.props)?;
                 provider.execute_chat().await
             }
         };
@@ -143,6 +146,14 @@ impl Llm {
                     .usage
                     .as_ref()
                     .map(|usage| usage.completion_tokens as i64);
+
+                // Extract reasoning tokens if available
+                reasoning_tokens = provider_response
+                    .usage
+                    .as_ref()
+                    .and_then(|usage| usage.completion_tokens_details.as_ref())
+                    .and_then(|details| details.reasoning_tokens)
+                    .map(|tokens| tokens as i64);
 
                 // Save raw response for logging
                 raw_response = serde_json::to_string(&provider_response).ok();
@@ -190,7 +201,7 @@ impl Llm {
         // Initialize variables to capture data even in error cases
         let mut input_tokens = None;
         let mut output_tokens = None;
-        let reasoning_tokens = None;
+        let mut reasoning_tokens = None;
         let mut raw_response: Option<String> = None;
         let mut status = Some(500); // Default to error status
 
@@ -225,7 +236,11 @@ impl Llm {
         // Execute request and capture result
         let result = match &self.props.provider {
             LlmApiProvider::Openrouter => {
-                let provider = OpenrouterProvider::new(&self.props, true)?;
+                let provider = OpenrouterProvider::new(&self.props)?;
+                provider.execute_chat_stream(tx).await
+            }
+            LlmApiProvider::OpenAi => {
+                let provider = OpenAiProvider::new(&self.props)?;
                 provider.execute_chat_stream(tx).await
             }
         };
@@ -246,6 +261,14 @@ impl Llm {
                     .usage
                     .as_ref()
                     .map(|usage| usage.completion_tokens as i64);
+
+                // Extract reasoning tokens if available
+                reasoning_tokens = response
+                    .usage
+                    .as_ref()
+                    .and_then(|usage| usage.completion_tokens_details.as_ref())
+                    .and_then(|details| details.reasoning_tokens)
+                    .map(|tokens| tokens as i64);
 
                 // Save raw response for logging
                 raw_response = serde_json::to_string(&response).ok();
