@@ -8,6 +8,7 @@ pub struct CreateModelRequest {
     pub supports_json: bool,
     pub supports_json_schema: bool,
     pub supports_tools: bool,
+    pub is_reasoning: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -17,4 +18,5 @@ pub struct UpdateModelRequest {
     pub supports_json: bool,
     pub supports_json_schema: bool,
     pub supports_tools: bool,
+    pub is_reasoning: bool,
 }

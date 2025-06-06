@@ -99,6 +99,10 @@ pub enum LlmError {
     SerializationError(String),
     #[error("Deserialization error: {0}")]
     DeserializationError(String),
+
+    // Async OpenAi Errors
+    #[error("Llm Chat Completion Error: {0}")]
+    AsyncOpenAiError(#[from] async_openai::error::OpenAIError),
 }
 
 impl From<openrouter_api::Error> for LlmError {

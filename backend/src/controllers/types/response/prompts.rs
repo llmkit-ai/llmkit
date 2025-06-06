@@ -28,7 +28,9 @@ pub struct PromptResponse {
     pub tools: Vec<ToolResponse>,
     pub supports_json: bool,
     pub supports_json_schema: bool,
-    pub supports_tools: bool
+    pub supports_tools: bool,
+    pub is_reasoning: bool,
+    pub reasoning_effort: Option<String>
 }
 
 
@@ -56,7 +58,9 @@ impl From<PromptRowWithModel> for PromptResponse {
             tools: Vec::new(), // Initialize with empty vector, will be filled separately
             supports_json: prompt.supports_json,
             supports_json_schema: prompt.supports_json_schema,
-            supports_tools: prompt.supports_tools
+            supports_tools: prompt.supports_tools,
+            is_reasoning: prompt.is_reasoning,
+            reasoning_effort: prompt.reasoning_effort
         }
     }
 }

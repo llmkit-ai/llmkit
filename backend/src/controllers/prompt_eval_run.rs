@@ -66,8 +66,8 @@ pub async fn execute_eval_run(
                 provider: None,
                 models: None,
                 transforms: None,
-                max_tokens: None,
-                temperature: None,
+                max_tokens: Some(prompt.max_tokens as u32),
+                temperature: Some(prompt.temperature as f32),
             };
 
             let llm_props = LlmServiceRequest::new(prompt.clone(), chat_request).map_err(|e| {
@@ -79,7 +79,10 @@ pub async fn execute_eval_run(
             let res = llm
                 .text()
                 .await
-                .map_err(|_| AppError::InternalServerError("Something went wrong".to_string()))?;
+                .map_err(|e| {
+                    tracing::error!("LLM service error: {}", e);
+                    AppError::InternalServerError(format!("LLM service error: {}", e))
+                })?;
 
             if let Some(c) = res.0.choices.first() {
                 let content = c.message.content.clone().map(|c| c.to_string()).unwrap_or("".to_string());
