@@ -17,4 +17,5 @@ export interface PromptEvalRunResponse {
   output: string;
   created_at: string;
   updated_at: string;
+  round_number?: number; // Optional for backward compatibility
 }

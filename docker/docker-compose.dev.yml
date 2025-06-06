@@ -1,0 +1,59 @@
+services:
+  backend:
+    build:
+      context: ../backend
+      target: builder # Use builder stage for development
+    env_file:
+      - ../.env
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    volumes:
+      - db_data:/app/data
+      - ../backend/src:/app/src # Mount source RW for cargo-watch
+      - ../backend/Cargo.toml:/app/Cargo.toml:ro
+      - ../backend/migrations:/app/migrations:ro
+      - backend_target:/app/target # Cache Rust build artifacts
+    environment:
+      - RUST_LOG=${RUST_LOG:-debug}
+      - DATABASE_URL=${DATABASE_URL}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - USE_SECURE_COOKIE=${USE_SECURE_COOKIE}
+    command: ["cargo", "watch", "-x", "run --bin backend"] # Hot reload with cargo-watch
+    depends_on:
+      - backend-deps
+
+  backend-deps:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile.deps
+    volumes:
+      - backend_deps:/app/target
+
+  ui:
+    build:
+      context: ../ui
+      target: builder # Use builder stage for development
+      args:
+        - BUN_LOCK_HASH=${BUN_LOCK_HASH}
+    env_file:
+      - ../.env
+    ports:
+      - "${UI_PORT:-3000}:3000"
+    volumes:
+      - ../ui:/app # Mount entire UI directory RW
+      - ui_node_modules:/app/node_modules # Cache node_modules
+      - bun_cache:/root/.bun/install/cache # Cache Bun dependencies
+    environment:
+      - API_BASE_URL=${API_BASE_URL}
+      - NODE_ENV=development
+    command: ["bun", "run", "dev", "--host", "0.0.0.0"]
+    depends_on:
+      - backend
+
+volumes:
+  db_data:
+  backend_target:
+  backend_deps:
+  ui_node_modules:
+  bun_cache:

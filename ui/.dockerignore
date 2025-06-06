@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+# Build outputs
+.nuxt/
+.output/
+dist/
+# IDE files
+.vscode/
+.idea/
+# OS files
+.DS_Store
+Thumbs.db
+# Git
+.git/
+.gitignore
+# Documentation
+README.md
+*.md
+# Temporary files
+*.tmp
+*.log
+# Development files
+.env.local
+.env.development
+# Test files
+tests/
+coverage/
+# Backup and temporary files
+*.bak
+*.orig
+*.swp
+*.swo
+*~
+.#*
+\#*#
+# Editor files
+.vimrc
+.emacs* 

@@ -1,0 +1,30 @@
+FROM rust:1.85-slim AS chef
+RUN cargo install cargo-chef
+
+FROM chef AS planner
+WORKDIR /app
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+FROM chef AS deps
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    pkg-config \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install cargo-watch for hot reloading
+RUN cargo install cargo-watch
+RUN cargo install sqlx-cli --no-default-features --features sqlite
+
+# Copy recipe and cook dependencies
+COPY --from=planner /app/recipe.json recipe.json
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/usr/local/cargo/git \
+    cargo chef cook --recipe-path recipe.json
+
+# This container just exists to cache dependencies
+CMD ["sleep", "infinity"] 

@@ -19,11 +19,16 @@ use crate::{common::types::{chat_response::{LlmServiceChatCompletionChunk, LlmSe
 pub struct Llm {
     props: LlmServiceRequest,
     db_log: LogRepository,
+    run_id: Option<String>,
 }
 
 impl Llm {
     pub fn new(props: LlmServiceRequest, db_log: LogRepository) -> Self {
-        Llm { props, db_log }
+        Llm { props, db_log, run_id: None }
+    }
+
+    pub fn new_with_run_id(props: LlmServiceRequest, db_log: LogRepository, run_id: String) -> Self {
+        Llm { props, db_log, run_id: Some(run_id) }
     }
 
     fn retry_strategy(&self) -> impl Iterator<Item = Duration> {
@@ -230,7 +235,7 @@ impl Llm {
                 output_tokens,
                 reasoning_tokens,
                 &request_body,
-                &provider_response_id
+                &provider_response_id,
             )
             .await?;
 
@@ -305,7 +310,7 @@ impl Llm {
                 output_tokens,
                 reasoning_tokens,
                 &request_body,
-                &provider_response_id
+                &provider_response_id,
             )
             .await?;
 
