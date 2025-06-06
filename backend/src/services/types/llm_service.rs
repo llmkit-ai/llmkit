@@ -166,8 +166,8 @@ impl LlmServiceRequest {
 
         // Override input with inputs from Prompt table
         // TODO: We should make the DB fields match the struct field types if possible
-        service_request.request.max_tokens = prompt.max_tokens as u32;
-        service_request.request.temperature = prompt.temperature as f32;
+        service_request.request.max_tokens = Some(prompt.max_tokens as u32);
+        service_request.request.temperature = Some(prompt.temperature as f32);
         service_request.request.model = prompt.model_name.clone();
 
         if prompt.json_mode && prompt.supports_json {
@@ -883,8 +883,8 @@ mod tests {
 
         // Check that values were properly overridden
         assert_eq!(service_request.request.model, "gpt-4");
-        assert_eq!(service_request.request.temperature, 0.7);
-        assert_eq!(service_request.request.max_tokens, 1000);
+        assert_eq!(service_request.request.temperature, Some(0.7));
+        assert_eq!(service_request.request.max_tokens, Some(1000));
     }
 
     #[test]

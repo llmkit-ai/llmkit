@@ -27,9 +27,9 @@ pub struct ChatCompletionRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub transforms: Option<Vec<String>>,
     /// Maximum number of tokens to generate
-    pub max_tokens: u32,
+    pub max_tokens: Option<u32>,
     /// What sampling temperature to use, between 0 and 2
-    pub temperature: f32,
+    pub temperature: Option<f32>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]

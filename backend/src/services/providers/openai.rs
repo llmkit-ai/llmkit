@@ -118,7 +118,9 @@ impl<'a> OpenAiProvider<'a> {
         let mut request = CreateChatCompletionRequestArgs::default();
 
         if self.props.is_reasoning {
-            request.max_completion_tokens(self.props.request.max_tokens * 2);
+            if let Some(max_tokens) = self.props.request.max_tokens {
+                request.max_completion_tokens(max_tokens * 2);
+            }
             
             // Set reasoning effort based on prompt configuration
             let reasoning_effort = match self.props.reasoning_effort.as_deref() {
@@ -129,8 +131,12 @@ impl<'a> OpenAiProvider<'a> {
             };
             request.reasoning_effort(reasoning_effort);
         } else {
-            request.max_tokens(self.props.request.max_tokens);
-            request.temperature(self.props.request.temperature);
+            if let Some(max_tokens) = self.props.request.max_tokens {
+                request.max_tokens(max_tokens);
+            }
+            if let Some(temperature) = self.props.request.temperature {
+                request.temperature(temperature);
+            }
         }
 
         request.model(self.props.request.model.clone());
@@ -228,7 +234,9 @@ impl<'a> OpenAiProvider<'a> {
         let mut request = CreateChatCompletionRequestArgs::default();
 
         if self.props.is_reasoning {
-            request.max_completion_tokens(self.props.request.max_tokens * 2);
+            if let Some(max_tokens) = self.props.request.max_tokens {
+                request.max_completion_tokens(max_tokens * 2);
+            }
             
             // Set reasoning effort based on prompt configuration
             let reasoning_effort = match self.props.reasoning_effort.as_deref() {
@@ -239,8 +247,12 @@ impl<'a> OpenAiProvider<'a> {
             };
             request.reasoning_effort(reasoning_effort);
         } else {
-            request.max_tokens(self.props.request.max_tokens);
-            request.temperature(self.props.request.temperature);
+            if let Some(max_tokens) = self.props.request.max_tokens {
+                request.max_tokens(max_tokens);
+            }
+            if let Some(temperature) = self.props.request.temperature {
+                request.temperature(temperature);
+            }
         }
 
         request.model(self.props.request.model.clone());
