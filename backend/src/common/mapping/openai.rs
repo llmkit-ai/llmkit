@@ -1,7 +1,7 @@
 use async_openai::types::{ChatCompletionMessageToolCall, ChatCompletionTool, ChatCompletionToolType, CreateChatCompletionResponse, CreateChatCompletionStreamResponse, FunctionCall, FunctionObject, ResponseFormat, ResponseFormatJsonSchema};
 
 use crate::common::types::{chat_request::{ChatCompletionRequestJsonSchema, ChatCompletionRequestResponseFormat, ChatCompletionRequestTool, ChatCompletionRequestToolCall}, chat_response::{
-    LlmServiceChatCompletionChunk, LlmServiceChatCompletionResponse, LlmServiceChatCompletionResponseChoice, LlmServiceChatCompletionResponseFunctionCall, LlmServiceChatCompletionResponseMessage, LlmServiceChatCompletionResponseToolCall, LlmServiceChatCompletionResponseUsage, LlmServiceChoiceStream, LlmServiceStreamDelta, LlmServiceUsage
+    CompletionTokensDetails, LlmServiceChatCompletionChunk, LlmServiceChatCompletionResponse, LlmServiceChatCompletionResponseChoice, LlmServiceChatCompletionResponseFunctionCall, LlmServiceChatCompletionResponseMessage, LlmServiceChatCompletionResponseToolCall, LlmServiceChatCompletionResponseUsage, LlmServiceChoiceStream, LlmServiceStreamDelta, LlmServiceUsage, PromptTokensDetails
 }};
 
 
@@ -119,6 +119,16 @@ impl From<CreateChatCompletionResponse> for LlmServiceChatCompletionResponse {
                     prompt_tokens: usage.prompt_tokens,
                     completion_tokens: usage.completion_tokens,
                     total_tokens: usage.total_tokens,
+                    prompt_tokens_details: usage.prompt_tokens_details.map(|details| PromptTokensDetails {
+                        audio_tokens: details.audio_tokens,
+                        cached_tokens: details.cached_tokens,
+                    }),
+                    completion_tokens_details: usage.completion_tokens_details.map(|details| CompletionTokensDetails {
+                        accepted_prediction_tokens: details.accepted_prediction_tokens,
+                        audio_tokens: details.audio_tokens,
+                        reasoning_tokens: details.reasoning_tokens,
+                        rejected_prediction_tokens: details.rejected_prediction_tokens,
+                    }),
                 }),
         }
     }
@@ -169,6 +179,16 @@ impl From<CreateChatCompletionStreamResponse> for LlmServiceChatCompletionChunk 
                     prompt_tokens: usage.prompt_tokens,
                     completion_tokens: usage.completion_tokens,
                     total_tokens: usage.total_tokens,
+                    prompt_tokens_details: usage.prompt_tokens_details.map(|details| PromptTokensDetails {
+                        audio_tokens: details.audio_tokens,
+                        cached_tokens: details.cached_tokens,
+                    }),
+                    completion_tokens_details: usage.completion_tokens_details.map(|details| CompletionTokensDetails {
+                        accepted_prediction_tokens: details.accepted_prediction_tokens,
+                        audio_tokens: details.audio_tokens,
+                        reasoning_tokens: details.reasoning_tokens,
+                        rejected_prediction_tokens: details.rejected_prediction_tokens,
+                    }),
                 }
             }),
         }

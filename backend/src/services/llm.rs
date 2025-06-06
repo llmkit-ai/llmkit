@@ -110,7 +110,7 @@ impl Llm {
         // Initialize variables to capture data even in error cases
         let mut input_tokens = None;
         let mut output_tokens = None;
-        let reasoning_tokens = None;
+        let mut reasoning_tokens = None;
         let mut raw_response: Option<String> = None;
         let mut status = Some(500); // Default to error status
 
@@ -146,6 +146,14 @@ impl Llm {
                     .usage
                     .as_ref()
                     .map(|usage| usage.completion_tokens as i64);
+
+                // Extract reasoning tokens if available
+                reasoning_tokens = provider_response
+                    .usage
+                    .as_ref()
+                    .and_then(|usage| usage.completion_tokens_details.as_ref())
+                    .and_then(|details| details.reasoning_tokens)
+                    .map(|tokens| tokens as i64);
 
                 // Save raw response for logging
                 raw_response = serde_json::to_string(&provider_response).ok();
@@ -193,7 +201,7 @@ impl Llm {
         // Initialize variables to capture data even in error cases
         let mut input_tokens = None;
         let mut output_tokens = None;
-        let reasoning_tokens = None;
+        let mut reasoning_tokens = None;
         let mut raw_response: Option<String> = None;
         let mut status = Some(500); // Default to error status
 
@@ -253,6 +261,14 @@ impl Llm {
                     .usage
                     .as_ref()
                     .map(|usage| usage.completion_tokens as i64);
+
+                // Extract reasoning tokens if available
+                reasoning_tokens = response
+                    .usage
+                    .as_ref()
+                    .and_then(|usage| usage.completion_tokens_details.as_ref())
+                    .and_then(|details| details.reasoning_tokens)
+                    .map(|tokens| tokens as i64);
 
                 // Save raw response for logging
                 raw_response = serde_json::to_string(&response).ok();

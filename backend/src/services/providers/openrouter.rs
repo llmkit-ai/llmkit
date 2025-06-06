@@ -158,7 +158,9 @@ impl<'a> OpenrouterProvider<'a> {
             created, 
             Some(prompt_tokens), 
             Some(completion_tokens), 
-            Some(total_tokens)
+            Some(total_tokens),
+            None, // OpenRouter doesn't provide prompt_tokens_details yet
+            None, // OpenRouter doesn't provide completion_tokens_details yet
         ))
     }
 }

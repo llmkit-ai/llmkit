@@ -1,6 +1,7 @@
 use crate::common::types::chat_request::ChatCompletionRequestMessage;
 use crate::common::types::chat_response::{
-    LlmServiceChatCompletionChunk, LlmServiceChatCompletionResponse,
+    CompletionTokensDetails, LlmServiceChatCompletionChunk, LlmServiceChatCompletionResponse,
+    PromptTokensDetails,
 };
 
 use crate::services::types::{
@@ -8,7 +9,8 @@ use crate::services::types::{
 };
 
 use async_openai::types::{
-    ChatCompletionMessageToolCall, ChatCompletionRequestToolMessageArgs, ChatCompletionRequestToolMessageContent, ChatCompletionTool, ReasoningEffort, ResponseFormat
+    ChatCompletionMessageToolCall, ChatCompletionRequestToolMessageArgs, ChatCompletionRequestToolMessageContent,
+    ChatCompletionStreamOptions, ChatCompletionTool, ReasoningEffort, ResponseFormat
 };
 
 use async_openai::{
@@ -244,6 +246,9 @@ impl<'a> OpenAiProvider<'a> {
         request.model(self.props.request.model.clone());
         request.messages(messages);
         request.stream(true);
+        request.stream_options(ChatCompletionStreamOptions {
+            include_usage: true,
+        });
 
         if let Some(tools) = oai_tools {
             request.tools(tools);
@@ -261,6 +266,8 @@ impl<'a> OpenAiProvider<'a> {
         let mut prompt_tokens = 0;
         let mut completion_tokens = 0;
         let mut total_tokens = 0;
+        let mut prompt_tokens_details: Option<PromptTokensDetails> = None;
+        let mut completion_tokens_details: Option<CompletionTokensDetails> = None;
         let mut id = String::new();
 
         while let Some(chunk) = stream.next().await {
@@ -273,6 +280,19 @@ impl<'a> OpenAiProvider<'a> {
                         completion_tokens = u.completion_tokens;
                         prompt_tokens = u.prompt_tokens;
                         total_tokens = u.total_tokens;
+                        
+                        // Capture token details if available
+                        prompt_tokens_details = u.prompt_tokens_details.as_ref().map(|details| PromptTokensDetails {
+                            audio_tokens: details.audio_tokens,
+                            cached_tokens: details.cached_tokens,
+                        });
+                        
+                        completion_tokens_details = u.completion_tokens_details.as_ref().map(|details| CompletionTokensDetails {
+                            accepted_prediction_tokens: details.accepted_prediction_tokens,
+                            audio_tokens: details.audio_tokens,
+                            reasoning_tokens: details.reasoning_tokens,
+                            rejected_prediction_tokens: details.rejected_prediction_tokens,
+                        });
                     }
 
                     if let Some(c) = &c.choices.first() {
@@ -314,6 +334,8 @@ impl<'a> OpenAiProvider<'a> {
             Some(prompt_tokens),
             Some(completion_tokens),
             Some(total_tokens),
+            prompt_tokens_details,
+            completion_tokens_details,
         ))
     }
 }

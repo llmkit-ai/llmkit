@@ -120,6 +120,8 @@ impl From<ChatCompletionResponse> for LlmServiceChatCompletionResponse {
                     prompt_tokens: usage.prompt_tokens,
                     completion_tokens: usage.completion_tokens,
                     total_tokens: usage.total_tokens,
+                    prompt_tokens_details: None, // OpenRouter doesn't provide these details yet
+                    completion_tokens_details: None, // OpenRouter doesn't provide these details yet
                 }
             }),
         }
@@ -161,6 +163,8 @@ impl From<ChatCompletionChunk> for LlmServiceChatCompletionChunk {
                     prompt_tokens: usage.prompt_tokens,
                     completion_tokens: usage.completion_tokens,
                     total_tokens: usage.total_tokens,
+                    prompt_tokens_details: None, // OpenRouter doesn't provide these details yet
+                    completion_tokens_details: None, // OpenRouter doesn't provide these details yet
                 }
             }),
         }
