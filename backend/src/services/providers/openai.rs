@@ -63,10 +63,10 @@ impl<'a> OpenAiProvider<'a> {
 
         let mut model_parts = props.request.model.split("|");
         let model_name = model_parts.next()
-            .ok_or_else(|| LlmError::InvalidConfig("Invalid model name config".to_string()))?;
+            .ok_or_else(|| LlmError::InvalidConfig("Invalid model name config missing name".to_string()))?;
 
         let model_api_version = model_parts.next()
-            .ok_or_else(|| LlmError::InvalidConfig("Invalid model name config".to_string()))?;
+            .ok_or_else(|| LlmError::InvalidConfig("Invalid model name config missing version".to_string()))?;
 
         let config = AzureConfig::new()
             .with_api_base(base_url)
