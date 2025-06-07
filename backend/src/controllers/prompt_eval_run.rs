@@ -1,8 +1,14 @@
 use axum::{
-    extract::{Path, State},
+    extract::{Path, State, Query},
     Json,
 };
+use serde::Deserialize;
 use uuid::Uuid;
+
+#[derive(Deserialize)]
+pub struct EvalRunParams {
+    pub rounds: Option<i64>,
+}
 
 use super::types::{
     request::prompt_eval_run::UpdateEvalRunRequest,
@@ -12,7 +18,9 @@ use super::types::{
 };
 
 use crate::{
-    common::types::chat_request::ChatCompletionRequest,
+    common::types::chat_request::{
+        ChatCompletionRequest, ChatCompletionRequestTool, ChatCompletionRequestFunctionDescription
+    },
     services::{llm::Llm, types::llm_service::LlmServiceRequest},
     AppError, AppState,
 };
@@ -20,11 +28,24 @@ use crate::{
 pub async fn execute_eval_run(
     Path((prompt_id, prompt_version_id)): Path<(i64, i64)>,
     State(state): State<AppState>,
-) -> Result<Json<PromptEvalExecutionRunResponse>, AppError> {
+    Query(params): Query<EvalRunParams>,
+) -> Result<Json<serde_json::Value>, AppError> {
     let prompt = state.db.prompt.get_prompt(prompt_id).await?;
     let evals = state.db.prompt_eval.get_by_prompt(prompt_id).await?;
-    let run_id = Uuid::new_v4().to_string();
-    let mut eval_runs = vec![];
+    let tools_list = state.db.tool.get_tools_by_prompt_version(prompt.version_id).await?;
+    let tools = tools_list.into_iter().map(|t| {
+        ChatCompletionRequestTool::Function {
+            function: ChatCompletionRequestFunctionDescription {
+                name: t.tool_name,
+                description: Some(t.description),
+                parameters: serde_json::from_str(&t.parameters).unwrap_or_default(),
+                strict: Some(t.strict)
+            }
+        }
+    }).collect::<Vec<_>>();
+
+    let rounds = params.rounds.unwrap_or(1);
+    let mut all_runs: Vec<PromptEvalExecutionRunResponse> = Vec::new();
 
     for e in evals.iter() {
         // Parse system_prompt_input if present
@@ -40,12 +61,10 @@ pub async fn execute_eval_run(
         let chat_request = ChatCompletionRequest {
             model: prompt.key.clone(),
             messages: vec![
-                // System message with context
                 crate::common::types::chat_request::ChatCompletionRequestMessage::System {
                     content: system_content,
                     name: None,
                 },
-                // User message with content
                 crate::common::types::chat_request::ChatCompletionRequestMessage::User {
                     content: user_content,
                     name: None,
@@ -53,7 +72,7 @@ pub async fn execute_eval_run(
             ],
             stream: None,
             response_format: None,
-            tools: None,
+            tools: Some(tools.clone()),
             provider: None,
             models: None,
             transforms: None,
@@ -67,26 +86,63 @@ pub async fn execute_eval_run(
         })?;
 
         let llm = Llm::new(llm_props, state.db.log.clone());
-        let res = llm
-            .text()
-            .await
-            .map_err(|_| AppError::InternalServerError("Something went wrong".to_string()))?;
+        let mut eval_runs = Vec::new();
 
-        if let Some(c) = res.0.choices.first() {
-            // TODO: We should make the DB field nullable so we don't have to hack this
-            let content = c.message.content.clone().map(|c| c.to_string()).unwrap_or("".to_string());
+        for _ in 0..rounds {
+            let run_id = Uuid::new_v4().to_string();
 
-            let eval_run = state
-                .db
-                .prompt_eval_run
-                .create(&run_id, prompt_version_id, e.id, None, &content)
-                .await?;
+            let res = llm
+                .text()
+                .await
+                .map_err(|e| {
+                    tracing::error!("LLM service error: {}", e);
+                    AppError::InternalServerError(format!("LLM service error: {}", e))
+                })?;
 
-            eval_runs.push(eval_run);
+            if let Some(c) = res.0.choices.first() {
+                if let Some(content) = &c.message.content {
+                    let eval_run = state
+                        .db
+                        .prompt_eval_run
+                        .create(&run_id, prompt_version_id, e.id, None, &content)
+                        .await?;
+
+                    eval_runs.push(eval_run);
+                }
+
+                // for not just stringify the tool calls
+                if let Some(tool_calls) = &c.message.tool_calls { 
+                    let tool_calls_string = serde_json::to_string(&tool_calls)
+                        .map_err(|e| AppError::InternalServerError(format!("Failed to serialize tool calls: {}", e)))?;
+
+                    let eval_run = state
+                        .db
+                        .prompt_eval_run
+                        .create(&run_id, prompt_version_id, e.id, None, &tool_calls_string)
+                        .await?;
+
+                    eval_runs.push(eval_run);
+                }
+            }
+
         }
+
+        all_runs.push(eval_runs.into());
     }
 
-    Ok(Json(eval_runs.into()))
+    // Maintain backward compatibility: return single response when rounds=1
+    if rounds == 1 && !all_runs.is_empty() {
+        // Return single response for backward compatibility
+        Ok(Json(serde_json::to_value(all_runs.into_iter().next()
+            .ok_or_else(|| AppError::InternalServerError("No eval runs generated".to_string()))?)
+            .map_err(|e| AppError::InternalServerError(format!("Failed to serialize response: {}", e)))?)
+        )
+    } else {
+        // Return array of responses for multiple rounds
+        Ok(Json(serde_json::to_value(all_runs)
+            .map_err(|e| AppError::InternalServerError(format!("Failed to serialize response: {}", e)))?)
+        )
+    }
 }
 
 pub async fn get_eval_run_by_id(

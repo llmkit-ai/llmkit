@@ -35,8 +35,8 @@ impl From<PromptEvalRun> for PromptEvalRunResponse {
 // EXECUTION RESPONSE
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PromptEvalExecutionRunResponse {
-    run_id: String,
-    runs: Vec<PromptEvalRunResponse>
+    pub run_id: String,
+    pub runs: Vec<PromptEvalRunResponse>
 }
 
 impl From<Vec<PromptEvalRun>> for PromptEvalExecutionRunResponse {
