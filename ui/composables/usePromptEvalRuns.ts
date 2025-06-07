@@ -71,9 +71,14 @@ export const usePromptEvalRuns = () => {
 
   const createEvalRun = async (promptId: number, promptVersionId: number, rounds: number) => {
     try {
-      const newEval = await $fetch<PromptEvalExecutionRunResponse[]>(`/v1/ui/prompt-eval-runs/${promptId}/version/${promptVersionId}?rounds=${rounds}`, {
+      const response = await $fetch(`/v1/ui/prompt-eval-runs/${promptId}/version/${promptVersionId}?rounds=${rounds}`, {
         method: 'POST',
       })
+
+      // Handle both single response (backward compatible) and array response
+      const newEval = Array.isArray(response) 
+        ? response as PromptEvalExecutionRunResponse[]
+        : [response as PromptEvalExecutionRunResponse]
 
       newEval.forEach((group, roundIndex) => {
         group.runs.forEach(r => {

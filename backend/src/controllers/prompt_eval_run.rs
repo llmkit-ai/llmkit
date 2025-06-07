@@ -27,11 +27,11 @@ pub async fn execute_eval_run(
     Path((prompt_id, prompt_version_id)): Path<(i64, i64)>,
     State(state): State<AppState>,
     Query(params): Query<EvalRunParams>,
-) -> Result<Json<Vec<PromptEvalExecutionRunResponse>>, AppError> {
+) -> Result<Json<serde_json::Value>, AppError> {
     let prompt = state.db.prompt.get_prompt(prompt_id).await?;
     let evals = state.db.prompt_eval.get_by_prompt(prompt_id).await?;
     let rounds = params.rounds.unwrap_or(1);
-    let mut all_runs = Vec::new();
+    let mut all_runs: Vec<PromptEvalExecutionRunResponse> = Vec::new();
 
     for _ in 0..rounds {
         let run_id = Uuid::new_v4().to_string();
@@ -100,7 +100,14 @@ pub async fn execute_eval_run(
         all_runs.push(eval_runs.into());
     }
 
-    Ok(Json(all_runs))
+    // Maintain backward compatibility: return single response when rounds=1
+    if rounds == 1 && !all_runs.is_empty() {
+        // Return single response for backward compatibility
+        Ok(Json(serde_json::to_value(all_runs.into_iter().next().unwrap()).unwrap()))
+    } else {
+        // Return array of responses for multiple rounds
+        Ok(Json(serde_json::to_value(all_runs).unwrap()))
+    }
 }
 
 pub async fn get_eval_run_by_id(

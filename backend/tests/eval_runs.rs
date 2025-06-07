@@ -631,6 +631,25 @@ async fn test_response_grouping_structure() {
     }
 }
 
+// New test: Backward compatibility - single round returns single response
+#[tokio::test]
+async fn test_backward_compatibility_single_round() {
+    let (pool, prompt_version_id, _prompt_id, eval_ids) = setup_test_db_with_multiple_evals().await;
+    
+    // Test with rounds=1 (or not specified)
+    let run_id = Uuid::new_v4().to_string();
+    let runs = execute_round(&pool, prompt_version_id, &eval_ids, &run_id).await;
+    
+    // When rounds=1, the API should return a single PromptEvalExecutionRunResponse
+    // not wrapped in an array for backward compatibility
+    assert_eq!(runs.len(), eval_ids.len());
+    
+    // All runs should share the same run_id
+    for run in &runs {
+        assert_eq!(run.run_id, run_id);
+    }
+}
+
 // New test: Edge case - no eval tests
 #[tokio::test]
 async fn test_edge_case_no_eval_tests() {
