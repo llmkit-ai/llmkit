@@ -103,6 +103,14 @@ pub enum LlmError {
     // Async OpenAi Errors
     #[error("Llm Chat Completion Error: {0}")]
     AsyncOpenAiError(#[from] async_openai::error::OpenAIError),
+
+    // Fallback Errors
+    #[error("All fallback providers failed. Attempted providers: {attempted_providers}. Last error: {last_error}")]
+    FallbackExhausted {
+        attempted_providers: String,
+        last_error: Box<LlmError>,
+        provider_errors: Vec<(String, String)>, // (provider_name, error_message)
+    },
 }
 
 impl From<openrouter_api::Error> for LlmError {
