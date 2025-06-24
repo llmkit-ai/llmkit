@@ -184,8 +184,8 @@ class TestSimpleFallback:
                 assert attempts[1]["provider"] == "openai"
                 assert attempts[1]["status"] == "success"
             
-            print("✅ PASS: OpenRouter rate limit triggered successful fallback to OpenAI")
-            print(f"✅ Response: {content}")
+            print("PASS: OpenRouter rate limit triggered successful fallback to OpenAI")
+            print(f"Response: {content}")
             
             # Verify the right number of HTTP calls were made
             assert len(responses.calls) >= 1  # At least the LLMKit call
@@ -195,12 +195,12 @@ class TestSimpleFallback:
                           if "localhost:8000" in call.request.url]
             assert len(llmkit_calls) == 1
             
-            print("✅ PASS: Correct API endpoints were called")
+            print("PASS: Correct API endpoints were called")
             
             return response
             
         except Exception as e:
-            print(f"❌ FAIL: Test failed with error: {e}")
+            print(f"FAIL: Test failed with error: {e}")
             # Print debug information
             print(f"Number of HTTP calls made: {len(responses.calls)}")
             for i, call in enumerate(responses.calls):
@@ -255,17 +255,17 @@ class TestSimpleFallback:
             )
             
             # Should not reach here if working correctly
-            print("❌ FAIL: Expected rate limit error but got successful response")
+            print("FAIL: Expected rate limit error but got successful response")
             assert False, "Expected rate limit error but request succeeded"
             
         except Exception as e:
             # Should get rate limit error
             error_str = str(e)
             if "rate_limit" in error_str.lower() or "429" in error_str:
-                print("✅ PASS: Got expected rate limit error (no fallback occurred)")
-                print(f"✅ Error: {error_str}")
+                print("PASS: Got expected rate limit error (no fallback occurred)")
+                print(f"Error: {error_str}")
             else:
-                print(f"❌ FAIL: Got unexpected error: {error_str}")
+                print(f"FAIL: Got unexpected error: {error_str}")
                 raise
 
     @responses.activate
@@ -344,22 +344,22 @@ class TestSimpleFallback:
                 }
             )
             
-            print("❌ FAIL: Expected FallbackExhausted error but got successful response")
+            print("FAIL: Expected FallbackExhausted error but got successful response")
             assert False, "Expected FallbackExhausted error but request succeeded"
             
         except Exception as e:
             error_str = str(e)
             if "fallback" in error_str.lower() and "exhausted" in error_str.lower():
-                print("✅ PASS: Got expected FallbackExhausted error")
-                print(f"✅ Error: {error_str}")
+                print("PASS: Got expected FallbackExhausted error")
+                print(f"Error: {error_str}")
                 
                 # Verify error contains provider information
                 if "openrouter" in error_str and "openai" in error_str:
-                    print("✅ PASS: Error contains attempted provider information")
+                    print("PASS: Error contains attempted provider information")
                 else:
-                    print("❌ FAIL: Error missing provider information")
+                    print("FAIL: Error missing provider information")
             else:
-                print(f"❌ FAIL: Got unexpected error: {error_str}")
+                print(f"FAIL: Got unexpected error: {error_str}")
                 raise
 
     def test_fallback_config_validation(self):
@@ -409,14 +409,14 @@ class TestSimpleFallback:
             assert isinstance(provider["catch_errors"], list)
             assert len(provider["catch_errors"]) > 0
         
-        print("✅ PASS: Fallback configuration validation successful")
+        print("PASS: Fallback configuration validation successful")
         
         # Test JSON serialization
         config_json = json.dumps(valid_config)
         parsed_config = json.loads(config_json)
         assert parsed_config == valid_config
         
-        print("✅ PASS: Fallback configuration JSON serialization successful")
+        print("PASS: Fallback configuration JSON serialization successful")
 
 
 if __name__ == "__main__":
@@ -447,10 +447,10 @@ if __name__ == "__main__":
         test_instance.test_fallback_config_validation()
         
         print("\n" + "=" * 50)
-        print("✅ ALL TESTS PASSED!")
-        print("✅ Fallback functionality is working correctly")
+        print("ALL TESTS PASSED!")
+        print("Fallback functionality is working correctly")
         
     except Exception as e:
-        print(f"\n❌ TEST SUITE FAILED: {e}")
+        print(f"\nTEST SUITE FAILED: {e}")
         print("\nThis indicates an issue with the fallback implementation.")
         raise
