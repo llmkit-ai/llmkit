@@ -1,5 +1,5 @@
 use anyhow::Result;
-use crate::db::types::models::ModelProviderRow;
+use crate::db::types::models::{ModelProviderRow, Prompt, PromptComponent, PromptDirectory};
 
 #[derive(Clone, Debug)]
 pub struct ModelRepository {
@@ -159,4 +159,36 @@ impl ModelRepository {
         .await?;
         Ok(model)
     }
+}
+
+// --- Prompt Directory ---
+#[derive(Debug, Clone)]
+pub struct PromptDirectory {
+    pub id: i64,
+    pub name: String,
+    pub parent_id: Option<i64>,
+    pub created_at: chrono::NaiveDateTime,
+    pub updated_at: chrono::NaiveDateTime,
+}
+
+// --- Prompt Component ---
+#[derive(Debug, Clone)]
+pub struct PromptComponent {
+    pub id: i64,
+    pub name: String,
+    pub content: String,
+    pub description: Option<String>,
+    pub created_at: chrono::NaiveDateTime,
+    pub updated_at: chrono::NaiveDateTime,
+}
+
+// --- Prompt (partial, for directory support) ---
+#[derive(Debug, Clone)]
+pub struct Prompt {
+    pub id: i64,
+    pub key: String,
+    pub current_prompt_version_id: Option<i64>,
+    pub directory_id: Option<i64>,
+    pub created_at: chrono::NaiveDateTime,
+    pub updated_at: chrono::NaiveDateTime,
 }

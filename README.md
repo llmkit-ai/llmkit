@@ -309,7 +309,30 @@ npm run dev  # or bun run dev
 
 The UI will be available at `http://localhost:3000`.
 
+## Documentation
 
+The documentation is located in the `docs/` directory and built with [VuePress](https://vuepress.vuejs.org/).
+
+### Local Preview
+
+1. Install dependencies:
+   ```bash
+   cd docs
+   npm install
+   ```
+2. Start the local docs server:
+   ```bash
+   npx vuepress dev
+   ```
+3. Open your browser to [http://localhost:8080](http://localhost:8080)
+
+### Build Static Docs
+
+To generate static files for deployment:
+```bash
+npx vuepress build
+```
+The output will be in `docs/.vuepress/dist`.
 
 ## Contributing
 
