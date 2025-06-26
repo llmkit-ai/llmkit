@@ -9,6 +9,7 @@ use tokio_retry::{
 use tracing;
 
 use super::{
+    fallback::FallbackService,
     providers::{openai::OpenAiProvider, openrouter::OpenrouterProvider},
     types::{
         llm_error::{LlmError, LlmStreamingError}, llm_service::LlmServiceRequest
@@ -34,11 +35,65 @@ impl Llm {
     }
 
     pub async fn text(&self) -> Result<(LlmServiceChatCompletionResponse, i64), LlmError> {
+        // Check if fallback is configured
+        if let Some(fallback_config) = &self.props.fallback_config {
+            if fallback_config.enabled {
+                let fallback_service = FallbackService::new(self.props.clone(), self.db_log.clone());
+                let result = fallback_service.execute_with_fallback().await?;
+                return Ok((result.response, result.log_id));
+            }
+        }
+
+        // No fallback configured, use the original retry strategy
         let retry_strategy = self.retry_strategy();
         Retry::spawn(retry_strategy, || self.send_request()).await
     }
 
     pub async fn json(&self) -> Result<(LlmServiceChatCompletionResponse, i64), LlmError> {
+        // Check if fallback is configured
+        if let Some(fallback_config) = &self.props.fallback_config {
+            if fallback_config.enabled {
+                let fallback_service = FallbackService::new(self.props.clone(), self.db_log.clone());
+                let result = fallback_service.execute_with_fallback().await?;
+                
+                // Still need to validate the JSON response from fallback
+                if let Some(c) = result.response.choices.first() {
+                    // We don't need to validate the tool response
+                    if c.message.role == "tool" {
+                        return Ok((result.response, result.log_id));
+                    }
+
+                    let content = match &c.message.content {
+                        Some(c) => c.to_string(),
+                        None => return Err(LlmError::MissingAssistantContent)
+                    };
+
+                    // if we have a JSON schema available lets use it
+                    // Otherwise just make sure it's valid JSON and return
+                    match &self.props.request.response_format {
+                        Some(rf) => {
+                            match &rf.json_schema {
+                                Some(js) => {
+                                    let is_valid = &self.validate_schema(&content, &js.schema)?;
+                                    if !is_valid {
+                                        tracing::error!("The schema was not valid");
+                                        return Err(LlmError::InvalidJsonSchema);
+                                    }
+                                },
+                                None => {
+                                    let _json: serde_json::Value = serde_json::from_str(&content)?;
+                                } 
+                            }
+                        },
+                        None => unreachable!("Encountered a situation where we don't have a response_format in JSON mode")
+                    }
+                }
+
+                return Ok((result.response, result.log_id));
+            }
+        }
+
+        // No fallback configured, use the original retry strategy
         let retry_strategy = self.retry_strategy();
         Retry::spawn(retry_strategy, || async {
             let res = self.send_request().await?;
@@ -101,6 +156,15 @@ impl Llm {
                 "Json".to_string(),
                 "Chat".to_string(),
             ));
+        }
+
+        // Check if fallback is configured
+        if let Some(fallback_config) = &self.props.fallback_config {
+            if fallback_config.enabled {
+                let fallback_service = FallbackService::new(self.props.clone(), self.db_log.clone());
+                let result = fallback_service.execute_stream_with_fallback(tx).await?;
+                return Ok((result.response, result.log_id));
+            }
         }
 
         Ok(self.send_request_stream(tx).await?)

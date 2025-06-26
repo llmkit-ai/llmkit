@@ -11,6 +11,7 @@ use crate::{
         models::LlmApiProvider,
     },
     db::types::prompt::PromptRowWithModel,
+    services::types::llm_error::LlmError,
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -23,6 +24,64 @@ pub enum LlmServiceRequestError {
     ChatMessagesInputError,
 }
 
+/// Configuration for a fallback provider
+#[derive(Serialize, Clone, Debug)]
+pub struct FallbackProviderConfig {
+    pub provider: LlmApiProvider,
+    pub model_name: String,
+    pub base_url: Option<String>,
+    pub max_tokens: Option<u32>,
+    pub temperature: Option<f32>,
+    pub catch_errors: Vec<FallbackErrorType>,
+}
+
+/// Types of errors that can trigger a fallback
+#[derive(Serialize, Clone, Debug, PartialEq)]
+pub enum FallbackErrorType {
+    RateLimit,
+    Auth,
+    ProviderUnavailable,
+    ProviderQuotaExceeded,
+    Timeout,
+    Network,
+    All, // Catch all errors
+}
+
+impl FallbackErrorType {
+    /// Check if this error type should trigger a fallback
+    pub fn matches_error(&self, error: &LlmError) -> bool {
+        match self {
+            FallbackErrorType::RateLimit => matches!(error, LlmError::RateLimit(_)),
+            FallbackErrorType::Auth => matches!(error, 
+                LlmError::Auth(_) | LlmError::InvalidApiKey | LlmError::InsufficientPermissions | LlmError::AuthError(_)
+            ),
+            FallbackErrorType::ProviderUnavailable => matches!(error, LlmError::ProviderUnavailable(_)),
+            FallbackErrorType::ProviderQuotaExceeded => matches!(error, LlmError::ProviderQuotaExceeded),
+            FallbackErrorType::Timeout => matches!(error, LlmError::Timeout(_)),
+            FallbackErrorType::Network => matches!(error, LlmError::Network(_)),
+            FallbackErrorType::All => true,
+        }
+    }
+}
+
+/// Configuration for fallback behavior
+#[derive(Serialize, Clone, Debug)]
+pub struct FallbackConfig {
+    pub enabled: bool,
+    pub providers: Vec<FallbackProviderConfig>,
+    pub max_retries_per_provider: usize,
+}
+
+impl Default for FallbackConfig {
+    fn default() -> Self {
+        FallbackConfig {
+            enabled: false,
+            providers: Vec::new(),
+            max_retries_per_provider: 3,
+        }
+    }
+}
+
 #[derive(Serialize, Clone, Debug)]
 pub struct LlmServiceRequest {
     pub provider: LlmApiProvider,
@@ -32,6 +91,7 @@ pub struct LlmServiceRequest {
     pub is_reasoning: bool,
     pub reasoning_effort: Option<String>,
     pub request: ChatCompletionRequest,
+    pub fallback_config: Option<FallbackConfig>,
 }
 
 impl LlmServiceRequest {
@@ -162,6 +222,7 @@ impl LlmServiceRequest {
             is_reasoning: prompt.is_reasoning,
             reasoning_effort: prompt.reasoning_effort.clone(),
             request: new_request,
+            fallback_config: None, // Default to no fallback, can be configured later
         };
 
         // Override input with inputs from Prompt table
