@@ -1,6 +1,7 @@
 services:
   backend:
     build: ./backend
+    restart: unless-stopped
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     volumes:
@@ -19,6 +20,7 @@ services:
       context: ./ui
       args:
         API_BASE_URL: ${API_BASE_URL}
+    restart: unless-stopped
     ports:
       - "${UI_PORT:-3000}:3000"
     depends_on:
